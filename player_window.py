@@ -1,11 +1,22 @@
 import os
-import json
-import math
-import numpy as np
+import sys
+import subprocess
 import tempfile
 import shutil
 import glob
-import subprocess
+import json
+import time
+import math
+import numpy as np
+
+# System volume control
+try:
+    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+    from comtypes import CLSCTX_ALL
+    HAS_PYCAW = True
+except Exception:
+    HAS_PYCAW = False
+
 from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread, QPoint, QPointF, QRectF
 from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform, QPainterPath, QPainterPathStroker
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
@@ -77,12 +88,15 @@ class DropListWidget(ListWidget):
         self.filesDropped.emit(files)
 
 class FrameExtractionThread(QThread):
-    finished_extraction = pyqtSignal(list, str)
+    finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, parent=None):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None):
         super().__init__(parent)
         self.video_path = video_path
-        self.temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+        self.start_frame = start_frame
+        self.num_frames = num_frames
+        self.fps = fps if fps > 0 else 30.0
+        self.temp_dir = temp_dir if temp_dir else tempfile.mkdtemp(prefix="boomerang_frames_")
         self.process = None
         self._is_cancelled = False
         
@@ -93,11 +107,15 @@ class FrameExtractionThread(QThread):
             if not os.path.exists(ffmpeg_path):
                 ffmpeg_path = "ffmpeg"
                 
-            out_pattern = os.path.join(self.temp_dir, "frame_%04d.jpg")
+            out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
+            start_time = self.start_frame / self.fps
             
             cmd = [
                 ffmpeg_path, "-y",
+                "-ss", str(start_time),
                 "-i", self.video_path,
+                "-vframes", str(self.num_frames),
+                "-start_number", str(self.start_frame),
                 "-q:v", "2", 
                 out_pattern
             ]
@@ -107,14 +125,19 @@ class FrameExtractionThread(QThread):
             self.process.wait()
             
             if self._is_cancelled:
-                self.finished_extraction.emit([], self.temp_dir)
+                self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
                 return
             
-            frame_files = sorted(glob.glob(os.path.join(self.temp_dir, "frame_*.jpg")))
-            self.finished_extraction.emit(frame_files, self.temp_dir)
+            frame_files = {}
+            for i in range(self.start_frame, self.start_frame + self.num_frames):
+                fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
+                if os.path.exists(fpath):
+                    frame_files[i] = fpath
+                    
+            self.finished_extraction.emit(frame_files, self.temp_dir, self.start_frame, self.num_frames)
         except Exception as e:
             print(f"Extraction error: {e}")
-            self.finished_extraction.emit([], self.temp_dir)
+            self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
 
     def cancel(self):
         self._is_cancelled = True
@@ -222,6 +245,13 @@ class MarkerSlider(QSlider):
         self.loopStartFrame = start_frame
         self.loopEndFrame = end_frame
         self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            val = self.minimum() + ((self.maximum() - self.minimum()) * event.position().x()) / self.width()
+            self.setValue(int(val))
+            self.sliderMoved.emit(int(val))
+        super().mousePressEvent(event)
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -517,6 +547,73 @@ class PlayerWindow(FluentWindow):
         self.audioOutput = QAudioOutput()
         self.mediaPlayer.setAudioOutput(self.audioOutput)
         
+        # System Volume Initialization
+        self.volume_ctrl = None
+        if HAS_PYCAW:
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                try:
+                    import comtypes
+                    from comtypes import CLSCTX_ALL, GUID
+                    try: comtypes.CoInitialize()
+                    except: pass 
+                    
+                    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+                    
+                    # Hardcoded GUIDs for fallback
+                    IID_IAudioEndpointVolume = "{5CDF2C82-841E-4546-9722-0CF74078229A}"
+                    
+                    def try_link_flexible(device_obj):
+                        if not device_obj: return None
+                        potential_targets = [device_obj]
+                        try:
+                            for attr in dir(device_obj):
+                                try:
+                                    val = getattr(device_obj, attr)
+                                    if hasattr(val, 'Activate'):
+                                        potential_targets.append(val)
+                                except: continue
+                        except: pass
+                        
+                        for target in potential_targets:
+                            try:
+                                iid = getattr(IAudioEndpointVolume, '_iid_', IID_IAudioEndpointVolume)
+                                try:
+                                    interface = target.Activate(GUID(iid), CLSCTX_ALL, None)
+                                    if interface:
+                                        return interface.QueryInterface(IAudioEndpointVolume)
+                                except: continue
+                            except: continue
+                        return None
+
+                    # Main linkage attempt
+                    try:
+                        test_dev = AudioUtilities.GetSpeakers()
+                        self.volume_ctrl = try_link_flexible(test_dev)
+                    except: pass
+                    
+                    if self.volume_ctrl is None:
+                        try:
+                            for d in AudioUtilities.GetAllDevices():
+                                self.volume_ctrl = try_link_flexible(d)
+                                if self.volume_ctrl: break
+                        except: pass
+                except: pass
+        
+        # Cache and playback variables
+        self.cached_frame_dict = {}
+        self.current_temp_dir = None
+        self.extraction_thread = None
+        self.cached_file_path = None
+        self.current_cache_index = 0
+        self.last_extracted_center = -1
+        self.cache_window_half = 600 # Adjustable via UI
+        self.is_zoomed_nav = False
+        self.total_frames = 0
+        self.is_playing = False
+        self.is_scrubbing = False
+        
         # UI Setup
         self.init_ui()
         
@@ -525,15 +622,6 @@ class PlayerWindow(FluentWindow):
         self.mediaPlayer.playbackStateChanged.connect(self.handle_state_change)
         self.mediaPlayer.mediaStatusChanged.connect(self.handle_status_change)
         self.mediaPlayer.metaDataChanged.connect(self.handle_metadata_change)
-        
-        # Cache and playback variables
-        self.cached_frame_files = []
-        self.current_temp_dir = None
-        self.extraction_thread = None
-        self.cached_file_path = None
-        self.current_cache_index = 0
-        self.is_playing = False
-        self.is_scrubbing = False
         
         # Master playback timer and elapsed time tracking
         self.playbackTimer = QTimer()
@@ -551,55 +639,128 @@ class PlayerWindow(FluentWindow):
             except:
                 pass
         self.current_temp_dir = None
-        self.cached_frame_files = []
+        self.cached_frame_dict = {}
+        self.last_extracted_center = -1
         if hasattr(self, 'pixmapItem'):
             self.pixmapItem.setPixmap(QPixmap())
 
+
+    def request_frame_extraction(self, center_frame, force=False):
+        if not self.currentFilePath:
+            return
+            
+        if self.extraction_thread and self.extraction_thread.isRunning():
+            return # Already extracting
+            
+        start_frame = max(0, center_frame - self.cache_window_half)
+        num_frames = self.cache_window_half * 2
+        
+        # Don't extract if we already have this exact range (optimization)
+        threshold = self.cache_window_half // 2
+        if not force and self.last_extracted_center != -1 and abs(self.last_extracted_center - center_frame) < threshold:
+            return
+            
+        self.last_extracted_center = center_frame
+        
+        if not self.current_temp_dir:
+            self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+            
+        self.extraction_thread = FrameExtractionThread(
+            self.currentFilePath, 
+            start_frame, 
+            num_frames, 
+            self.fps, 
+            self.current_temp_dir, 
+            self
+        )
+        self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
+        self.extraction_thread.start()
 
     def start_full_extraction(self):
         if not self.currentFilePath:
             return
             
-        # Check if already cached for this exact file
-        if self.cached_frame_files and getattr(self, 'cached_file_path', None) == self.currentFilePath:
-            print(f"Skipping extraction, already cached: {self.currentFilePath}")
-            self.loadingOverlay.hide()
-            return
-            
-        if self.extraction_thread and self.extraction_thread.isRunning():
-            self.extraction_thread.cancel()
-            
         self.cleanup_cache()
         self.loadingOverlay.show()
         
-        self.extraction_thread = FrameExtractionThread(self.currentFilePath, self)
-        self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
-        self.extraction_thread.start()
+        # Start caching from the beginning or wherever the playlist data says
+        data = self.playlistData.get(self.currentFilePath, {})
+        start_pos = data.get('startFrame', 0)
+        self.current_cache_index = start_pos
+        self.request_frame_extraction(start_pos)
 
-    def on_extraction_finished(self, frame_files, temp_dir):
-        if not frame_files:
-            try:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            except:
-                pass
+    def check_sliding_window(self):
+        # Trigger background extraction if approaching the edge
+        if self.last_extracted_center == -1:
+            return
+            
+        dist = abs(self.current_cache_index - self.last_extracted_center)
+        threshold = self.cache_window_half // 2
+        if dist > threshold: # We moved enough from the center to trigger a new chunk
+            self.request_frame_extraction(self.current_cache_index)
+
+    def on_extraction_finished(self, frame_dict, temp_dir, start_frame, num_frames):
+        if not frame_dict:
             self.loadingOverlay.hide()
             return
             
-        self.cached_frame_files = frame_files
+        self.cached_frame_dict.update(frame_dict)
         self.cached_file_path = self.currentFilePath
-        self.current_temp_dir = temp_dir
+        
+        # Prune old frames to save disk/RAM
+        keys_to_delete = []
+        center = self.last_extracted_center
+        prune_threshold = self.cache_window_half * 1.5 # Keep a bit more for buffer
+        for frame_idx, fpath in self.cached_frame_dict.items():
+            if abs(frame_idx - center) > prune_threshold:
+                keys_to_delete.append(frame_idx)
+                
+        for k in keys_to_delete:
+            try:
+                os.remove(self.cached_frame_dict[k])
+            except:
+                pass
+            del self.cached_frame_dict[k]
+            
         self.loadingOverlay.hide()
-        print(f"Full RAM Preview cached {len(frame_files)} frames.")
+        print(f"Sliding Window Cache: Extracted frames {start_frame} to {start_frame + num_frames}. Cache size: {len(self.cached_frame_dict)}")
+        
+        # Only fit transform if it's the first time
+        fit_needed = not hasattr(self, 'initial_fit_done')
+        if fit_needed:
+            self.initial_fit_done = True
         
         self.update_pixmap_from_cache()
-        self.apply_transformations(fit=True)
+        if fit_needed:
+            self.apply_transformations(fit=True)
+            
+        self.sync_progress_bar()
+
+    def sync_progress_bar(self):
+        if not self.currentFilePath:
+            return
+            
+        self.progressBar.blockSignals(True)
+        
+        if getattr(self, 'is_zoomed_nav', False) and self.cached_frame_dict:
+            indices = self.cached_frame_dict.keys()
+            if indices:
+                min_idx = min(indices)
+                max_idx = max(indices)
+                self.progressBar.setRange(min_idx, max_idx)
+        else:
+            self.progressBar.setRange(0, self.total_frames)
+            
+        self.progressBar.setValue(self.current_cache_index)
+        self.progressBar.blockSignals(False)
+        self.progressBar.update()
 
     def closeEvent(self, event):
         self.cleanup_cache()
         super().closeEvent(event)
 
     def advance_frame(self):
-        if not self.cached_frame_files or self.fps <= 0:
+        if not getattr(self, 'cached_frame_dict', None) or self.fps <= 0:
             return
             
         # Calculate how many frames to advance based on real elapsed time
@@ -628,10 +789,10 @@ class PlayerWindow(FluentWindow):
         loop_mode = self.loopCombo.currentIndex()
         if loop_mode == 0: # None
             start_frame = 0
-            end_frame = self.progressBar.maximum()
+            end_frame = self.total_frames
         else:
             start_frame = self.loopStartFrame
-            end_frame = self.loopEndFrame if self.loopEndFrame > 0 else self.progressBar.maximum()
+            end_frame = self.loopEndFrame if self.loopEndFrame > 0 else self.total_frames
             
         if start_frame > end_frame:
             start_frame, end_frame = end_frame, start_frame
@@ -643,12 +804,13 @@ class PlayerWindow(FluentWindow):
                     self.current_cache_index = start_frame + (self.current_cache_index - end_frame - 1)
                     if self.fps > 0:
                         self.mediaPlayer.setPosition(int(self.current_cache_index * 1000 / self.fps))
+                        self.set_volume(self.audioOutput.volume() * 100)
                     if loop_mode == 2:
                         self.isForward = False
                 elif loop_mode == 3: # Ping-pong
                     self.isForward = False
                     self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
-                    self.audioOutput.setMuted(True)
+                    self.set_volume(0)
                 else:
                     self.current_cache_index = end_frame
                     self.stop_playback()
@@ -658,7 +820,7 @@ class PlayerWindow(FluentWindow):
                 if loop_mode == 3: # Ping-pong
                     self.isForward = True
                     self.current_cache_index = start_frame + (start_frame - self.current_cache_index)
-                    self.audioOutput.setMuted(self.userMutedIntent)
+                    self.set_volume(self.audioOutput.volume() * 100)
                     if self.fps > 0:
                         self.mediaPlayer.setPosition(int(self.current_cache_index * 1000 / self.fps))
                 elif loop_mode == 2: # Backward loop
@@ -667,9 +829,19 @@ class PlayerWindow(FluentWindow):
                     self.current_cache_index = start_frame
                     self.stop_playback()
                     
-        # Clamp final index
-        self.current_cache_index = max(0, min(len(self.cached_frame_files) - 1, self.current_cache_index))
+        # Clamp final index to total frames
+        self.current_cache_index = max(0, min(self.total_frames, self.current_cache_index))
+        
+        # Check cache boundaries and trigger if needed
+        if self.current_cache_index not in self.cached_frame_dict:
+            self.stop_playback()
+            self.loadingOverlay.show()
+            self.request_frame_extraction(self.current_cache_index, force=True)
+            return
+            
         self.update_pixmap_from_cache()
+        self.check_sliding_window()
+        self.sync_progress_bar()
 
     def reset_adjustments(self):
         self.brightnessSlider.setValue(0)
@@ -679,8 +851,8 @@ class PlayerWindow(FluentWindow):
         self.update_pixmap_from_cache()
 
     def update_pixmap_from_cache(self):
-        if self.cached_frame_files and self.current_cache_index < len(self.cached_frame_files):
-            file_path = self.cached_frame_files[self.current_cache_index]
+        if self.current_cache_index in getattr(self, 'cached_frame_dict', {}):
+            file_path = self.cached_frame_dict[self.current_cache_index]
             pixmap = QPixmap(file_path)
             
             # Apply image adjustments
@@ -721,13 +893,11 @@ class PlayerWindow(FluentWindow):
             
             # Update position label
             if hasattr(self, 'frameLabel'):
-                self.frameLabel.setText(f" [F: {self.current_cache_index + 1} / {len(self.cached_frame_files)}]")
+                self.frameLabel.setText(f" [F: {self.current_cache_index + 1} / {self.total_frames}]")
 
         # Update slider to reflect current frame index
         if not self.is_scrubbing:
-            self.progressBar.blockSignals(True)
-            self.progressBar.setValue(self.current_cache_index)
-            self.progressBar.blockSignals(False)
+            self.sync_progress_bar()
             
         if self.fps > 0:
             pos = int((self.current_cache_index * 1000) / self.fps)
@@ -1066,6 +1236,16 @@ class PlayerWindow(FluentWindow):
         self.progressBar.sliderPressed.connect(self.on_slider_pressed)
         self.totalTimeLabel = CaptionLabel("00:00")
         
+        # Set initial volume from system if possible
+        initial_vol = 50
+        if self.volume_ctrl:
+            try:
+                initial_vol = int(self.volume_ctrl.GetMasterVolumeLevelScalar() * 100)
+                self.userMutedIntent = self.volume_ctrl.GetMute()
+            except:
+                pass
+        self.audioOutput.setVolume(initial_vol / 100.0)
+        
         self.progressLayout.addWidget(self.currentTimeLabel)
         self.progressLayout.addWidget(self.frameLabel)
         self.progressLayout.addWidget(self.progressBar)
@@ -1093,8 +1273,9 @@ class PlayerWindow(FluentWindow):
         self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE)
         
         self.playButton = ToolButton(FluentIcon.PLAY)
+        self.playButton.setIconSize(QSize(24, 24))
+        self.playButton.setFixedSize(32, 32)
         self.playButton.clicked.connect(self.play_pause)
-        self.playButton.setStyleSheet(COMPACT_BTN_STYLE)
         
         self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
         self.stepForwardButton.setToolTip("Next frame")
@@ -1148,6 +1329,37 @@ class PlayerWindow(FluentWindow):
         zoomGroup.addWidget(self.zoomSlider)
         
         self.settingsInnerLayout.addLayout(zoomGroup)
+        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
+
+        # --- Cache Window Settings ---
+        cacheGroup = QVBoxLayout()
+        cacheGroup.setSpacing(5)
+        cacheHeader = QHBoxLayout()
+        cacheLabel = CaptionLabel("Cache Window (frames)")
+        self.cacheValueLabel = CaptionLabel(str(self.cache_window_half))
+        cacheHeader.addWidget(cacheLabel)
+        cacheHeader.addStretch(1)
+        cacheHeader.addWidget(self.cacheValueLabel)
+        cacheGroup.addLayout(cacheHeader)
+        
+        self.cacheSlider = QSlider(Qt.Orientation.Horizontal)
+        self.cacheSlider.setRange(100, 1500)
+        self.cacheSlider.setSingleStep(10)
+        self.cacheSlider.setPageStep(50)
+        self.cacheSlider.setValue(self.cache_window_half)
+        self.cacheSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        def update_cache_size(val):
+            rounded_val = (val // 10) * 10
+            self.cache_window_half = rounded_val
+            self.cacheValueLabel.setText(str(rounded_val))
+            # Sync slider position to rounded value if needed
+            if val != rounded_val:
+                self.cacheSlider.blockSignals(True)
+                self.cacheSlider.setValue(rounded_val)
+                self.cacheSlider.blockSignals(False)
+        self.cacheSlider.valueChanged.connect(update_cache_size)
+        cacheGroup.addWidget(self.cacheSlider)
+        self.settingsInnerLayout.addLayout(cacheGroup)
         self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
 
         # Image Adjustments
@@ -1230,6 +1442,22 @@ class PlayerWindow(FluentWindow):
         loopHeader.addStretch(1)
         loopHeader.addWidget(self.globalLoopToggle)
         loopGroup.addLayout(loopHeader)
+        
+        # --- Navigation Mode ---
+        navGroup = QHBoxLayout()
+        self.navLabel = CaptionLabel("Zoom Navigation")
+        self.navToggle = SwitchButton()
+        self.navToggle.setChecked(False)
+        self.navToggle.setOnText("On")
+        self.navToggle.setOffText("Off")
+        def toggle_nav_mode(checked):
+            self.is_zoomed_nav = checked
+            self.sync_progress_bar()
+        self.navToggle.checkedChanged.connect(toggle_nav_mode)
+        navGroup.addWidget(self.navLabel)
+        navGroup.addStretch(1)
+        navGroup.addWidget(self.navToggle)
+        loopGroup.addLayout(navGroup)
         
         self.loopCombo = QComboBox()
         self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-Pong"])
@@ -1361,13 +1589,17 @@ class PlayerWindow(FluentWindow):
         self.volumeContainerLayout.setSpacing(5)
         
         self.volumeButton = ToolButton(FluentIcon.VOLUME)
+        if self.userMutedIntent:
+            self.volumeButton.setIcon(FluentIcon.MUTE)
         self.volumeButton.clicked.connect(self.toggle_mute)
-        self.volumeValueLabel = ToolButton()
-        self.volumeValueLabel.setText("70%")
+        
+        self.volumeValueLabel = CaptionLabel(f"{initial_vol}%")
+        if self.userMutedIntent:
+            self.volumeValueLabel.setText("0%")
         self.volumeValueLabel.setFixedWidth(40)
-        self.volumeValueLabel.setStyleSheet("border: none; background: transparent; color: #ccc; font-size: 12px;")
-        self.volumeValueLabel.clicked.connect(self.show_volume_flyout)
+        self.volumeValueLabel.setStyleSheet("border: none; background: transparent; color: #ccc; font-size: 12px; hover { color: white; }")
         self.volumeValueLabel.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.volumeValueLabel.mousePressEvent = lambda e: self.show_volume_flyout()
         
         self.volumeContainerLayout.addWidget(self.volumeButton)
         self.volumeContainerLayout.addWidget(self.volumeValueLabel)
@@ -1447,11 +1679,12 @@ class PlayerWindow(FluentWindow):
             
             if is_image:
                 self.cleanup_cache()
-                self.cached_frame_files = [filePath]
+                self.cached_frame_dict = {0: filePath}
                 self.cached_file_path = filePath
                 self.current_cache_index = 0
                 self.fps = 1.0 
-                self.progressBar.setRange(0, 0)
+                self.total_frames = 0
+                self.sync_progress_bar()
                 self.update_pixmap_from_cache()
                 self.apply_transformations(fit=True)
                 self.mediaPlayer.stop()
@@ -1924,7 +2157,14 @@ class PlayerWindow(FluentWindow):
         
     def set_position(self, index):
         self.current_cache_index = index
-        self.update_pixmap_from_cache()
+        
+        # Trigger extraction if frame is missing
+        if index not in getattr(self, 'cached_frame_dict', {}):
+            self.loadingOverlay.show()
+            self.request_frame_extraction(index, force=True)
+        else:
+            self.update_pixmap_from_cache()
+            self.check_sliding_window()
         
         # Update labels (convert frames back to ms for display)
         if self.fps > 0:
@@ -1954,9 +2194,16 @@ class PlayerWindow(FluentWindow):
     def step_frame(self, direction):
         self.current_cache_index += direction
         # Clamp bounds
-        if self.cached_frame_files:
-            self.current_cache_index = max(0, min(len(self.cached_frame_files) - 1, self.current_cache_index))
+        max_frame = self.progressBar.maximum() if self.progressBar.maximum() > 0 else 0
+        self.current_cache_index = max(0, min(max_frame, self.current_cache_index))
+        
+        if self.current_cache_index not in getattr(self, 'cached_frame_dict', {}):
+            self.loadingOverlay.show()
+            self.request_frame_extraction(self.current_cache_index, force=True)
+            return
+            
         self.update_pixmap_from_cache()
+        self.check_sliding_window()
 
     def handle_state_change(self, state):
         is_paused_or_stopped = not self.is_playing
@@ -1972,19 +2219,31 @@ class PlayerWindow(FluentWindow):
         
     def update_duration(self, duration):
         if self.fps > 0:
-            total_frames = int((duration / 1000.0) * self.fps)
-            self.progressBar.setRange(0, total_frames)
+            self.total_frames = int((duration / 1000.0) * self.fps)
             self.totalTimeLabel.setText(self.format_time(duration))
+            self.sync_progress_bar()
             
-            if self.loopEndFrame == 0 or self.loopEndFrame > total_frames:
-                self.loopEndFrame = total_frames
+            if self.loopEndFrame == 0 or self.loopEndFrame > self.total_frames:
+                self.loopEndFrame = self.total_frames
                 self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
                 self.update_loop_frames_label()
         
     def set_volume(self, volume):
         self.audioOutput.setVolume(volume / 100.0)
+        if self.volume_ctrl:
+            try:
+                self.volume_ctrl.SetMasterVolumeLevelScalar(volume / 100.0, None)
+            except Exception as e:
+                print(f"Runtime volume sync error: {e}")
+                
         self.volumeValueLabel.setText(f"{volume}%")
         is_muted = volume == 0
+        self.userMutedIntent = is_muted
+        if self.volume_ctrl:
+            try:
+                self.volume_ctrl.SetMute(is_muted, None)
+            except:
+                pass
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
         
     def show_volume_flyout(self):
@@ -2003,7 +2262,17 @@ class PlayerWindow(FluentWindow):
         
         slider = QSlider(Qt.Orientation.Vertical)
         slider.setRange(0, 100)
-        slider.setValue(int(self.audioOutput.volume() * 100))
+        
+        current_vol = 50
+        if self.volume_ctrl:
+            try:
+                current_vol = int(self.volume_ctrl.GetMasterVolumeLevelScalar() * 100)
+            except:
+                pass
+        else:
+            current_vol = int(self.audioOutput.volume() * 100)
+            
+        slider.setValue(current_vol)
         slider.setFixedHeight(150)
         slider.setStyleSheet(FLUENT_SLIDER_STYLE)
         slider.valueChanged.connect(self.set_volume)
@@ -2024,6 +2293,14 @@ class PlayerWindow(FluentWindow):
         # but if we want a separate mute toggle:
         is_muted = not self.audioOutput.isMuted()
         self.audioOutput.setMuted(is_muted)
+        self.userMutedIntent = is_muted
+        
+        if self.volume_ctrl:
+            try:
+                self.volume_ctrl.SetMute(is_muted, None)
+            except:
+                pass
+                
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
         if is_muted:
             self.volumeValueLabel.setText("0%")
@@ -2152,7 +2429,7 @@ class PlayerWindow(FluentWindow):
     def set_loop_start(self):
         self.loopStartFrame = self.current_cache_index
         if self.loopStartFrame >= self.loopEndFrame and self.loopEndFrame != 0:
-            self.loopEndFrame = self.progressBar.maximum()
+            self.loopEndFrame = self.total_frames
             
         self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
         self.update_loop_frames_label()
@@ -2169,18 +2446,18 @@ class PlayerWindow(FluentWindow):
 
     def clear_loop_markers(self):
         self.loopStartFrame = 0
-        self.loopEndFrame = self.progressBar.maximum()
+        self.loopEndFrame = self.total_frames
         self.progressBar.update_markers(0, self.loopEndFrame)
         self.update_loop_frames_label()
         self.save_current_markers()
 
     def save_current_frame(self):
-        if not self.cached_frame_files or self.current_cache_index < 0 or self.current_cache_index >= len(self.cached_frame_files):
+        if self.current_cache_index not in getattr(self, 'cached_frame_dict', {}):
             return
             
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Frame", "", "PNG Image (*.png)")
         if fileName:
-            img = QImage(self.cached_frame_files[self.current_cache_index])
+            img = QImage(self.cached_frame_dict[self.current_cache_index])
             img.save(fileName)
 
     def save_loop_segment(self):
