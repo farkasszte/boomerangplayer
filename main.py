@@ -7,7 +7,7 @@ def main():
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     
     app = QApplication(sys.argv)
-    app.setApplicationName("Antigravity Video Player")
+    app.setApplicationName("Boomerang Player")
     
     # Set default font to avoid QFont warnings
     from PyQt6.QtGui import QFont

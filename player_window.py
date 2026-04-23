@@ -516,6 +516,8 @@ class PlayerWindow(FluentWindow):
         setTheme(Theme.DARK)
         
         super().__init__()
+        self.setWindowIcon(QIcon(get_resource_path("app_icon.ico")))
+        self.setWindowTitle("Boomerang Player")
         self.titleBar.setFixedHeight(32) # Compact header
         self.setContentsMargins(0, 0, 0, 0)
         

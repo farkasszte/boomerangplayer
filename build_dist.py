@@ -21,6 +21,7 @@ args = [
     '--windowed',          # No console window
     f'--name={APP_NAME}',
     '--icon=app_icon.ico',
+    '--add-data=app_icon.ico;.', # Add icon to data so QIcon can load it
     '--clean',
 ]
 
