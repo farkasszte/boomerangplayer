@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 import tempfile
 import shutil
 import glob
@@ -8,13 +9,14 @@ from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QTh
 from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
                              QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, 
-                             QSplitter, QGraphicsPixmapItem, QLabel, QComboBox)
+                             QSplitter, QGraphicsPixmapItem, QLabel, QComboBox, QMenu)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 
 from qfluentwidgets import (FluentWindow, 
                             FluentIcon, ToolButton, 
                             CardWidget, CaptionLabel,
-                            SwitchButton, ListWidget, Flyout, FlyoutView, PushButton)
+                            SwitchButton, ListWidget, PushButton, MessageBox, 
+                            SingleDirectionScrollArea, RoundMenu, Action)
 
 import sys
 
@@ -118,6 +120,26 @@ QSlider::handle:horizontal:hover {
 QSlider::sub-page:horizontal {
     background: #00f2ff;
     border-radius: 2px;
+}
+"""
+
+COMPACT_BTN_STYLE = """
+ToolButton {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: none;
+    border-radius: 0px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0px;
+    min-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    margin: 0px;
+}
+ToolButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+ToolButton:pressed {
+    background: rgba(255, 255, 255, 0.03);
 }
 """
 
@@ -377,6 +399,7 @@ class PlayerWindow(FluentWindow):
         print(f"Full RAM Preview cached {len(frame_files)} frames.")
         
         self.update_pixmap_from_cache()
+        self.apply_transformations(fit=True)
 
     def closeEvent(self, event):
         self.cleanup_cache()
@@ -455,29 +478,67 @@ class PlayerWindow(FluentWindow):
         self.current_cache_index = max(0, min(len(self.cached_frame_files) - 1, self.current_cache_index))
         self.update_pixmap_from_cache()
 
+    def reset_adjustments(self):
+        self.brightnessSlider.setValue(0)
+        self.contrastSlider.setValue(100)
+        self.gammaSlider.setValue(100)
+        self.saturationSlider.setValue(100)
+        self.update_pixmap_from_cache()
+
     def update_pixmap_from_cache(self):
-        if self.current_cache_index < 0 or self.current_cache_index >= len(self.cached_frame_files):
-            return
+        if self.cached_frame_files and self.current_cache_index < len(self.cached_frame_files):
+            file_path = self.cached_frame_files[self.current_cache_index]
+            pixmap = QPixmap(file_path)
             
+            # Apply image adjustments
+            b = self.brightnessSlider.value()
+            c = self.contrastSlider.value() / 100.0
+            g = self.gammaSlider.value() / 100.0
+            s = self.saturationSlider.value() / 100.0
+            
+            if b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
+                img = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
+                width, height = img.width(), img.height()
+                
+                ptr = img.bits()
+                ptr.setsize(img.sizeInBytes())
+                arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
+                
+                # RGB processing
+                rgb = arr[:, :, :3].astype(np.float32)
+                
+                if c != 1.0 or b != 0:
+                    rgb = rgb * c + b
+                    
+                if g != 1.0:
+                    rgb = 255.0 * (np.power(rgb / 255.0, 1.0 / g))
+                    
+                if s != 1.0:
+                    # Luma weights (ITU-R 601-2)
+                    gray = 0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]
+                    gray = np.stack([gray] * 3, axis=-1)
+                    rgb = gray + s * (rgb - gray)
+                
+                arr[:, :, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+                pixmap = QPixmap.fromImage(img)
+            
+            if self.pixmapItem:
+                self.pixmapItem.setPixmap(pixmap)
+                self.apply_transformations(fit=False)
+            
+            # Update position label
+            if hasattr(self, 'frameLabel'):
+                self.frameLabel.setText(f" [F: {self.current_cache_index + 1} / {len(self.cached_frame_files)}]")
+
         # Update slider to reflect current frame index
         if not self.is_scrubbing:
             self.progressBar.blockSignals(True)
             self.progressBar.setValue(self.current_cache_index)
             self.progressBar.blockSignals(False)
             
-        frame_path = self.cached_frame_files[self.current_cache_index]
-        if not os.path.exists(frame_path):
-            return # Still extracting or missing
-            
-        img = QImage(frame_path)
-        if not img.isNull():
-            self.pixmapItem.setPixmap(QPixmap.fromImage(img))
-            self.apply_transformations(fit=False) # Don't refit every frame
-            
         if self.fps > 0:
             pos = int((self.current_cache_index * 1000) / self.fps)
             self.currentTimeLabel.setText(self.format_time(pos))
-            self.frameLabel.setText(f" [F: {self.current_cache_index}]")
             
     def init_ui(self):
         # --- Main Interface ---
@@ -530,7 +591,43 @@ class PlayerWindow(FluentWindow):
         self.removeFileButton.setToolTip("Remove selected")
         self.removeFileButton.clicked.connect(self.remove_from_playlist)
         
+        self.addVideoFolderButton = ToolButton(FluentIcon.VIDEO)
+        self.addVideoFolderButton.setToolTip("Add all videos from folder")
+        self.addVideoFolderButton.clicked.connect(lambda: self.add_folder_contents(type="video"))
+        
+        self.addImageFolderButton = ToolButton(FluentIcon.PHOTO)
+        self.addImageFolderButton.setToolTip("Add all images from folder")
+        self.addImageFolderButton.clicked.connect(lambda: self.add_folder_contents(type="image"))
+        
+        self.sortPlaylistButton = ToolButton(FluentIcon.MENU)
+        self.sortPlaylistButton.setToolTip("Sort Playlist")
+        self.sortPlaylistButton.clicked.connect(self.show_sort_menu)
+        
+        self.sortMenu = QMenu(self)
+        self.sortMenu.setStyleSheet("""
+            QMenu {
+                background-color: #202020;
+                color: white;
+                border: 1px solid #333;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 20px 6px 10px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #333;
+            }
+        """)
+        self.sortMenu.addAction("Name (A-Z)", lambda: self.sort_playlist_by("name_asc"))
+        self.sortMenu.addAction("Name (Z-A)", lambda: self.sort_playlist_by("name_desc"))
+        self.sortMenu.addAction("Date (Newest)", lambda: self.sort_playlist_by("date_newest"))
+        self.sortMenu.addAction("Date (Oldest)", lambda: self.sort_playlist_by("date_oldest"))
+        
         self.playlistButtonsLayout.addWidget(self.addFileButton)
+        self.playlistButtonsLayout.addWidget(self.addVideoFolderButton)
+        self.playlistButtonsLayout.addWidget(self.addImageFolderButton)
+        self.playlistButtonsLayout.addWidget(self.sortPlaylistButton)
         self.playlistButtonsLayout.addWidget(self.savePlaylistButton)
         self.playlistButtonsLayout.addWidget(self.loadPlaylistButton)
         self.playlistButtonsLayout.addWidget(self.removeFileButton)
@@ -545,19 +642,27 @@ class PlayerWindow(FluentWindow):
         self.settingsContainer.setMinimumWidth(225)
         self.settingsContainer.setStyleSheet("background: #202020; border-right: 1px solid #333;")
         self.settingsLayout = QVBoxLayout(self.settingsContainer)
-        self.settingsLayout.setContentsMargins(15, 15, 15, 15)
-        self.settingsLayout.setSpacing(20)
+        self.settingsLayout.setContentsMargins(5, 10, 5, 10)
+        self.settingsLayout.setSpacing(10)
         
         self.settingsTitle = CaptionLabel("Video Settings")
-        self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white; margin-left: 10px;")
         self.settingsLayout.addWidget(self.settingsTitle)
         
-        self.settingsScroll = QWidget() # Placeholder for now, can be scroll area if needed
-        self.settingsInnerLayout = QVBoxLayout(self.settingsScroll)
-        self.settingsInnerLayout.setContentsMargins(0, 0, 0, 0)
-        self.settingsInnerLayout.setSpacing(15)
-        self.settingsLayout.addWidget(self.settingsScroll)
-        self.settingsLayout.addStretch(1)
+        self.scrollArea = SingleDirectionScrollArea(self.settingsContainer, Qt.Orientation.Vertical)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setStyleSheet("background: transparent; border: none;")
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        self.settingsScrollWidget = QWidget()
+        self.settingsScrollWidget.setStyleSheet("background: transparent;")
+        self.settingsInnerLayout = QVBoxLayout(self.settingsScrollWidget)
+        self.settingsInnerLayout.setContentsMargins(10, 0, 10, 0)
+        self.settingsInnerLayout.setSpacing(10)
+        
+        self.scrollArea.setWidget(self.settingsScrollWidget)
+        self.settingsLayout.addWidget(self.scrollArea)
 
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.view)
@@ -611,30 +716,96 @@ class PlayerWindow(FluentWindow):
         self.buttonsLayout.addSpacing(10)
         
         # Center: Playback controls
-        self.buttonsLayout.addStretch(1)
+        self.playbackButtonsLayout = QHBoxLayout()
+        self.playbackButtonsLayout.setSpacing(0)
         
         self.stepBackButton = ToolButton(FluentIcon.LEFT_ARROW)
         self.stepBackButton.setToolTip("Előző képkocka")
         self.stepBackButton.clicked.connect(lambda: self.step_frame(-1))
+        self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE)
         
         self.playButton = ToolButton(FluentIcon.PLAY)
         self.playButton.clicked.connect(self.play_pause)
+        self.playButton.setStyleSheet(COMPACT_BTN_STYLE)
         
         self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
         self.stepForwardButton.setToolTip("Következő képkocka")
         self.stepForwardButton.clicked.connect(lambda: self.step_frame(1))
+        self.stepForwardButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: 1px solid rgba(255, 255, 255, 0.08); border-top-right-radius: 4px; border-bottom-right-radius: 4px; }")
         
-        self.stopButton = ToolButton(FluentIcon.CLOSE)
-        self.stopButton.clicked.connect(self.stop_playback)
+        # Apply border radius to the first button too
+        self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }")
+
+        self.playbackButtonsLayout.addWidget(self.stepBackButton)
+        self.playbackButtonsLayout.addWidget(self.playButton)
+        self.playbackButtonsLayout.addWidget(self.stepForwardButton)
         
-        self.buttonsLayout.addWidget(self.stepBackButton)
-        self.buttonsLayout.addWidget(self.playButton)
-        self.buttonsLayout.addWidget(self.stepForwardButton)
-        self.buttonsLayout.addWidget(self.stopButton)
+        self.buttonsLayout.addStretch(1)
+        self.buttonsLayout.addLayout(self.playbackButtonsLayout)
         self.buttonsLayout.addStretch(1)
         
-        # Right side: Settings & Volume
-        # (Speed moved later)
+        # --- Speed ---
+        speedHeader = QHBoxLayout()
+        self.speedLabel = CaptionLabel("Playback Speed")
+        self.speedValueLabel = CaptionLabel("1.0x")
+        speedHeader.addWidget(self.speedLabel)
+        speedHeader.addStretch(1)
+        speedHeader.addWidget(self.speedValueLabel)
+        
+        self.speedSlider = QSlider(Qt.Orientation.Horizontal)
+        self.speedSlider.setRange(10, 500)
+        self.speedSlider.setValue(100)
+        self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.speedSlider.valueChanged.connect(lambda v: self.speedValueLabel.setText(f"{v/100:.1f}x"))
+        
+        self.settingsInnerLayout.addLayout(speedHeader)
+        self.settingsInnerLayout.addWidget(self.speedSlider)
+        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
+
+        # Image Adjustments
+        self.adjLabel = CaptionLabel("Image Adjustments")
+        self.adjLabel.setStyleSheet("font-weight: bold; margin-top: 5px;")
+        self.settingsInnerLayout.addWidget(self.adjLabel)
+
+        def create_adj_slider(label_text, min_val, max_val, default):
+            layout = QVBoxLayout()
+            header = QHBoxLayout()
+            lbl = CaptionLabel(label_text)
+            val_lbl = CaptionLabel(str(default))
+            header.addWidget(lbl)
+            header.addStretch(1)
+            header.addWidget(val_lbl)
+            
+            slider = QSlider(Qt.Orientation.Horizontal)
+            slider.setRange(min_val, max_val)
+            slider.setValue(default)
+            slider.setStyleSheet(FLUENT_SLIDER_STYLE)
+            slider.valueChanged.connect(lambda v: (val_lbl.setText(str(v)), self.update_pixmap_from_cache()))
+            
+            layout.addLayout(header)
+            layout.addWidget(slider)
+            return slider, layout
+
+        self.brightnessSlider, l1 = create_adj_slider("Brightness", -100, 100, 0)
+        self.contrastSlider, l2 = create_adj_slider("Contrast", 0, 200, 100)
+        self.gammaSlider, l3 = create_adj_slider("Gamma", 10, 300, 100)
+        self.saturationSlider, l4 = create_adj_slider("Saturation", 0, 200, 100)
+
+        self.settingsInnerLayout.addLayout(l1)
+        self.settingsInnerLayout.addLayout(l2)
+        self.settingsInnerLayout.addLayout(l3)
+        self.settingsInnerLayout.addLayout(l4)
+
+        self.resetAdjButton = PushButton("Reset Image")
+        self.resetAdjButton.clicked.connect(self.reset_adjustments)
+        self.settingsInnerLayout.addWidget(self.resetAdjButton)
+        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
+
+        # File Info Button
+        self.infoButton = PushButton("File Info")
+        self.infoButton.clicked.connect(self.show_file_info)
+        self.settingsInnerLayout.addWidget(self.infoButton)
+        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
         
         # --- Loop Controls (Moved to Sidebar) ---
         loopGroup = QVBoxLayout()
@@ -752,27 +923,6 @@ class PlayerWindow(FluentWindow):
         
         self.buttonsLayout.addSpacing(20)
         
-        # --- Speed Controls ---
-        speedGroup = QVBoxLayout()
-        speedGroup.setSpacing(5)
-        speedHeader = QHBoxLayout()
-        self.speedLabel = CaptionLabel("Playback Speed")
-        self.speedValueLabel = CaptionLabel("100%")
-        speedHeader.addWidget(self.speedLabel)
-        speedHeader.addStretch(1)
-        speedHeader.addWidget(self.speedValueLabel)
-        speedGroup.addLayout(speedHeader)
-        
-        self.speedSlider = QSlider(Qt.Orientation.Horizontal)
-        self.speedSlider.setRange(5, 200)
-        self.speedSlider.setValue(100)
-        self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
-        self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
-        speedGroup.addWidget(self.speedSlider)
-        
-        self.settingsInnerLayout.addLayout(speedGroup)
-        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
-        
         # --- Zoom Controls ---
         zoomGroup = QVBoxLayout()
         zoomGroup.setSpacing(5)
@@ -842,25 +992,32 @@ class PlayerWindow(FluentWindow):
         self.playerLayout.setSpacing(0)
         
     def open_file(self):
-        fileNames, _ = QFileDialog.getOpenFileNames(self, "Videók hozzáadása", "", 
-                                                   "Videó fájlok (*.mp4 *.mkv *.avi *.mov)")
+        fileNames, _ = QFileDialog.getOpenFileNames(self, "Fájlok hozzáadása", "", 
+                                                   "Média fájlok (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff)")
         if fileNames:
-            for fileName in fileNames:
-                # Add to playlist if not already there
-                exists = False
-                for i in range(self.playlistList.count()):
-                    if self.playlistList.item(i).data(Qt.ItemDataRole.UserRole) == fileName:
-                        exists = True
-                        break
-                
-                if not exists:
-                    item = QListWidgetItem(os.path.basename(fileName))
-                    item.setData(Qt.ItemDataRole.UserRole, fileName)
-                    self.playlistList.addItem(item)
-            
-            # Auto-play first one if nothing is playing
+            self.add_files_to_playlist(fileNames)
             if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
                 self.load_video(fileNames[0])
+
+    def add_folder_contents(self, type="video"):
+        folder = QFileDialog.getExistingDirectory(self, f"Select {type.capitalize()} Folder")
+        if not folder:
+            return
+            
+        if type == "video":
+            exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v')
+        else:
+            exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+            
+        files = []
+        for f in os.listdir(folder):
+            if f.lower().endswith(exts):
+                files.append(os.path.join(folder, f))
+        
+        if files:
+            self.add_files_to_playlist(sorted(files))
+            if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
+                self.load_video(files[0])
 
     def load_video(self, filePath):
         # Save markers for current video before switching
@@ -871,30 +1028,45 @@ class PlayerWindow(FluentWindow):
             self.zoomSlider.setValue(100)
             self.view.set_scroll_state(0, 0)
             
-            # Get accurate info using ffprobe before loading into player
-            fps, duration_ms, total_frames = self.get_video_info(filePath)
-            if fps > 0:
-                self.fps = fps
-                print(f"ffprobe detected FPS: {self.fps}")
+            # Check if it's an image
+            is_image = filePath.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff'))
             
-            self.current_cache_index = 0
-            self.update_pixmap_from_cache()
-            
-            self.mediaPlayer.setSource(QUrl.fromLocalFile(filePath))
-            self.setWindowTitle(os.path.basename(filePath))
-            
-            if duration_ms > 0:
-                self.update_duration(duration_ms)
+            if is_image:
+                self.cleanup_cache()
+                self.cached_frame_files = [filePath]
+                self.cached_file_path = filePath
+                self.current_cache_index = 0
+                self.fps = 1.0 
+                self.progressBar.setRange(0, 0)
+                self.update_pixmap_from_cache()
+                self.apply_transformations(fit=True)
+                self.mediaPlayer.stop()
+                self.setWindowTitle(os.path.basename(filePath))
+            else:
+                # Video logic
+                fps, duration_ms, total_frames = self.get_video_info(filePath)
+                if fps > 0:
+                    self.fps = fps
+                    print(f"ffprobe detected FPS: {self.fps}")
+                
+                self.current_cache_index = 0
+                self.update_pixmap_from_cache()
+                
+                self.mediaPlayer.setSource(QUrl.fromLocalFile(filePath))
+                self.setWindowTitle(os.path.basename(filePath))
+                
+                if duration_ms > 0:
+                    self.update_duration(duration_ms)
+                
+                self.mediaPlayer.pause()
+                self.playButton.setIcon(FluentIcon.PLAY)
+                self.playButton.setEnabled(True)
+                
+                # Start extraction
+                self.start_full_extraction()
             
             # Load markers if they exist
             self.load_markers_for_current()
-            
-            self.playButton.setEnabled(True)
-            self.mediaPlayer.pause()
-            self.playButton.setIcon(FluentIcon.PLAY)
-            
-            # Start extraction
-            self.start_full_extraction()
             
         except Exception as e:
             print(f"Hiba a fájl megnyitásakor: {e}")
@@ -962,7 +1134,11 @@ class PlayerWindow(FluentWindow):
                 'scrollX': scroll_x,
                 'scrollY': scroll_y,
                 'isMirrored': self.isMirrored,
-                'rotationAngle': self.rotationAngle
+                'rotationAngle': self.rotationAngle,
+                'brightness': self.brightnessSlider.value(),
+                'contrast': self.contrastSlider.value(),
+                'gamma': self.gammaSlider.value(),
+                'saturation': self.saturationSlider.value()
             }
 
     def load_markers_for_current(self):
@@ -980,6 +1156,13 @@ class PlayerWindow(FluentWindow):
             self.view.set_scroll_state(data.get('scrollX', 0), data.get('scrollY', 0))
             self.isMirrored = data.get('isMirrored', False)
             self.rotationAngle = data.get('rotationAngle', 0)
+            
+            # Load image adjustments
+            self.brightnessSlider.setValue(data.get('brightness', 0))
+            self.contrastSlider.setValue(data.get('contrast', 100))
+            self.gammaSlider.setValue(data.get('gamma', 100))
+            self.saturationSlider.setValue(data.get('saturation', 100))
+            
             self.apply_transformations(fit=True)
         else:
             self.loopStartFrame = 0
@@ -987,9 +1170,7 @@ class PlayerWindow(FluentWindow):
             if not self.globalLoopToggle.isChecked():
                 self.loopCombo.setCurrentIndex(0) # Default None
             self.speedSlider.setValue(100)
-            self.zoomSlider.setValue(100)
-            self.isMirrored = False
-            self.rotationAngle = 0
+            self.reset_adjustments()
             self.apply_transformations(fit=True)
             
         # Ensure the UI reflects the loaded/reset markers
@@ -998,13 +1179,14 @@ class PlayerWindow(FluentWindow):
 
     def handle_view_drop(self, files):
         if files:
-            # Filter for video files
-            video_files = [f for f in files if f.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v'))]
-            if video_files:
-                self.add_files_to_playlist(video_files)
+            # Filter for video and image files
+            valid_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+            valid_files = [f for f in files if f.lower().endswith(valid_exts)]
+            if valid_files:
+                self.add_files_to_playlist(valid_files)
                 # Load the first one if nothing is playing
-                if not self.playlist:
-                    self.load_video(video_files[0])
+                if not self.currentFilePath:
+                    self.load_video(valid_files[0])
             
     def add_files_to_playlist(self, file_paths):
         for filePath in file_paths:
@@ -1036,6 +1218,40 @@ class PlayerWindow(FluentWindow):
     def on_playlist_item_clicked(self, item):
         filePath = item.data(Qt.ItemDataRole.UserRole)
         self.load_video(filePath)
+
+    def show_sort_menu(self):
+        menu_height = self.sortMenu.sizeHint().height()
+        pos = self.sortPlaylistButton.mapToGlobal(QPoint(0, -menu_height))
+        self.sortMenu.exec(pos)
+
+    def sort_playlist_by(self, criteria):
+        items_info = []
+        for i in range(self.playlistList.count()):
+            item = self.playlistList.item(i)
+            path = item.data(Qt.ItemDataRole.UserRole)
+            items_info.append({
+                'item': item,
+                'name': item.text().lower(),
+                'date': os.path.getmtime(path) if os.path.exists(path) else 0
+            })
+            
+        if criteria == "name_asc":
+            items_info.sort(key=lambda x: x['name'])
+        elif criteria == "name_desc":
+            items_info.sort(key=lambda x: x['name'], reverse=True)
+        elif criteria == "date_newest":
+            items_info.sort(key=lambda x: x['date'], reverse=True)
+        elif criteria == "date_oldest":
+            items_info.sort(key=lambda x: x['date'])
+            
+        # Take all items out first to avoid deletion on clear
+        taken_items = []
+        for _ in range(self.playlistList.count()):
+            taken_items.append(self.playlistList.takeItem(0))
+            
+        # Re-add in sorted order
+        for info in items_info:
+            self.playlistList.addItem(info['item'])
 
     def remove_from_playlist(self):
         item = self.playlistList.currentItem()
@@ -1084,6 +1300,54 @@ class PlayerWindow(FluentWindow):
             
             if self.playlistList.count() > 0:
                 self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
+
+    def show_file_info(self):
+        if not self.currentFilePath or not os.path.exists(self.currentFilePath):
+            return
+            
+        try:
+            ffprobe_path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
+            if not os.path.exists(ffprobe_path):
+                ffprobe_path = "ffprobe"
+                
+            cmd = [
+                ffprobe_path, "-v", "error", 
+                "-select_streams", "v:0",
+                "-show_entries", "stream=width,height,avg_frame_rate,codec_name,pix_fmt",
+                "-show_entries", "format=size,duration,format_name",
+                "-of", "json", self.currentFilePath
+            ]
+            
+            creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
+            data = json.loads(result)
+            
+            stream = data.get('streams', [{}])[0]
+            fmt = data.get('format', {})
+            
+            size_mb = float(fmt.get('size', 0)) / (1024 * 1024)
+            res = f"{stream.get('width', '?')}x{stream.get('height', '?')}"
+            codec = stream.get('codec_name', 'unknown')
+            pix_fmt = stream.get('pix_fmt', 'unknown')
+            container = fmt.get('format_name', 'unknown').split(',')[0]
+            
+            info_text = (
+                f"Fájl: {os.path.basename(self.currentFilePath)}\n\n"
+                f"Felbontás: {res}\n"
+                f"Kodek: {codec} ({pix_fmt})\n"
+                f"Konténer: {container}\n"
+                f"FPS: {float(self.fps):.2f}\n"
+                f"Méret: {size_mb:.2f} MB\n\n"
+                f"Elérési út: {self.currentFilePath}"
+            )
+            
+            w = MessageBox("File Information", info_text, self)
+            w.yesButton.setText("OK")
+            w.cancelButton.hide()
+            w.exec()
+            
+        except Exception as e:
+            print(f"Error getting file info: {e}")
 
     def play_pause(self):
         if self.is_playing:
