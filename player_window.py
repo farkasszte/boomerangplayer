@@ -462,7 +462,7 @@ class PlayerWindow(FluentWindow):
             
         if self.fps > 0:
             pos = int((self.current_cache_index * 1000) / self.fps)
-            self.currentTimeLabel.setText(self.format_time(pos))
+            self.currentTimeLabel.setText(format_time(pos))
             
     def init_ui(self):
         # --- Main Interface ---
@@ -1730,7 +1730,7 @@ class PlayerWindow(FluentWindow):
         # Update labels (convert frames back to ms for display)
         if self.fps > 0:
             ms = int((index * 1000) / self.fps)
-            self.currentTimeLabel.setText(self.format_time(ms))
+            self.currentTimeLabel.setText(format_time(ms))
 
     def on_slider_pressed(self):
         self.is_scrubbing = True
@@ -1781,7 +1781,7 @@ class PlayerWindow(FluentWindow):
     def update_duration(self, duration):
         if self.fps > 0:
             self.total_frames = int((duration / 1000.0) * self.fps)
-            self.totalTimeLabel.setText(self.format_time(duration))
+            self.totalTimeLabel.setText(format_time(duration))
             self.sync_progress_bar()
             
             last_valid_frame = max(0, self.total_frames - 1)
