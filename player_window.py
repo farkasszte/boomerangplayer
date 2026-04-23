@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import glob
 import subprocess
-from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap
+from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread, QPoint
+from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
                              QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, 
                              QSplitter, QGraphicsPixmapItem, QLabel, QComboBox)
@@ -14,7 +14,7 @@ from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 from qfluentwidgets import (FluentWindow, 
                             FluentIcon, ToolButton, 
                             CardWidget, CaptionLabel,
-                            SwitchButton, ListWidget)
+                            SwitchButton, ListWidget, Flyout, FlyoutView, PushButton)
 
 import sys
 
@@ -33,30 +33,22 @@ class DropListWidget(ListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
-        
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
-            event.acceptProposedAction()
+            event.accept()
         else:
-            super().dragEnterEvent(event)
-            
+            event.ignore()
+
     def dragMoveEvent(self, event):
         if event.mimeData().hasUrls():
-            event.acceptProposedAction()
+            event.accept()
         else:
-            super().dragMoveEvent(event)
-            
+            event.ignore()
+
     def dropEvent(self, event):
-        if event.mimeData().hasUrls():
-            files = []
-            for url in event.mimeData().urls():
-                if url.isLocalFile():
-                    files.append(url.toLocalFile())
-            if files:
-                self.filesDropped.emit(files)
-            event.acceptProposedAction()
-        else:
-            super().dropEvent(event)
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        self.filesDropped.emit(files)
 
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(list, str)
@@ -210,6 +202,7 @@ class MarkerSlider(QSlider):
 
 class ZoomView(QGraphicsView):
     zoomChanged = pyqtSignal(float)
+    filesDropped = pyqtSignal(list)
 
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
@@ -218,6 +211,7 @@ class ZoomView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.setAcceptDrops(True)
         self.zoomLevel = 1.0
 
     def get_scroll_state(self):
@@ -230,6 +224,26 @@ class ZoomView(QGraphicsView):
     def _apply_scroll(self, x, y):
         self.horizontalScrollBar().setValue(x)
         self.verticalScrollBar().setValue(y)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            files = [u.toLocalFile() for u in event.mimeData().urls()]
+            self.filesDropped.emit(files)
+            event.acceptProposedAction()
+        else:
+            super().dropEvent(event)
 
     def wheelEvent(self, event):
         # Zoom factor
@@ -280,6 +294,8 @@ class PlayerWindow(FluentWindow):
         self.loopEndFrame = 0
         self.fps = 30.0 # Default fallback
         self.userMutedIntent = False
+        self.isMirrored = False
+        self.rotationAngle = 0
         
         # Initialize Media Player
         self.mediaPlayer = QMediaPlayer()
@@ -456,6 +472,7 @@ class PlayerWindow(FluentWindow):
         img = QImage(frame_path)
         if not img.isNull():
             self.pixmapItem.setPixmap(QPixmap.fromImage(img))
+            self.apply_transformations(fit=False) # Don't refit every frame
             
         if self.fps > 0:
             pos = int((self.current_cache_index * 1000) / self.fps)
@@ -476,12 +493,13 @@ class PlayerWindow(FluentWindow):
         
         self.scene = QGraphicsScene()
         self.view = ZoomView(self.scene, self.playerInterface)
+        self.view.filesDropped.connect(self.handle_view_drop)
         self.view.zoomChanged.connect(self.sync_zoom_ui)
         self.view.setStyleSheet("border: none; background: black;")
         
         # Playlist Sidebar
         self.playlistContainer = QFrame()
-        self.playlistContainer.setMinimumWidth(180)
+        self.playlistContainer.setMinimumWidth(225)
         self.playlistContainer.setStyleSheet("background: #202020; border-left: 1px solid #333;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
         self.playlistLayout.setContentsMargins(5, 5, 5, 5)
@@ -522,9 +540,30 @@ class PlayerWindow(FluentWindow):
         self.playlistLayout.addWidget(self.playlistList)
         self.playlistLayout.addLayout(self.playlistButtonsLayout)
         
+        # Settings Sidebar (Left)
+        self.settingsContainer = QFrame()
+        self.settingsContainer.setMinimumWidth(225)
+        self.settingsContainer.setStyleSheet("background: #202020; border-right: 1px solid #333;")
+        self.settingsLayout = QVBoxLayout(self.settingsContainer)
+        self.settingsLayout.setContentsMargins(15, 15, 15, 15)
+        self.settingsLayout.setSpacing(20)
+        
+        self.settingsTitle = CaptionLabel("Video Settings")
+        self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.settingsLayout.addWidget(self.settingsTitle)
+        
+        self.settingsScroll = QWidget() # Placeholder for now, can be scroll area if needed
+        self.settingsInnerLayout = QVBoxLayout(self.settingsScroll)
+        self.settingsInnerLayout.setContentsMargins(0, 0, 0, 0)
+        self.settingsInnerLayout.setSpacing(15)
+        self.settingsLayout.addWidget(self.settingsScroll)
+        self.settingsLayout.addStretch(1)
+
+        self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.playlistContainer)
-        self.mainSplitter.setStretchFactor(0, 1)
+        self.mainSplitter.setStretchFactor(1, 1)
+        self.settingsContainer.hide() # Hidden by default
         
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
         
@@ -563,12 +602,13 @@ class PlayerWindow(FluentWindow):
         # Buttons Row
         self.buttonsLayout = QHBoxLayout()
         
-        # Left side: File operations
-        self.openButton = ToolButton(FluentIcon.FOLDER)
-        self.openButton.clicked.connect(self.open_file)
-        self.buttonsLayout.addWidget(self.openButton)
+        # Left side: Settings & File Info
+        self.toggleSettingsButton = ToolButton(FluentIcon.SETTING)
+        self.toggleSettingsButton.setToolTip("Toggle Settings")
+        self.toggleSettingsButton.clicked.connect(self.toggle_settings)
+        self.buttonsLayout.addWidget(self.toggleSettingsButton)
         
-        self.buttonsLayout.addSpacing(20)
+        self.buttonsLayout.addSpacing(10)
         
         # Center: Playback controls
         self.buttonsLayout.addStretch(1)
@@ -594,75 +634,87 @@ class PlayerWindow(FluentWindow):
         self.buttonsLayout.addStretch(1)
         
         # Right side: Settings & Volume
-        # Speed Slider
-        self.speedLabel = CaptionLabel("Speed")
-        self.speedValueLabel = CaptionLabel("100%")
-        self.speedValueLabel.setFixedWidth(40)
-        self.speedSlider = QSlider(Qt.Orientation.Horizontal)
-        self.speedSlider.setRange(5, 200)  # 5% to 200%
-        self.speedSlider.setSingleStep(5)   # 5% steps
-        self.speedSlider.setPageStep(5)
-        self.speedSlider.setValue(100)       # Default: 100% = 1.0x
-        self.speedSlider.setFixedWidth(120)
-        self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
-        self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
-        self.speedSlider.setToolTip("Playback Speed")
+        # (Speed moved later)
         
-        self.buttonsLayout.addWidget(self.speedLabel)
-        self.buttonsLayout.addWidget(self.speedSlider)
-        self.buttonsLayout.addWidget(self.speedValueLabel)
+        # --- Loop Controls (Moved to Sidebar) ---
+        loopGroup = QVBoxLayout()
+        loopGroup.setSpacing(10)
         
-        self.buttonsLayout.addSpacing(10)
-        
-        # Loop Modes & Markers
-        self.loopLabel = CaptionLabel("Loop")
-        self.loopCombo = QComboBox()
-        self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-Pong"])
-        self.loopCombo.setCurrentIndex(3)
-        self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
-        self.loopCombo.setFixedWidth(100)
-        
+        loopHeader = QHBoxLayout()
+        self.loopLabel = CaptionLabel("Loop Mode")
         self.globalLoopToggle = SwitchButton()
         self.globalLoopToggle.setChecked(True)
         self.globalLoopToggle.setOnText("Global")
         self.globalLoopToggle.setOffText("Global")
-        self.globalLoopToggle.setText("Global")
         self.globalLoopToggle.setToolTip("Apply loop mode to all videos")
+        loopHeader.addWidget(self.loopLabel)
+        loopHeader.addStretch(1)
+        loopHeader.addWidget(self.globalLoopToggle)
+        loopGroup.addLayout(loopHeader)
         
-        self.loopFramesLabel = CaptionLabel("[F: 0 - End]")
-        self.loopFramesLabel.setStyleSheet("color: #888;")
+        self.loopCombo = QComboBox()
+        self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-Pong"])
+        self.loopCombo.setCurrentIndex(3)
+        self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
+        loopGroup.addWidget(self.loopCombo)
         
+        markerLayout = QHBoxLayout()
         self.setStartButton = ToolButton()
         self.setStartButton.setText("[")
-        self.setStartButton.setToolTip("Loop kezdete")
+        self.setStartButton.setFixedWidth(36)
         self.setStartButton.clicked.connect(self.set_loop_start)
         
         self.setEndButton = ToolButton()
         self.setEndButton.setText("]")
-        self.setEndButton.setToolTip("Loop vége")
+        self.setEndButton.setFixedWidth(36)
         self.setEndButton.clicked.connect(self.set_loop_end)
         
         self.clearMarkersButton = ToolButton(FluentIcon.DELETE)
-        self.clearMarkersButton.setToolTip("Loop törlése")
+        self.clearMarkersButton.setToolTip("Markers törlése")
+        self.clearMarkersButton.setFixedWidth(36)
         self.clearMarkersButton.clicked.connect(self.clear_loop_markers)
         
-        self.saveLoopButton = ToolButton(FluentIcon.SAVE)
+        self.loopFramesLabel = CaptionLabel("[F: 0 - End]")
+        self.loopFramesLabel.setStyleSheet("color: #888;")
+        
+        markerLayout.addWidget(self.setStartButton)
+        markerLayout.addWidget(self.setEndButton)
+        markerLayout.addWidget(self.clearMarkersButton)
+        markerLayout.addStretch(1)
+        markerLayout.addWidget(self.loopFramesLabel)
+        loopGroup.addLayout(markerLayout)
+        
+        actionButtonsLayout = QHBoxLayout()
+        self.saveLoopButton = PushButton("Save Loop")
         self.saveLoopButton.setToolTip("Save Loop Segment")
         self.saveLoopButton.clicked.connect(self.save_loop_segment)
         
-        self.saveFrameButton = ToolButton(FluentIcon.PHOTO)
+        self.saveFrameButton = PushButton("Save Frame")
         self.saveFrameButton.setToolTip("Save Current Frame")
         self.saveFrameButton.clicked.connect(self.save_current_frame)
         
-        self.buttonsLayout.addWidget(self.loopLabel)
-        self.buttonsLayout.addWidget(self.loopCombo)
-        self.buttonsLayout.addWidget(self.globalLoopToggle)
-        self.buttonsLayout.addWidget(self.loopFramesLabel)
-        self.buttonsLayout.addWidget(self.setStartButton)
-        self.buttonsLayout.addWidget(self.setEndButton)
-        self.buttonsLayout.addWidget(self.clearMarkersButton)
-        self.buttonsLayout.addWidget(self.saveLoopButton)
-        self.buttonsLayout.addWidget(self.saveFrameButton)
+        actionButtonsLayout.addWidget(self.saveLoopButton)
+        actionButtonsLayout.addWidget(self.saveFrameButton)
+        actionButtonsLayout.addStretch(1)
+        loopGroup.addLayout(actionButtonsLayout)
+        
+        # Transformation buttons under save buttons
+        transformButtons = QHBoxLayout()
+        self.mirrorButton = PushButton("Mirror")
+        self.mirrorButton.setToolTip("Tükrözés (Vízszintes)")
+        self.mirrorButton.clicked.connect(self.toggle_mirror)
+        
+        self.rotateButton = PushButton("Rotate")
+        self.rotateButton.setToolTip("Forgatás (90°)")
+        self.rotateButton.clicked.connect(self.rotate_video)
+        
+        transformButtons.addWidget(self.mirrorButton)
+        transformButtons.addWidget(self.rotateButton)
+        transformButtons.addStretch(1)
+        loopGroup.addLayout(transformButtons)
+        
+        self.settingsInnerLayout.addLayout(loopGroup)
+        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
         
         self.loopCombo.setStyleSheet("""
             QComboBox {
@@ -700,36 +752,70 @@ class PlayerWindow(FluentWindow):
         
         self.buttonsLayout.addSpacing(20)
         
-        # Zoom
+        # --- Speed Controls ---
+        speedGroup = QVBoxLayout()
+        speedGroup.setSpacing(5)
+        speedHeader = QHBoxLayout()
+        self.speedLabel = CaptionLabel("Playback Speed")
+        self.speedValueLabel = CaptionLabel("100%")
+        speedHeader.addWidget(self.speedLabel)
+        speedHeader.addStretch(1)
+        speedHeader.addWidget(self.speedValueLabel)
+        speedGroup.addLayout(speedHeader)
+        
+        self.speedSlider = QSlider(Qt.Orientation.Horizontal)
+        self.speedSlider.setRange(5, 200)
+        self.speedSlider.setValue(100)
+        self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
+        speedGroup.addWidget(self.speedSlider)
+        
+        self.settingsInnerLayout.addLayout(speedGroup)
+        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
+        
+        # --- Zoom Controls ---
+        zoomGroup = QVBoxLayout()
+        zoomGroup.setSpacing(5)
+        zoomHeader = QHBoxLayout()
         self.zoomLabel = CaptionLabel("Zoom")
         self.zoomValueLabel = CaptionLabel("100%")
-        self.zoomValueLabel.setFixedWidth(40)
+        zoomHeader.addWidget(self.zoomLabel)
+        zoomHeader.addStretch(1)
+        zoomHeader.addWidget(self.zoomValueLabel)
+        zoomGroup.addLayout(zoomHeader)
+        
         self.zoomSlider = QSlider(Qt.Orientation.Horizontal)
         self.zoomSlider.setRange(100, 1000)
-        self.zoomSlider.setSingleStep(20)   # 20% steps
-        self.zoomSlider.setPageStep(20)
         self.zoomSlider.setValue(100)
-        self.zoomSlider.setFixedWidth(120)
         self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         self.zoomSlider.valueChanged.connect(self.update_zoom)
-        self.buttonsLayout.addWidget(self.zoomLabel)
-        self.buttonsLayout.addWidget(self.zoomSlider)
-        self.buttonsLayout.addWidget(self.zoomValueLabel)
+        zoomGroup.addWidget(self.zoomSlider)
         
-        self.buttonsLayout.addSpacing(20)
+        self.settingsInnerLayout.addLayout(zoomGroup)
         
         # Volume
+        
+        # Volume (Modified to Flyout)
+        self.volumeContainer = QWidget()
+        self.volumeContainerLayout = QHBoxLayout(self.volumeContainer)
+        self.volumeContainerLayout.setContentsMargins(0, 0, 0, 0)
+        self.volumeContainerLayout.setSpacing(5)
+        
         self.volumeButton = ToolButton(FluentIcon.VOLUME)
         self.volumeButton.clicked.connect(self.toggle_mute)
-        self.volumeSlider = QSlider(Qt.Orientation.Horizontal)
-        self.volumeSlider.setRange(0, 100)
-        self.volumeSlider.setValue(70)
-        self.volumeSlider.setFixedWidth(120)
-        self.volumeSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.volumeValueLabel = ToolButton()
+        self.volumeValueLabel.setText("70%")
+        self.volumeValueLabel.setFixedWidth(40)
+        self.volumeValueLabel.setStyleSheet("border: none; background: transparent; color: #ccc; font-size: 12px;")
+        self.volumeValueLabel.clicked.connect(self.show_volume_flyout)
+        self.volumeValueLabel.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        self.volumeContainerLayout.addWidget(self.volumeButton)
+        self.volumeContainerLayout.addWidget(self.volumeValueLabel)
+        self.buttonsLayout.addWidget(self.volumeContainer)
+        
+        # We still need the internal logic for volume
         self.audioOutput.setVolume(0.7)
-        self.volumeSlider.valueChanged.connect(self.set_volume)
-        self.buttonsLayout.addWidget(self.volumeButton)
-        self.buttonsLayout.addWidget(self.volumeSlider)
         
         self.buttonsLayout.addSpacing(20)
         self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
@@ -874,7 +960,9 @@ class PlayerWindow(FluentWindow):
                 'speed': self.speedSlider.value(),
                 'zoom': self.zoomSlider.value(),
                 'scrollX': scroll_x,
-                'scrollY': scroll_y
+                'scrollY': scroll_y,
+                'isMirrored': self.isMirrored,
+                'rotationAngle': self.rotationAngle
             }
 
     def load_markers_for_current(self):
@@ -890,6 +978,9 @@ class PlayerWindow(FluentWindow):
             self.speedSlider.setValue(data.get('speed', 100))
             self.zoomSlider.setValue(data.get('zoom', 100))
             self.view.set_scroll_state(data.get('scrollX', 0), data.get('scrollY', 0))
+            self.isMirrored = data.get('isMirrored', False)
+            self.rotationAngle = data.get('rotationAngle', 0)
+            self.apply_transformations(fit=True)
         else:
             self.loopStartFrame = 0
             self.loopEndFrame = 0
@@ -897,13 +988,26 @@ class PlayerWindow(FluentWindow):
                 self.loopCombo.setCurrentIndex(0) # Default None
             self.speedSlider.setValue(100)
             self.zoomSlider.setValue(100)
+            self.isMirrored = False
+            self.rotationAngle = 0
+            self.apply_transformations(fit=True)
             
         # Ensure the UI reflects the loaded/reset markers
         self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
         self.update_loop_frames_label()
 
-    def add_files_to_playlist(self, files):
-        for filePath in files:
+    def handle_view_drop(self, files):
+        if files:
+            # Filter for video files
+            video_files = [f for f in files if f.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v'))]
+            if video_files:
+                self.add_files_to_playlist(video_files)
+                # Load the first one if nothing is playing
+                if not self.playlist:
+                    self.load_video(video_files[0])
+            
+    def add_files_to_playlist(self, file_paths):
+        for filePath in file_paths:
             if os.path.isfile(filePath):
                 # Create item with placeholder icon
                 item = QListWidgetItem(os.path.basename(filePath))
@@ -944,6 +1048,10 @@ class PlayerWindow(FluentWindow):
     def toggle_playlist(self):
         is_visible = self.playlistContainer.isVisible()
         self.playlistContainer.setVisible(not is_visible)
+
+    def toggle_settings(self):
+        is_visible = self.settingsContainer.isVisible()
+        self.settingsContainer.setVisible(not is_visible)
 
     def save_playlist_to_file(self):
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Project", "", "JSON Files (*.json)")
@@ -1066,17 +1174,54 @@ class PlayerWindow(FluentWindow):
                 self.update_loop_frames_label()
         
     def set_volume(self, volume):
-        self.audioOutput.setVolume(volume / 100)
-        if volume > 0 and self.audioOutput.isMuted():
-            self.toggle_mute() # Auto-unmute if sliding up
-        elif volume == 0 and not self.audioOutput.isMuted():
-            self.toggle_mute() # Auto-mute if reaching 0
+        self.audioOutput.setVolume(volume / 100.0)
+        self.volumeValueLabel.setText(f"{volume}%")
+        is_muted = volume == 0
+        self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
+        
+    def show_volume_flyout(self):
+        # Create a custom popup frame to avoid the default Flyout border
+        self.volumePopup = QFrame(None, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.volumePopup.setObjectName("volumePopup")
+        self.volumePopup.setStyleSheet("""
+            #volumePopup { 
+                background: #1e1e1e; 
+                border: 1px solid #333; 
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(self.volumePopup)
+        layout.setContentsMargins(10, 15, 10, 15)
+        
+        slider = QSlider(Qt.Orientation.Vertical)
+        slider.setRange(0, 100)
+        slider.setValue(int(self.audioOutput.volume() * 100))
+        slider.setFixedHeight(150)
+        slider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        slider.valueChanged.connect(self.set_volume)
+        
+        layout.addWidget(slider, 0, Qt.AlignmentFlag.AlignCenter)
+        
+        # Position accurately above the value label
+        self.volumePopup.adjustSize()
+        global_pos = self.volumeValueLabel.mapToGlobal(QPoint(0, 0))
+        x = global_pos.x() + (self.volumeValueLabel.width() - self.volumePopup.width()) // 2
+        y = global_pos.y() - self.volumePopup.height() - 8
+        
+        self.volumePopup.move(x, y)
+        self.volumePopup.show()
         
     def toggle_mute(self):
+        # Mute logic now handled by slider reaching 0, 
+        # but if we want a separate mute toggle:
         is_muted = not self.audioOutput.isMuted()
-        self.userMutedIntent = is_muted
         self.audioOutput.setMuted(is_muted)
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
+        if is_muted:
+            self.volumeValueLabel.setText("0%")
+        else:
+            vol = int(self.audioOutput.volume() * 100)
+            self.volumeValueLabel.setText(f"{vol}%")
         
     def on_speed_slider_changed(self, value):
         snapped = round(value / 5) * 5
@@ -1111,6 +1256,57 @@ class PlayerWindow(FluentWindow):
         val = int(zoom_level * 100)
         # Use singleShot to ensure the UI updates correctly in the next event loop cycle
         QTimer.singleShot(0, lambda: self._apply_sync_zoom(val))
+
+    def toggle_mirror(self):
+        self.isMirrored = not self.isMirrored
+        self.apply_transformations(fit=True)
+        self.save_current_markers()
+
+    def rotate_video(self):
+        self.rotationAngle = (self.rotationAngle + 90) % 360
+        self.apply_transformations(fit=True)
+        self.save_current_markers()
+
+    def apply_transformations(self, fit=False):
+        if not hasattr(self, 'pixmapItem') or self.pixmapItem is None:
+            return
+            
+        pix = self.pixmapItem.pixmap()
+        if pix.isNull():
+            return
+            
+        # We will apply all transformations (mirror, rotate) around the center of the pixmap
+        cx = pix.width() / 2.0
+        cy = pix.height() / 2.0
+        
+        transform = QTransform()
+        
+        # 1. Translate center to origin
+        transform.translate(cx, cy)
+        
+        # 2. Apply mirroring (horizontal flip)
+        if self.isMirrored:
+            transform.scale(-1, 1)
+            
+        # 3. Apply rotation
+        if self.rotationAngle != 0:
+            transform.rotate(self.rotationAngle)
+            
+        # 4. Translate back
+        transform.translate(-cx, -cy)
+        
+        self.pixmapItem.setTransform(transform)
+
+        # Update scene rect and center if requested
+        if hasattr(self, 'view') and self.view:
+            # Ensure scene rect is large enough for rotated item
+            max_dim = max(pix.width(), pix.height()) * 2
+            self.view.setSceneRect(-max_dim, -max_dim, max_dim * 4, max_dim * 4)
+            
+            if fit:
+                self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
+                self.view.zoomLevel = 1.0
+                self.sync_zoom_ui(1.0)
             
     def handle_status_change(self, status):
         if status == QMediaPlayer.MediaStatus.LoadedMedia:
@@ -1118,13 +1314,9 @@ class PlayerWindow(FluentWindow):
             # but we still check handle_metadata_change as a fallback
             self.handle_metadata_change()
             
-            # Adjust video item size to fit video aspect ratio
-            if self.view and self.pixmapItem.pixmap():
-                pix = self.pixmapItem.pixmap()
-                self.view.setSceneRect(0, 0, pix.width(), pix.height())
-                self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
-                self.view.zoomLevel = 1.0
-                self.sync_zoom_ui(1.0)
+            # Adjust video item size and center it
+            if self.view and self.pixmapItem:
+                self.apply_transformations(fit=True)
 
     def format_time(self, ms):
         seconds = (ms // 1000) % 60
