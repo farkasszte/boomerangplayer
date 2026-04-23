@@ -22,7 +22,8 @@ from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransfo
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
                              QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, 
                              QSplitter, QGraphicsPixmapItem, QLabel, QComboBox, QMenu,
-                             QGraphicsPathItem, QColorDialog, QButtonGroup, QGraphicsEllipseItem, QGridLayout)
+                             QGraphicsPathItem, QColorDialog, QButtonGroup, QGraphicsEllipseItem, QGridLayout,
+                             QInputDialog, QGraphicsTextItem)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 
 # Brute force silence qfluentwidgets during import
@@ -333,13 +334,31 @@ class ZoomView(QGraphicsView):
             elif self.drawing_tool == 'area_eraser':
                 self.perform_area_erase(scene_pos)
                 return
+            elif self.drawing_tool == 'text':
+                text, ok = QInputDialog.getText(self, "Add Text", "Enter text:")
+                if ok and text:
+                    from PyQt6.QtGui import QFont
+                    text_item = QGraphicsTextItem(text)
+                    text_item.setDefaultTextColor(self.pen_color)
+                    text_item.setFont(QFont("Segoe UI", int(self.pen_width * 3)))
+                    text_item.setPos(scene_pos)
+                    text_item.setZValue(1000)
+                    self.scene().addItem(text_item)
+                    self.strokes.append(text_item)
+                return
 
             self.start_scene_pos = scene_pos
             self.current_path = QPainterPath()
             self.current_path.moveTo(self.start_scene_pos)
             
             self.current_path_item = QGraphicsPathItem()
-            pen = QPen(self.pen_color, self.pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            
+            if self.drawing_tool == 'laser':
+                color = QColor(self.pen_color.red(), self.pen_color.green(), self.pen_color.blue(), 150)
+                pen = QPen(color, self.pen_width * 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            else:
+                pen = QPen(self.pen_color, self.pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            
             self.current_path_item.setPen(pen)
             self.current_path_item.setZValue(1000)
             
@@ -378,6 +397,12 @@ class ZoomView(QGraphicsView):
                             new_path.lineTo(rect.bottomLeft())
                             new_path.lineTo(rect.bottomRight())
                             new_path.closeSubpath()
+                        elif self.drawing_tool == 'line':
+                            new_path.moveTo(self.start_scene_pos)
+                            new_path.lineTo(curr_pos)
+                        elif self.drawing_tool == 'laser':
+                            new_path.moveTo(self.start_scene_pos)
+                            new_path.lineTo(curr_pos)
                         elif self.drawing_tool == 'arrow':
                             new_path.moveTo(self.start_scene_pos)
                             new_path.lineTo(curr_pos)
@@ -399,11 +424,10 @@ class ZoomView(QGraphicsView):
             super().mouseMoveEvent(event)
 
     def perform_object_erase(self, scene_pos):
-        # Slightly larger rect for easier hitting
         hit_rect = QRectF(scene_pos.x()-2, scene_pos.y()-2, 4, 4)
         items = self.scene().items(hit_rect)
         for item in items:
-            if isinstance(item, QGraphicsPathItem) and item in self.strokes:
+            if (isinstance(item, (QGraphicsPathItem, QGraphicsTextItem))) and item in self.strokes:
                 self.scene().removeItem(item)
                 self.strokes.remove(item)
 
@@ -443,6 +467,11 @@ class ZoomView(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
+            if self.drawing_tool == 'laser' and self.current_path_item:
+                if self.current_path_item.scene():
+                    self.scene().removeItem(self.current_path_item)
+                if self.current_path_item in self.strokes:
+                    self.strokes.remove(self.current_path_item)
             self.current_path_item = None
             self.current_path = None
         else:
@@ -543,6 +572,7 @@ class PlayerWindow(FluentWindow):
         self.isMirrored = False
         self.isMirroredVertical = False
         self.rotationAngle = 0
+        self.last_transform_state = None # (width, height, rotation, mirrored, mirrored_v)
         
         # Initialize Media Player
         self.mediaPlayer = QMediaPlayer()
@@ -615,6 +645,7 @@ class PlayerWindow(FluentWindow):
         self.total_frames = 0
         self.is_playing = False
         self.is_scrubbing = False
+        self.was_playing_before_cache_miss = False
         
         # UI Setup
         self.init_ui()
@@ -737,6 +768,11 @@ class PlayerWindow(FluentWindow):
             self.apply_transformations(fit=True)
             
         self.sync_progress_bar()
+        
+        # Auto-resume if we were playing before the cache miss
+        if getattr(self, 'was_playing_before_cache_miss', False):
+            self.was_playing_before_cache_miss = False
+            self.play_pause()
 
     def sync_progress_bar(self):
         if not self.currentFilePath:
@@ -751,7 +787,7 @@ class PlayerWindow(FluentWindow):
                 max_idx = max(indices)
                 self.progressBar.setRange(min_idx, max_idx)
         else:
-            self.progressBar.setRange(0, self.total_frames)
+            self.progressBar.setRange(0, max(0, self.total_frames - 1))
             
         self.progressBar.setValue(self.current_cache_index)
         self.progressBar.blockSignals(False)
@@ -791,10 +827,10 @@ class PlayerWindow(FluentWindow):
         loop_mode = self.loopCombo.currentIndex()
         if loop_mode == 0: # None
             start_frame = 0
-            end_frame = self.total_frames
+            end_frame = max(0, self.total_frames - 1)
         else:
             start_frame = self.loopStartFrame
-            end_frame = self.loopEndFrame if self.loopEndFrame > 0 else self.total_frames
+            end_frame = self.loopEndFrame if self.loopEndFrame > 0 else max(0, self.total_frames - 1)
             
         if start_frame > end_frame:
             start_frame, end_frame = end_frame, start_frame
@@ -832,10 +868,11 @@ class PlayerWindow(FluentWindow):
                     self.stop_playback()
                     
         # Clamp final index to total frames
-        self.current_cache_index = max(0, min(self.total_frames, self.current_cache_index))
+        self.current_cache_index = max(0, min(max(0, self.total_frames - 1), self.current_cache_index))
         
         # Check cache boundaries and trigger if needed
         if self.current_cache_index not in self.cached_frame_dict:
+            self.was_playing_before_cache_miss = self.is_playing
             self.stop_playback()
             self.loadingOverlay.show()
             self.request_frame_extraction(self.current_cache_index, force=True)
@@ -955,9 +992,39 @@ class PlayerWindow(FluentWindow):
         self.loadPlaylistButton.setToolTip("Load Playlist")
         self.loadPlaylistButton.clicked.connect(self.load_playlist_from_file)
         
+        # Create Premium Menus
+        menu_style = """
+            QMenu {
+                background-color: #202020;
+                color: white;
+                border: 1px solid #333;
+                border-radius: 5px;
+                padding: 5px;
+            }
+            QMenu::item {
+                padding: 5px 25px 5px 20px;
+                border-radius: 3px;
+            }
+            QMenu::item:selected {
+                background-color: #333;
+            }
+        """
+        
+        self.sortMenu = QMenu(self)
+        self.sortMenu.setStyleSheet(menu_style)
+        self.sortMenu.addAction("Name (A-Z)", lambda: self.sort_playlist_by("name_asc"))
+        self.sortMenu.addAction("Name (Z-A)", lambda: self.sort_playlist_by("name_desc"))
+        self.sortMenu.addAction("Date (Newest)", lambda: self.sort_playlist_by("date_newest"))
+        self.sortMenu.addAction("Date (Oldest)", lambda: self.sort_playlist_by("date_oldest"))
+
         self.removeFileButton = ToolButton(FluentIcon.DELETE)
-        self.removeFileButton.setToolTip("Remove selected")
-        self.removeFileButton.clicked.connect(self.remove_from_playlist)
+        self.removeFileButton.setToolTip("Remove functions")
+        
+        self.removeMenu = QMenu(self)
+        self.removeMenu.setStyleSheet(menu_style)
+        self.removeMenu.addAction("Remove Selected", self.remove_from_playlist)
+        self.removeMenu.addAction("Clear Playlist", self.clear_playlist)
+        self.removeFileButton.clicked.connect(self.show_remove_menu)
         
         self.addVideoFolderButton = ToolButton(FluentIcon.VIDEO)
         self.addVideoFolderButton.setToolTip("Add all videos from folder")
@@ -970,27 +1037,6 @@ class PlayerWindow(FluentWindow):
         self.sortPlaylistButton = ToolButton(FluentIcon.MENU)
         self.sortPlaylistButton.setToolTip("Sort Playlist")
         self.sortPlaylistButton.clicked.connect(self.show_sort_menu)
-        
-        self.sortMenu = QMenu(self)
-        self.sortMenu.setStyleSheet("""
-            QMenu {
-                background-color: #202020;
-                color: white;
-                border: 1px solid #333;
-                padding: 4px;
-            }
-            QMenu::item {
-                padding: 6px 20px 6px 10px;
-                border-radius: 4px;
-            }
-            QMenu::item:selected {
-                background-color: #333;
-            }
-        """)
-        self.sortMenu.addAction("Name (A-Z)", lambda: self.sort_playlist_by("name_asc"))
-        self.sortMenu.addAction("Name (Z-A)", lambda: self.sort_playlist_by("name_desc"))
-        self.sortMenu.addAction("Date (Newest)", lambda: self.sort_playlist_by("date_newest"))
-        self.sortMenu.addAction("Date (Oldest)", lambda: self.sort_playlist_by("date_oldest"))
         
         self.playlistButtonsLayout.addWidget(self.addFileButton)
         self.playlistButtonsLayout.addWidget(self.addVideoFolderButton)
@@ -1036,10 +1082,13 @@ class PlayerWindow(FluentWindow):
         # 8 Tools for 4x2 grid (English)
         all_tools = [
             ('Pen', 'pen', 'Freehand drawing'),
+            ('Line', 'line', 'Straight line'),
             ('Arrow', 'arrow', 'Directional arrow'),
-            ('Triangle', 'triangle', 'Triangle shape'),
+            ('Text', 'text', 'Add text label'),
             ('Square', 'rect', 'Square/Rectangle shape'),
             ('Circle', 'ellipse', 'Circle/Ellipse shape'),
+            ('Triangle', 'triangle', 'Triangle shape'),
+            ('Laser', 'laser', 'Temporary pointer'),
             ('Eraser (O)', 'obj_eraser', 'Delete whole objects'),
             ('Eraser (A)', 'area_eraser', 'Precision area eraser'),
             ('Eraser (L)', 'stroke_eraser', 'Delete connected lines')
@@ -1272,20 +1321,20 @@ class PlayerWindow(FluentWindow):
         self.stepBackButton = ToolButton(FluentIcon.LEFT_ARROW)
         self.stepBackButton.setToolTip("Previous frame")
         self.stepBackButton.clicked.connect(lambda: self.step_frame(-1))
-        self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE)
+        self.stepBackButton.setFixedSize(32, 32)
+        self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }")
         
         self.playButton = ToolButton(FluentIcon.PLAY)
         self.playButton.setIconSize(QSize(24, 24))
         self.playButton.setFixedSize(32, 32)
+        self.playButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }")
         self.playButton.clicked.connect(self.play_pause)
         
         self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
         self.stepForwardButton.setToolTip("Next frame")
         self.stepForwardButton.clicked.connect(lambda: self.step_frame(1))
+        self.stepForwardButton.setFixedSize(32, 32)
         self.stepForwardButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: 1px solid rgba(255, 255, 255, 0.08); border-top-right-radius: 4px; border-bottom-right-radius: 4px; }")
-        
-        # Apply border radius to the first button too
-        self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }")
 
         self.playbackButtonsLayout.addWidget(self.stepBackButton)
         self.playbackButtonsLayout.addWidget(self.playButton)
@@ -1991,8 +2040,8 @@ class PlayerWindow(FluentWindow):
         self.load_video(filePath)
 
     def show_sort_menu(self):
-        menu_height = self.sortMenu.sizeHint().height()
-        pos = self.sortPlaylistButton.mapToGlobal(QPoint(0, -menu_height))
+        menu_hint = self.sortMenu.sizeHint()
+        pos = self.sortPlaylistButton.mapToGlobal(QPoint(self.sortPlaylistButton.width() - menu_hint.width(), -menu_hint.height()))
         self.sortMenu.exec(pos)
 
     def sort_playlist_by(self, criteria):
@@ -2031,6 +2080,26 @@ class PlayerWindow(FluentWindow):
             if path in self.playlistData:
                 del self.playlistData[path]
             self.playlistList.takeItem(self.playlistList.row(item))
+
+    def clear_playlist(self):
+        self.playlistList.clear()
+        self.playlistData = {}
+        self.stop_playback()
+        self.cleanup_cache()
+        self.currentFilePath = None
+        self.setWindowTitle("Boomerang Player")
+        if hasattr(self, 'pixmapItem'):
+            self.pixmapItem.setPixmap(QPixmap())
+        self.progressBar.setRange(0, 0)
+        self.progressBar.setValue(0)
+        self.frameLabel.setText(" [F: 0]")
+        self.currentTimeLabel.setText("00:00")
+        self.totalTimeLabel.setText("00:00")
+
+    def show_remove_menu(self):
+        menu_hint = self.removeMenu.sizeHint()
+        pos = self.removeFileButton.mapToGlobal(QPoint(self.removeFileButton.width() - menu_hint.width(), -menu_hint.height()))
+        self.removeMenu.exec(pos)
 
     def toggle_playlist(self):
         is_visible = self.playlistContainer.isVisible()
@@ -2225,8 +2294,9 @@ class PlayerWindow(FluentWindow):
             self.totalTimeLabel.setText(self.format_time(duration))
             self.sync_progress_bar()
             
-            if self.loopEndFrame == 0 or self.loopEndFrame > self.total_frames:
-                self.loopEndFrame = self.total_frames
+            last_valid_frame = max(0, self.total_frames - 1)
+            if self.loopEndFrame == 0 or self.loopEndFrame > last_valid_frame:
+                self.loopEndFrame = last_valid_frame
                 self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
                 self.update_loop_frames_label()
         
@@ -2390,12 +2460,16 @@ class PlayerWindow(FluentWindow):
         transform.translate(-cx, -cy)
         
         self.pixmapItem.setTransform(transform)
-
+        
         # Update scene rect and center if requested
         if hasattr(self, 'view') and self.view:
-            # Ensure scene rect is large enough for rotated item
-            max_dim = max(pix.width(), pix.height()) * 2
-            self.view.setSceneRect(-max_dim, -max_dim, max_dim * 4, max_dim * 4)
+            # Only update scene rect if dimensions or rotation changed to prevent jumping
+            current_state = (pix.width(), pix.height(), self.rotationAngle, self.isMirrored, self.isMirroredVertical)
+            if current_state != self.last_transform_state:
+                self.last_transform_state = current_state
+                # Ensure scene rect is large enough for rotated item
+                max_dim = max(pix.width(), pix.height()) * 2
+                self.view.setSceneRect(-max_dim, -max_dim, max_dim * 4, max_dim * 4)
             
             if fit:
                 self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
@@ -2409,7 +2483,8 @@ class PlayerWindow(FluentWindow):
             self.handle_metadata_change()
             
             # Adjust video item size and center it
-            if self.view and self.pixmapItem:
+            # ONLY fit if we don't have a transform state yet (i.e. first load)
+            if self.view and self.pixmapItem and self.last_transform_state is None:
                 self.apply_transformations(fit=True)
 
     def format_time(self, ms):
@@ -2431,7 +2506,7 @@ class PlayerWindow(FluentWindow):
     def set_loop_start(self):
         self.loopStartFrame = self.current_cache_index
         if self.loopStartFrame >= self.loopEndFrame and self.loopEndFrame != 0:
-            self.loopEndFrame = self.total_frames
+            self.loopEndFrame = max(0, self.total_frames - 1)
             
         self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
         self.update_loop_frames_label()
@@ -2448,7 +2523,7 @@ class PlayerWindow(FluentWindow):
 
     def clear_loop_markers(self):
         self.loopStartFrame = 0
-        self.loopEndFrame = self.total_frames
+        self.loopEndFrame = max(0, self.total_frames - 1)
         self.progressBar.update_markers(0, self.loopEndFrame)
         self.update_loop_frames_label()
         self.save_current_markers()
