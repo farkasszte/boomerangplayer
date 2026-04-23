@@ -19,7 +19,7 @@ args = [
     'main.py',
     '--onefile',           # Single EXE
     '--windowed',          # No console window
-    '--name={APP_NAME}',
+    f'--name={APP_NAME}',
     '--icon=app_icon.ico',
     '--clean',
 ]
