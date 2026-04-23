@@ -1,24 +1,48 @@
 import os
 import json
+import math
 import numpy as np
 import tempfile
 import shutil
 import glob
 import subprocess
-from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread, QPoint
-from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform
+from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread, QPoint, QPointF, QRectF
+from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform, QPainterPath, QPainterPathStroker
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
                              QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, 
-                             QSplitter, QGraphicsPixmapItem, QLabel, QComboBox, QMenu)
+                             QSplitter, QGraphicsPixmapItem, QLabel, QComboBox, QMenu,
+                             QGraphicsPathItem, QColorDialog, QButtonGroup, QGraphicsEllipseItem, QGridLayout)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 
-from qfluentwidgets import (FluentWindow, 
-                            FluentIcon, ToolButton, 
-                            CardWidget, CaptionLabel,
-                            SwitchButton, ListWidget, PushButton, MessageBox, 
-                            SingleDirectionScrollArea)
+# Brute force silence qfluentwidgets during import
+import sys, os
+_temp_stdout = sys.stdout
+sys.stdout = open(os.devnull, 'w')
+try:
+    import qfluentwidgets
+    from qfluentwidgets import (FluentWindow, 
+                                FluentIcon, ToolButton, 
+                                CardWidget, CaptionLabel,
+                                SwitchButton, ListWidget, PushButton, MessageBox, 
+                                SingleDirectionScrollArea)
+    qfluentwidgets.HELP_MESSAGE = False
+finally:
+    sys.stdout.close()
+    sys.stdout = _temp_stdout
 
 import sys
+from PyQt6.QtCore import qInstallMessageHandler
+
+def qt_message_handler(mode, context, message):
+    # Suppress common but harmless Qt warnings that clutter the console
+    if "QFont::setPointSize: Point size <= 0" in message:
+        return
+    # For others, you could print them, but here we just ignore the known noisy ones
+    if not message.strip():
+        return
+    # sys.stderr.write(f"Qt Message: {message}\n")
+
+qInstallMessageHandler(qt_message_handler)
 
 def get_resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -235,6 +259,174 @@ class ZoomView(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setAcceptDrops(True)
         self.zoomLevel = 1.0
+        
+        # Drawing state
+        self.drawing_mode = False
+        self.drawing_tool = 'pen' # 'pen', 'rect', 'ellipse', 'triangle', 'obj_eraser', 'area_eraser'
+        self.pen_color = QColor(255, 0, 0) # Default Red
+        self.pen_width = 3
+        self.start_scene_pos = None
+        self.current_path = None
+        self.current_path_item = None
+        self.strokes = []
+        
+        # Visual brush cursor
+        self.cursor_item = QGraphicsEllipseItem()
+        self.cursor_item.setPen(QPen(QColor(255, 255, 255, 120), 1))
+        self.cursor_item.setBrush(QColor(255, 255, 255, 50))
+        self.cursor_item.setZValue(2000) # Above everything
+        self.cursor_item.setVisible(False)
+        self.scene().addItem(self.cursor_item)
+
+    def set_drawing_mode(self, enabled):
+        self.drawing_mode = enabled
+        self.cursor_item.setVisible(enabled)
+        if enabled:
+            self.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.setCursor(Qt.CursorShape.BlankCursor) # Hide default cursor
+            self.update_cursor_size()
+        else:
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def update_cursor_size(self):
+        r = self.pen_width / 2.0
+        self.cursor_item.setRect(-r, -r, self.pen_width, self.pen_width)
+
+    def mousePressEvent(self, event):
+        if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
+            scene_pos = self.mapToScene(event.pos())
+            
+            if self.drawing_tool == 'obj_eraser':
+                self.perform_object_erase(scene_pos)
+                return
+            elif self.drawing_tool == 'area_eraser':
+                self.perform_area_erase(scene_pos)
+                return
+
+            self.start_scene_pos = scene_pos
+            self.current_path = QPainterPath()
+            self.current_path.moveTo(self.start_scene_pos)
+            
+            self.current_path_item = QGraphicsPathItem()
+            pen = QPen(self.pen_color, self.pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            self.current_path_item.setPen(pen)
+            self.current_path_item.setZValue(1000)
+            
+            self.scene().addItem(self.current_path_item)
+            self.strokes.append(self.current_path_item)
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.drawing_mode:
+            curr_pos = self.mapToScene(event.pos())
+            self.cursor_item.setPos(curr_pos)
+            
+            if event.buttons() & Qt.MouseButton.LeftButton:
+                if self.drawing_tool in ['obj_eraser', 'stroke_eraser']:
+                    self.perform_object_erase(curr_pos)
+                    return
+                elif self.drawing_tool == 'area_eraser':
+                    self.perform_area_erase(curr_pos)
+                    return
+                    
+                if self.current_path_item:
+                    if self.drawing_tool == 'pen':
+                        self.current_path.lineTo(curr_pos)
+                    else:
+                        # Shapes: recreate path from start to current
+                        new_path = QPainterPath()
+                        rect = QRectF(self.start_scene_pos, curr_pos).normalized()
+                        
+                        if self.drawing_tool == 'rect':
+                            new_path.addRect(rect)
+                        elif self.drawing_tool == 'ellipse':
+                            new_path.addEllipse(rect)
+                        elif self.drawing_tool == 'triangle':
+                            new_path.moveTo(rect.left() + rect.width()/2, rect.top())
+                            new_path.lineTo(rect.bottomLeft())
+                            new_path.lineTo(rect.bottomRight())
+                            new_path.closeSubpath()
+                        elif self.drawing_tool == 'arrow':
+                            new_path.moveTo(self.start_scene_pos)
+                            new_path.lineTo(curr_pos)
+                            angle = math.atan2(curr_pos.y() - self.start_scene_pos.y(), curr_pos.x() - self.start_scene_pos.x())
+                            headSize = max(15, self.pen_width * 3)
+                            p1 = curr_pos - QPointF(headSize * math.cos(angle - math.pi / 6),
+                                                 headSize * math.sin(angle - math.pi / 6))
+                            p2 = curr_pos - QPointF(headSize * math.cos(angle + math.pi / 6),
+                                                 headSize * math.sin(angle + math.pi / 6))
+                            new_path.moveTo(curr_pos)
+                            new_path.lineTo(p1)
+                            new_path.moveTo(curr_pos)
+                            new_path.lineTo(p2)
+                        
+                        self.current_path = new_path
+                        
+                    self.current_path_item.setPath(self.current_path)
+        else:
+            super().mouseMoveEvent(event)
+
+    def perform_object_erase(self, scene_pos):
+        # Slightly larger rect for easier hitting
+        hit_rect = QRectF(scene_pos.x()-2, scene_pos.y()-2, 4, 4)
+        items = self.scene().items(hit_rect)
+        for item in items:
+            if isinstance(item, QGraphicsPathItem) and item in self.strokes:
+                self.scene().removeItem(item)
+                self.strokes.remove(item)
+
+    def perform_area_erase(self, scene_pos):
+        r = self.pen_width / 2.0
+        eraser_path = QPainterPath()
+        eraser_path.addEllipse(scene_pos, r, r)
+        
+        # Find items in the eraser area
+        items = self.scene().items(eraser_path.boundingRect())
+        for item in items:
+            if isinstance(item, QGraphicsPathItem) and item in self.strokes:
+                # Get current path
+                path = item.path()
+                
+                # If it's a thin line (no brush), convert to area for subtraction
+                if item.brush().style() == Qt.BrushStyle.NoBrush:
+                    stroker = QPainterPathStroker()
+                    stroker.setWidth(item.pen().widthF())
+                    stroker.setCapStyle(item.pen().capStyle())
+                    stroker.setJoinStyle(item.pen().joinStyle())
+                    path = stroker.createStroke(path)
+                    
+                    # Convert item to filled mode
+                    item.setBrush(item.pen().color())
+                    item.setPen(QPen(Qt.PenStyle.NoPen))
+                
+                new_path = path.subtracted(eraser_path)
+                
+                if new_path.isEmpty():
+                    if item.scene():
+                        self.scene().removeItem(item)
+                    if item in self.strokes:
+                        self.strokes.remove(item)
+                else:
+                    item.setPath(new_path)
+
+    def mouseReleaseEvent(self, event):
+        if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
+            self.current_path_item = None
+            self.current_path = None
+        else:
+            super().mouseReleaseEvent(event)
+
+    def undo_stroke(self):
+        if self.strokes:
+            last_stroke = self.strokes.pop()
+            self.scene().removeItem(last_stroke)
+
+    def clear_strokes(self):
+        for stroke in self.strokes:
+            self.scene().removeItem(stroke)
+        self.strokes = []
 
     def get_scroll_state(self):
         return (self.horizontalScrollBar().value(), self.verticalScrollBar().value())
@@ -317,6 +509,7 @@ class PlayerWindow(FluentWindow):
         self.fps = 30.0 # Default fallback
         self.userMutedIntent = False
         self.isMirrored = False
+        self.isMirroredVertical = False
         self.rotationAngle = 0
         
         # Initialize Media Player
@@ -560,13 +753,16 @@ class PlayerWindow(FluentWindow):
         
         # Playlist Sidebar
         self.playlistContainer = QFrame()
-        self.playlistContainer.setMinimumWidth(225)
+        self.playlistContainer.setMinimumWidth(280)
         self.playlistContainer.setStyleSheet("background: #202020; border-left: 1px solid #333;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
         self.playlistLayout.setContentsMargins(5, 5, 5, 5)
         
         self.playlistLabel = CaptionLabel("Playlist")
         self.playlistList = DropListWidget()
+        self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.playlistList.setStyleSheet("QListWidget { border: none; background: transparent; } QScrollBar:vertical { width: 0px; }")
         self.playlistList.setIconSize(QSize(120, 120))
         self.playlistList.itemDoubleClicked.connect(self.on_playlist_item_clicked)
         self.playlistList.filesDropped.connect(self.add_files_to_playlist)
@@ -637,9 +833,176 @@ class PlayerWindow(FluentWindow):
         self.playlistLayout.addWidget(self.playlistList)
         self.playlistLayout.addLayout(self.playlistButtonsLayout)
         
+        # Drawing Sidebar (Right - Alternative to Playlist)
+        self.drawingContainer = QFrame()
+        self.drawingContainer.setMinimumWidth(250)
+        self.drawingContainer.setStyleSheet("background: #202020; border-left: 1px solid #333; QScrollBar { width: 0px; height: 0px; }")
+        self.drawingSidebarLayout = QVBoxLayout(self.drawingContainer)
+        self.drawingSidebarLayout.setContentsMargins(10, 10, 10, 10)
+        self.drawingSidebarLayout.setSpacing(15)
+        
+        self.drawingSidebarTitle = CaptionLabel("Drawing Settings")
+        self.drawingSidebarTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.drawingSidebarLayout.addWidget(self.drawingSidebarTitle)
+        
+        # Drawing Toggle
+        self.drawModeToggleLayout = QHBoxLayout()
+        self.drawModeToggleLabel = QLabel("Drawing Mode")
+        self.drawModeToggleLabel.setStyleSheet("color: white; font-size: 13px;")
+        self.drawModeToggle = SwitchButton()
+        self.drawModeToggle.checkedChanged.connect(self.toggle_drawing_mode)
+        self.drawModeToggleLayout.addWidget(self.drawModeToggleLabel)
+        self.drawModeToggleLayout.addStretch(1)
+        self.drawModeToggleLayout.addWidget(self.drawModeToggle)
+        self.drawingSidebarLayout.addLayout(self.drawModeToggleLayout)
+        
+        self.toolsLayout = QGridLayout()
+        self.toolsLayout.setSpacing(8)
+        self.toolGroup = QButtonGroup(self)
+        self.toolGroup.setExclusive(True)
+        
+        # 8 Tools for 4x2 grid (English)
+        all_tools = [
+            ('Pen', 'pen', 'Freehand drawing'),
+            ('Arrow', 'arrow', 'Directional arrow'),
+            ('Triangle', 'triangle', 'Triangle shape'),
+            ('Square', 'rect', 'Square/Rectangle shape'),
+            ('Circle', 'ellipse', 'Circle/Ellipse shape'),
+            ('Eraser (O)', 'obj_eraser', 'Delete whole objects'),
+            ('Eraser (A)', 'area_eraser', 'Precision area eraser'),
+            ('Eraser (L)', 'stroke_eraser', 'Delete connected lines')
+        ]
+        
+        btn_style = """
+            PushButton {
+                font-size: 13px;
+                font-weight: 500;
+                padding: 6px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+            }
+            PushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            PushButton[checked=true] {
+                background: rgba(0, 242, 255, 0.15);
+                border: 1px solid #00f2ff;
+                color: #00f2ff;
+            }
+            PushButton:checked {
+                background: rgba(0, 242, 255, 0.15);
+                border: 1px solid #00f2ff;
+                color: #00f2ff;
+            }
+        """
+        
+        for i, (label, tool_id, tip) in enumerate(all_tools):
+            btn = PushButton(label)
+            btn.setFixedSize(115, 38)
+            btn.setToolTip(tip)
+            btn.setStyleSheet(btn_style)
+            
+            btn.setCheckable(True)
+            if tool_id == 'pen': btn.setChecked(True)
+            self.toolGroup.addButton(btn)
+            btn.clicked.connect(lambda checked, t=tool_id: self.set_active_tool(t))
+                
+            self.toolsLayout.addWidget(btn, i // 2, i % 2)
+            
+        self.drawingSidebarLayout.addLayout(self.toolsLayout)
+        
+        self.drawingSidebarLayout.addSpacing(15)
+        
+        # Thickness Row (Label + Preview + Color + Slider)
+        thicknessRow = QHBoxLayout()
+        self.penPreview = QLabel()
+        self.penPreview.setFixedSize(30, 30)
+        self.penPreview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.penPreview.setStyleSheet("background: transparent; border: none !important;")
+        thicknessRow.addWidget(self.penPreview)
+        
+        self.penSizeLabel = QLabel("3 px")
+        self.penSizeLabel.setStyleSheet("color: #00f2ff; font-size: 13px; font-weight: 500; background: transparent; border: none !important;")
+        thicknessRow.addWidget(self.penSizeLabel)
+        
+        thicknessRow.addStretch(1)
+        
+        self.penColorBtn = PushButton("Color")
+        self.penColorBtn.setFixedSize(70, 32)
+        self.penColorBtn.setToolTip("Choose pen color")
+        self.penColorBtn.setStyleSheet("""
+            PushButton {
+                font-size: 14px;
+                font-weight: 500;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 12px;
+            }
+            PushButton:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+        """)
+        self.penColorBtn.clicked.connect(self.choose_pen_color)
+        thicknessRow.addWidget(self.penColorBtn)
+        
+        self.drawingSidebarLayout.addLayout(thicknessRow)
+        
+        self.penSizeSlider = QSlider(Qt.Orientation.Horizontal)
+        self.penSizeSlider.setRange(1, 60)
+        self.penSizeSlider.setValue(3)
+        self.penSizeSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.penSizeSlider.valueChanged.connect(self.update_pen_width)
+        self.drawingSidebarLayout.addWidget(self.penSizeSlider)
+        
+        self.drawingSidebarLayout.addSpacing(15)
+        
+        # Action Grid for Drawing (Save Screenshot, Undo, Clear)
+        self.drawingActionsGrid = QGridLayout()
+        self.drawingActionsGrid.setSpacing(8)
+        
+        self.saveScreenshotBtn = PushButton("Save Screenshot")
+        self.saveScreenshotBtn.clicked.connect(self.save_drawing_screenshot)
+        self.saveScreenshotBtn.setToolTip("Export current frame with drawings")
+        
+        self.sidebarUndoBtn = PushButton("Undo")
+        self.sidebarUndoBtn.setToolTip("Undo last action")
+        self.sidebarUndoBtn.clicked.connect(self.undo_last_stroke)
+        
+        self.sidebarClearBtn = PushButton("Clear")
+        self.sidebarClearBtn.setToolTip("Clear all drawings")
+        self.sidebarClearBtn.clicked.connect(self.clear_all_strokes)
+        
+        # Apply design style to all
+        drawing_action_style = """
+            PushButton {
+                font-size: 13px;
+                font-weight: 500;
+                padding: 8px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+            }
+            PushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """
+        for btn in [self.saveScreenshotBtn, self.sidebarUndoBtn, self.sidebarClearBtn]:
+            btn.setStyleSheet(drawing_action_style)
+            btn.setMinimumHeight(38)
+            
+        self.drawingActionsGrid.addWidget(self.saveScreenshotBtn, 0, 0, 1, 2) # Top wide
+        self.drawingActionsGrid.addWidget(self.sidebarUndoBtn, 1, 0)
+        self.drawingActionsGrid.addWidget(self.sidebarClearBtn, 1, 1)
+        
+        self.drawingSidebarLayout.addLayout(self.drawingActionsGrid)
+        
+        self.drawingSidebarLayout.addStretch(1)
+        self.drawingContainer.hide()
+        
         # Settings Sidebar (Left)
         self.settingsContainer = QFrame()
-        self.settingsContainer.setMinimumWidth(225)
+        self.settingsContainer.setMinimumWidth(250)
         self.settingsContainer.setStyleSheet("background: #202020; border-right: 1px solid #333;")
         self.settingsLayout = QVBoxLayout(self.settingsContainer)
         self.settingsLayout.setContentsMargins(5, 10, 5, 10)
@@ -652,7 +1015,8 @@ class PlayerWindow(FluentWindow):
         self.scrollArea = SingleDirectionScrollArea(self.settingsContainer, Qt.Orientation.Vertical)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setStyleSheet("background: transparent; border: none;")
-        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scrollArea.setFrameShape(QFrame.Shape.NoFrame)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         self.settingsScrollWidget = QWidget()
@@ -667,10 +1031,14 @@ class PlayerWindow(FluentWindow):
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.playlistContainer)
+        self.mainSplitter.addWidget(self.drawingContainer)
         self.mainSplitter.setStretchFactor(1, 1)
         self.settingsContainer.hide() # Hidden by default
         
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
+        
+        # Initial pen preview
+        self.update_pen_preview()
         
         self.pixmapItem = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmapItem)
@@ -720,7 +1088,7 @@ class PlayerWindow(FluentWindow):
         self.playbackButtonsLayout.setSpacing(0)
         
         self.stepBackButton = ToolButton(FluentIcon.LEFT_ARROW)
-        self.stepBackButton.setToolTip("Előző képkocka")
+        self.stepBackButton.setToolTip("Previous frame")
         self.stepBackButton.clicked.connect(lambda: self.step_frame(-1))
         self.stepBackButton.setStyleSheet(COMPACT_BTN_STYLE)
         
@@ -729,7 +1097,7 @@ class PlayerWindow(FluentWindow):
         self.playButton.setStyleSheet(COMPACT_BTN_STYLE)
         
         self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
-        self.stepForwardButton.setToolTip("Következő képkocka")
+        self.stepForwardButton.setToolTip("Next frame")
         self.stepForwardButton.clicked.connect(lambda: self.step_frame(1))
         self.stepForwardButton.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: 1px solid rgba(255, 255, 255, 0.08); border-top-right-radius: 4px; border-bottom-right-radius: 4px; }")
         
@@ -760,6 +1128,26 @@ class PlayerWindow(FluentWindow):
         
         self.settingsInnerLayout.addLayout(speedHeader)
         self.settingsInnerLayout.addWidget(self.speedSlider)
+        
+        # --- Zoom Controls (Moved here) ---
+        zoomGroup = QVBoxLayout()
+        zoomGroup.setSpacing(5)
+        zoomHeader = QHBoxLayout()
+        self.zoomLabel = CaptionLabel("Zoom")
+        self.zoomValueLabel = CaptionLabel("100%")
+        zoomHeader.addWidget(self.zoomLabel)
+        zoomHeader.addStretch(1)
+        zoomHeader.addWidget(self.zoomValueLabel)
+        zoomGroup.addLayout(zoomHeader)
+        
+        self.zoomSlider = QSlider(Qt.Orientation.Horizontal)
+        self.zoomSlider.setRange(100, 1000)
+        self.zoomSlider.setValue(100)
+        self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.zoomSlider.valueChanged.connect(self.update_zoom)
+        zoomGroup.addWidget(self.zoomSlider)
+        
+        self.settingsInnerLayout.addLayout(zoomGroup)
         self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
 
         # Image Adjustments
@@ -796,15 +1184,35 @@ class PlayerWindow(FluentWindow):
         self.settingsInnerLayout.addLayout(l3)
         self.settingsInnerLayout.addLayout(l4)
 
+        footerButtonsLayout = QHBoxLayout()
         self.resetAdjButton = PushButton("Reset Image")
+        self.resetAdjButton.setMinimumWidth(100)
         self.resetAdjButton.clicked.connect(self.reset_adjustments)
-        self.settingsInnerLayout.addWidget(self.resetAdjButton)
-        self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
-
-        # File Info Button
+        
         self.infoButton = PushButton("File Info")
+        self.infoButton.setMinimumWidth(100)
         self.infoButton.clicked.connect(self.show_file_info)
-        self.settingsInnerLayout.addWidget(self.infoButton)
+        
+        # Apply the unified style
+        action_btn_style = """
+            PushButton {
+                font-size: 13px;
+                font-weight: 500;
+                padding: 6px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+            }
+            PushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """
+        for btn in [self.resetAdjButton, self.infoButton]:
+            btn.setStyleSheet(action_btn_style)
+            
+        footerButtonsLayout.addWidget(self.resetAdjButton)
+        footerButtonsLayout.addWidget(self.infoButton)
+        self.settingsInnerLayout.addLayout(footerButtonsLayout)
         self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
         
         # --- Loop Controls (Moved to Sidebar) ---
@@ -841,7 +1249,7 @@ class PlayerWindow(FluentWindow):
         self.setEndButton.clicked.connect(self.set_loop_end)
         
         self.clearMarkersButton = ToolButton(FluentIcon.DELETE)
-        self.clearMarkersButton.setToolTip("Markers törlése")
+        self.clearMarkersButton.setToolTip("Clear markers")
         self.clearMarkersButton.setFixedWidth(36)
         self.clearMarkersButton.clicked.connect(self.clear_loop_markers)
         
@@ -855,7 +1263,9 @@ class PlayerWindow(FluentWindow):
         markerLayout.addWidget(self.loopFramesLabel)
         loopGroup.addLayout(markerLayout)
         
-        actionButtonsLayout = QHBoxLayout()
+        self.actionsGrid = QGridLayout()
+        self.actionsGrid.setSpacing(8)
+        
         self.saveLoopButton = PushButton("Save Loop")
         self.saveLoopButton.setToolTip("Save Loop Segment")
         self.saveLoopButton.clicked.connect(self.save_loop_segment)
@@ -864,25 +1274,44 @@ class PlayerWindow(FluentWindow):
         self.saveFrameButton.setToolTip("Save Current Frame")
         self.saveFrameButton.clicked.connect(self.save_current_frame)
         
-        actionButtonsLayout.addWidget(self.saveLoopButton)
-        actionButtonsLayout.addWidget(self.saveFrameButton)
-        actionButtonsLayout.addStretch(1)
-        loopGroup.addLayout(actionButtonsLayout)
-        
-        # Transformation buttons under save buttons
-        transformButtons = QHBoxLayout()
-        self.mirrorButton = PushButton("Mirror")
-        self.mirrorButton.setToolTip("Tükrözés (Vízszintes)")
+        self.mirrorButton = PushButton("Mirror H")
+        self.mirrorButton.setToolTip("Mirror (Horizontal)")
         self.mirrorButton.clicked.connect(self.toggle_mirror)
         
+        self.mirrorVerticalButton = PushButton("Mirror V")
+        self.mirrorVerticalButton.setToolTip("Mirror (Vertical)")
+        self.mirrorVerticalButton.clicked.connect(self.toggle_vertical_mirror)
+        
         self.rotateButton = PushButton("Rotate")
-        self.rotateButton.setToolTip("Forgatás (90°)")
+        self.rotateButton.setToolTip("Rotate (90°)")
         self.rotateButton.clicked.connect(self.rotate_video)
         
-        transformButtons.addWidget(self.mirrorButton)
-        transformButtons.addWidget(self.rotateButton)
-        transformButtons.addStretch(1)
-        loopGroup.addLayout(transformButtons)
+        # Apply uniform styling and min-width to match drawing tools
+        action_btn_style = """
+            PushButton {
+                font-size: 13px;
+                font-weight: 500;
+                padding: 6px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+            }
+            PushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """
+        for btn in [self.saveLoopButton, self.saveFrameButton, self.mirrorButton, 
+                    self.mirrorVerticalButton, self.rotateButton]:
+            btn.setMinimumWidth(100)
+            btn.setStyleSheet(action_btn_style)
+            
+        self.actionsGrid.addWidget(self.saveLoopButton, 0, 0)
+        self.actionsGrid.addWidget(self.saveFrameButton, 0, 1)
+        self.actionsGrid.addWidget(self.mirrorButton, 1, 0)
+        self.actionsGrid.addWidget(self.mirrorVerticalButton, 1, 1)
+        self.actionsGrid.addWidget(self.rotateButton, 2, 0, 1, 2) # Span across 2 columns
+        
+        loopGroup.addLayout(self.actionsGrid)
         
         self.settingsInnerLayout.addLayout(loopGroup)
         self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
@@ -923,27 +1352,7 @@ class PlayerWindow(FluentWindow):
         
         self.buttonsLayout.addSpacing(20)
         
-        # --- Zoom Controls ---
-        zoomGroup = QVBoxLayout()
-        zoomGroup.setSpacing(5)
-        zoomHeader = QHBoxLayout()
-        self.zoomLabel = CaptionLabel("Zoom")
-        self.zoomValueLabel = CaptionLabel("100%")
-        zoomHeader.addWidget(self.zoomLabel)
-        zoomHeader.addStretch(1)
-        zoomHeader.addWidget(self.zoomValueLabel)
-        zoomGroup.addLayout(zoomHeader)
-        
-        self.zoomSlider = QSlider(Qt.Orientation.Horizontal)
-        self.zoomSlider.setRange(100, 1000)
-        self.zoomSlider.setValue(100)
-        self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
-        self.zoomSlider.valueChanged.connect(self.update_zoom)
-        zoomGroup.addWidget(self.zoomSlider)
-        
-        self.settingsInnerLayout.addLayout(zoomGroup)
-        
-        # Volume
+        self.settingsInnerLayout.addStretch(1)
         
         # Volume (Modified to Flyout)
         self.volumeContainer = QWidget()
@@ -973,6 +1382,11 @@ class PlayerWindow(FluentWindow):
         self.togglePlaylistButton.clicked.connect(self.toggle_playlist)
         self.buttonsLayout.addWidget(self.togglePlaylistButton)
         
+        self.toggleDrawingButton = ToolButton(FluentIcon.EDIT)
+        self.toggleDrawingButton.setToolTip("Toggle Drawing Panel")
+        self.toggleDrawingButton.clicked.connect(self.toggle_drawing_panel)
+        self.buttonsLayout.addWidget(self.toggleDrawingButton)
+        
         self.controlsLayout.addLayout(self.buttonsLayout)
         # Margin around the controls card itself for breathing room, but none on top
         self.playerLayout.addWidget(self.controlsCard, stretch=0)
@@ -992,8 +1406,8 @@ class PlayerWindow(FluentWindow):
         self.playerLayout.setSpacing(0)
         
     def open_file(self):
-        fileNames, _ = QFileDialog.getOpenFileNames(self, "Fájlok hozzáadása", "", 
-                                                   "Média fájlok (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff)")
+        fileNames, _ = QFileDialog.getOpenFileNames(self, "Add Files", "", 
+                                                   "Media Files (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff)")
         if fileNames:
             self.add_files_to_playlist(fileNames)
             if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
@@ -1069,7 +1483,7 @@ class PlayerWindow(FluentWindow):
             self.load_markers_for_current()
             
         except Exception as e:
-            print(f"Hiba a fájl megnyitásakor: {e}")
+            print(f"Error opening file: {e}")
 
     def get_video_info(self, file_path):
         """Get FPS and duration using ffprobe"""
@@ -1207,6 +1621,24 @@ class PlayerWindow(FluentWindow):
                 self.thumb_threads.append(thread)
                 thread.start()
 
+    def toggle_drawing_mode(self, checked):
+        self.view.set_drawing_mode(checked)
+
+    def choose_pen_color(self):
+        color = QColorDialog.getColor(self.view.pen_color, self, "Select Color")
+        if color.isValid():
+            self.view.pen_color = color
+            # Just update the background of the tool button subtly or the preview
+            self.update_pen_preview()
+            # Update cursor color too
+            self.set_active_tool(self.view.drawing_tool)
+
+    def update_pen_width(self, val):
+        self.view.pen_width = val
+        self.penSizeLabel.setText(f"{val} px")
+        self.view.update_cursor_size()
+        self.update_pen_preview()
+
     def on_thumbnail_ready(self, filePath, pixmap):
         # Find the item in the list and update its icon
         for i in range(self.playlistList.count()):
@@ -1214,6 +1646,110 @@ class PlayerWindow(FluentWindow):
             if item.data(Qt.ItemDataRole.UserRole) == filePath:
                 item.setIcon(QIcon(pixmap))
                 break
+
+    def create_shape_icon(self, shape_type):
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(Qt.GlobalColor.white, 2))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        
+        if shape_type == 'rect':
+            painter.drawRect(5, 5, 22, 22)
+        elif shape_type == 'ellipse':
+            painter.drawEllipse(5, 5, 22, 22)
+        elif shape_type == 'triangle':
+            path = QPainterPath()
+            path.moveTo(16, 5)
+            path.lineTo(27, 27)
+            path.lineTo(5, 27)
+            path.closeSubpath()
+            painter.drawPath(path)
+        elif shape_type == 'arrow':
+            painter.drawLine(6, 26, 26, 6)
+            painter.drawLine(26, 6, 15, 6)
+            painter.drawLine(26, 6, 26, 17)
+            
+        painter.end()
+        return QIcon(pixmap)
+
+    def set_active_tool(self, tool_id):
+        self.view.drawing_tool = tool_id
+        # Explicitly update button highlights because QButtonGroup exclusivity 
+        # might not trigger QSS :checked refresh automatically on some platforms
+        for btn in self.toolGroup.buttons():
+            btn.setProperty('checked', btn.isChecked())
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+            
+        # Update cursor color based on tool (optional logic)
+        if tool_id in ['obj_eraser', 'area_eraser', 'stroke_eraser']:
+            self.view.cursor_item.setBrush(QColor(255, 255, 255, 30))
+        else:
+            c = self.view.pen_color
+            self.view.cursor_item.setBrush(QColor(c.red(), c.green(), c.blue(), 50))
+
+    def undo_last_stroke(self):
+        if self.view.strokes:
+            item = self.view.strokes.pop()
+            if item.scene():
+                self.view.scene().removeItem(item)
+
+    def clear_all_strokes(self):
+        for item in self.view.strokes:
+            if item.scene():
+                self.view.scene().removeItem(item)
+        self.view.strokes.clear()
+
+    def save_drawing_screenshot(self):
+        if not self.view.pixmapItem.pixmap():
+            return
+            
+        # Get video source rect
+        rect = self.view.pixmapItem.pixmap().rect()
+        
+        # Create a high quality output pixmap
+        out_pixmap = QPixmap(rect.size())
+        out_pixmap.fill(Qt.GlobalColor.black)
+        
+        painter = QPainter(out_pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        
+        # Render ONLY the scene part that matches the video
+        # (This avoids black bars and UI elements)
+        self.view.scene().render(painter, QRectF(rect), QRectF(rect))
+        painter.end()
+        
+        filePath, _ = QFileDialog.getSaveFileName(
+            self, "Save Screenshot", "boomerang_analysis.png", "PNG file (*.png);;JPG file (*.jpg)"
+        )
+        if filePath:
+            out_pixmap.save(filePath)
+
+    def update_pen_preview(self):
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        color = self.view.pen_color
+        # Limit preview radius for display
+        r = min(14, self.view.pen_width / 2.0)
+        
+        # Subtle ring background
+        painter.setPen(QPen(QColor(255, 255, 255, 20), 1))
+        painter.setBrush(QColor(255, 255, 255, 5))
+        painter.drawEllipse(QPointF(16, 16), 15, 15)
+        
+        # The actual pen thickness
+        painter.setBrush(color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QPointF(16, 16), r, r)
+        painter.end()
+        
+        self.penPreview.setPixmap(pixmap)
 
     def on_playlist_item_clicked(self, item):
         filePath = item.data(Qt.ItemDataRole.UserRole)
@@ -1263,7 +1799,15 @@ class PlayerWindow(FluentWindow):
 
     def toggle_playlist(self):
         is_visible = self.playlistContainer.isVisible()
+        if not is_visible:
+            self.drawingContainer.hide()
         self.playlistContainer.setVisible(not is_visible)
+
+    def toggle_drawing_panel(self):
+        is_visible = self.drawingContainer.isVisible()
+        if not is_visible:
+            self.playlistContainer.hide()
+        self.drawingContainer.setVisible(not is_visible)
 
     def toggle_settings(self):
         is_visible = self.settingsContainer.isVisible()
@@ -1332,13 +1876,13 @@ class PlayerWindow(FluentWindow):
             container = fmt.get('format_name', 'unknown').split(',')[0]
             
             info_text = (
-                f"Fájl: {os.path.basename(self.currentFilePath)}\n\n"
-                f"Felbontás: {res}\n"
-                f"Kodek: {codec} ({pix_fmt})\n"
-                f"Konténer: {container}\n"
+                f"File: {os.path.basename(self.currentFilePath)}\n\n"
+                f"Resolution: {res}\n"
+                f"Codec: {codec} ({pix_fmt})\n"
+                f"Container: {container}\n"
                 f"FPS: {float(self.fps):.2f}\n"
-                f"Méret: {size_mb:.2f} MB\n\n"
-                f"Elérési út: {self.currentFilePath}"
+                f"Size: {size_mb:.2f} MB\n\n"
+                f"Path: {self.currentFilePath}"
             )
             
             w = MessageBox("File Information", info_text, self)
@@ -1526,6 +2070,11 @@ class PlayerWindow(FluentWindow):
         self.apply_transformations(fit=True)
         self.save_current_markers()
 
+    def toggle_vertical_mirror(self):
+        self.isMirroredVertical = not self.isMirroredVertical
+        self.apply_transformations(fit=True)
+        self.save_current_markers()
+
     def rotate_video(self):
         self.rotationAngle = (self.rotationAngle + 90) % 360
         self.apply_transformations(fit=True)
@@ -1548,9 +2097,11 @@ class PlayerWindow(FluentWindow):
         # 1. Translate center to origin
         transform.translate(cx, cy)
         
-        # 2. Apply mirroring (horizontal flip)
+        # 2. Apply mirroring
         if self.isMirrored:
             transform.scale(-1, 1)
+        if self.isMirroredVertical:
+            transform.scale(1, -1)
             
         # 3. Apply rotation
         if self.rotationAngle != 0:
