@@ -4,17 +4,17 @@ import tempfile
 import shutil
 import glob
 import subprocess
-from PyQt6.QtCore import Qt, QUrl, QTimer, QRectF, QSizeF, QSize, QElapsedTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QIcon, QTransform, QPainter, QPen, QColor, QImage, QPixmap
+from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread
+from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
-                             QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, QSplitter, QGraphicsPixmapItem, QLabel)
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData, QVideoSink
-from PyQt6.QtMultimediaWidgets import QVideoWidget, QGraphicsVideoItem
+                             QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, 
+                             QSplitter, QGraphicsPixmapItem, QLabel, QComboBox)
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 
-from qfluentwidgets import (FluentWindow, SubtitleLabel, PushButton, 
-                            Slider, FluentIcon, ToolButton, BodyLabel,
-                            CardWidget, PrimaryPushButton, CaptionLabel,
-                            SwitchButton, ComboBox, ListWidget)
+from qfluentwidgets import (FluentWindow, 
+                            FluentIcon, ToolButton, 
+                            CardWidget, CaptionLabel,
+                            SwitchButton, ListWidget)
 
 import sys
 
@@ -311,10 +311,7 @@ class PlayerWindow(FluentWindow):
         self.elapsedTimer = QElapsedTimer()
         self.last_advance_ms = 0
         
-        # Connect to size changes for reliable fitting
-        self.videoSink = QVideoSink()
-        self.mediaPlayer.setVideoSink(self.videoSink)
-        self.videoSink.videoSizeChanged.connect(self.handle_size_change)
+
             
     def cleanup_cache(self):
         if self.current_temp_dir and os.path.exists(self.current_temp_dir):
@@ -465,14 +462,6 @@ class PlayerWindow(FluentWindow):
             self.currentTimeLabel.setText(self.format_time(pos))
             self.frameLabel.setText(f" [F: {self.current_cache_index}]")
             
-    def handle_size_change(self):
-        sink = self.mediaPlayer.videoSink()
-        if sink and self.view:
-            size = sink.videoSize()
-            if not size.isEmpty():
-                self.view.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-                if getattr(self.view, 'zoomLevel', 1.0) == 1.0:
-                    self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
     def init_ui(self):
         # --- Main Interface ---
         self.playerInterface = QWidget()
@@ -627,7 +616,6 @@ class PlayerWindow(FluentWindow):
         
         # Loop Modes & Markers
         self.loopLabel = CaptionLabel("Loop")
-        from PyQt6.QtWidgets import QComboBox
         self.loopCombo = QComboBox()
         self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-Pong"])
         self.loopCombo.setCurrentIndex(3)
@@ -836,7 +824,7 @@ class PlayerWindow(FluentWindow):
                 ffprobe_path, "-v", "error", 
                 "-select_streams", "v:0",
                 "-show_entries", "stream=avg_frame_rate,duration,nb_frames",
-                "-of", "json", filePath
+                "-of", "json", file_path
             ]
             
             creationflags = 0
@@ -861,7 +849,7 @@ class PlayerWindow(FluentWindow):
             # Duration (seconds)
             duration = float(stream.get('duration', 0))
             if duration == 0:
-                cmd_fmt = [ffprobe_path, "-v", "error", "-show_entries", "format=duration", "-of", "json", filePath]
+                cmd_fmt = [ffprobe_path, "-v", "error", "-show_entries", "format=duration", "-of", "json", file_path]
                 result_fmt = subprocess.check_output(cmd_fmt, creationflags=creationflags).decode('utf-8')
                 data_fmt = json.loads(result_fmt)
                 duration = float(data_fmt.get('format', {}).get('duration', 0))
@@ -1131,14 +1119,12 @@ class PlayerWindow(FluentWindow):
             self.handle_metadata_change()
             
             # Adjust video item size to fit video aspect ratio
-            sink = self.mediaPlayer.videoSink()
-            if sink and self.view:
-                size = sink.videoSize()
-                if not size.isEmpty():
-                    self.view.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-                    self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
-                    self.view.zoomLevel = 1.0
-                    self.sync_zoom_ui(1.0)
+            if self.view and self.pixmapItem.pixmap():
+                pix = self.pixmapItem.pixmap()
+                self.view.setSceneRect(0, 0, pix.width(), pix.height())
+                self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
+                self.view.zoomLevel = 1.0
+                self.sync_zoom_ui(1.0)
 
     def format_time(self, ms):
         seconds = (ms // 1000) % 60
