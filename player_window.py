@@ -381,7 +381,7 @@ class ZoomView(QGraphicsView):
                     return
                     
                 if self.current_path_item:
-                    if self.drawing_tool == 'pen':
+                    if self.drawing_tool in ['pen', 'laser']:
                         self.current_path.lineTo(curr_pos)
                     else:
                         # Shapes: recreate path from start to current
@@ -398,9 +398,6 @@ class ZoomView(QGraphicsView):
                             new_path.lineTo(rect.bottomRight())
                             new_path.closeSubpath()
                         elif self.drawing_tool == 'line':
-                            new_path.moveTo(self.start_scene_pos)
-                            new_path.lineTo(curr_pos)
-                        elif self.drawing_tool == 'laser':
                             new_path.moveTo(self.start_scene_pos)
                             new_path.lineTo(curr_pos)
                         elif self.drawing_tool == 'arrow':
@@ -1724,6 +1721,9 @@ class PlayerWindow(FluentWindow):
             self.currentFilePath = filePath
             self.zoomSlider.setValue(100)
             self.view.set_scroll_state(0, 0)
+            self.last_transform_state = None
+            if hasattr(self, 'initial_fit_done'):
+                delattr(self, 'initial_fit_done')
             
             # Check if it's an image
             is_image = filePath.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff'))
@@ -2459,7 +2459,9 @@ class PlayerWindow(FluentWindow):
         # 4. Translate back
         transform.translate(-cx, -cy)
         
-        self.pixmapItem.setTransform(transform)
+        if not hasattr(self, 'last_applied_transform') or self.last_applied_transform != transform:
+            self.pixmapItem.setTransform(transform)
+            self.last_applied_transform = transform
         
         # Update scene rect and center if requested
         if hasattr(self, 'view') and self.view:
