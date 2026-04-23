@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 
 # Brute force silence qfluentwidgets during import
-import sys, os
 _temp_stdout = sys.stdout
 sys.stdout = open(os.devnull, 'w')
 try:
@@ -42,495 +41,21 @@ finally:
     sys.stdout.close()
     sys.stdout = _temp_stdout
 
-import sys
 from PyQt6.QtCore import qInstallMessageHandler
 
-def qt_message_handler(mode, context, message):
-    # Suppress common but harmless Qt warnings that clutter the console
-    if "QFont::setPointSize: Point size <= 0" in message:
-        return
-    # For others, you could print them, but here we just ignore the known noisy ones
-    if not message.strip():
-        return
-    # sys.stderr.write(f"Qt Message: {message}\n")
+# Import extracted modules
+from utils import get_resource_path, format_time, qt_message_handler
+from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE, 
+                    DRAWING_ACTION_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE, 
+                    LOOP_COMBO_STYLE, VOLUME_POPUP_STYLE, PEN_COLOR_BTN_STYLE_TEMPLATE)
+from components import DropListWidget, MarkerSlider, ZoomView
+from threads import FrameExtractionThread, ThumbnailThread
 
 qInstallMessageHandler(qt_message_handler)
 
-def get_resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
 
-class DropListWidget(ListWidget):
-    filesDropped = pyqtSignal(list)
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAcceptDrops(True)
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.accept()
-        else:
-            event.ignore()
 
-    def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.accept()
-        else:
-            event.ignore()
-
-    def dropEvent(self, event):
-        files = [u.toLocalFile() for u in event.mimeData().urls()]
-        self.filesDropped.emit(files)
-
-class FrameExtractionThread(QThread):
-    finished_extraction = pyqtSignal(dict, str, int, int)
-    
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None):
-        super().__init__(parent)
-        self.video_path = video_path
-        self.start_frame = start_frame
-        self.num_frames = num_frames
-        self.fps = fps if fps > 0 else 30.0
-        self.temp_dir = temp_dir if temp_dir else tempfile.mkdtemp(prefix="boomerang_frames_")
-        self.process = None
-        self._is_cancelled = False
-        
-    def run(self):
-        try:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            ffmpeg_path = os.path.join(base_dir, "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
-            if not os.path.exists(ffmpeg_path):
-                ffmpeg_path = "ffmpeg"
-                
-            out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
-            start_time = self.start_frame / self.fps
-            
-            cmd = [
-                ffmpeg_path, "-y",
-                "-ss", str(start_time),
-                "-i", self.video_path,
-                "-vframes", str(self.num_frames),
-                "-start_number", str(self.start_frame),
-                "-q:v", "2", 
-                out_pattern
-            ]
-            
-            creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            self.process.wait()
-            
-            if self._is_cancelled:
-                self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
-                return
-            
-            frame_files = {}
-            for i in range(self.start_frame, self.start_frame + self.num_frames):
-                fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
-                if os.path.exists(fpath):
-                    frame_files[i] = fpath
-                    
-            self.finished_extraction.emit(frame_files, self.temp_dir, self.start_frame, self.num_frames)
-        except Exception as e:
-            print(f"Extraction error: {e}")
-            self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
-
-    def cancel(self):
-        self._is_cancelled = True
-        if self.process:
-            try:
-                self.process.kill()
-            except:
-                pass
-
-FLUENT_SLIDER_STYLE = """
-QSlider::groove:horizontal {
-    border: none;
-    height: 4px;
-    background: #444;
-    margin: 2px 0;
-    border-radius: 2px;
-}
-QSlider::handle:horizontal {
-    background: #ffffff;
-    width: 2px;
-    height: 16px;
-    margin: -6px 0;
-}
-QSlider::handle:horizontal:hover {
-    background: #ffffff;
-}
-QSlider::sub-page:horizontal {
-    background: #00f2ff;
-    border-radius: 2px;
-}
-"""
-
-COMPACT_BTN_STYLE = """
-ToolButton {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-right: none;
-    border-radius: 0px;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0px;
-    min-width: 32px;
-    min-height: 32px;
-    max-height: 32px;
-    margin: 0px;
-}
-ToolButton:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-ToolButton:pressed {
-    background: rgba(255, 255, 255, 0.03);
-}
-"""
-
-class ThumbnailThread(QThread):
-    finished = pyqtSignal(str, QPixmap)
-
-    def __init__(self, filePath, parent=None):
-        super().__init__(parent)
-        self.filePath = filePath
-
-    def run(self):
-        try:
-            # Create a unique temp name for thumbnail
-            import tempfile
-            temp_dir = tempfile.gettempdir()
-            thumb_name = f"thumb_{hash(self.filePath)}.jpg"
-            thumb_path = os.path.join(temp_dir, thumb_name)
-            
-            # Use helper to find ffmpeg
-            ffmpeg_path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
-            if not os.path.exists(ffmpeg_path):
-                ffmpeg_path = "ffmpeg"
-
-            cmd = [
-                ffmpeg_path, "-y",
-                "-ss", "0.5",
-                "-i", self.filePath,
-                "-vframes", "1",
-                "-vf", "setsar=1,scale=120:120:force_original_aspect_ratio=decrease,pad=120:120:(ow-iw)/2:(oh-ih)/2",
-                thumb_path
-            ]
-            
-            creationflags = 0
-            if os.name == 'nt':
-                creationflags = subprocess.CREATE_NO_WINDOW
-                
-            process = subprocess.Popen(cmd, creationflags=creationflags)
-            process.wait()
-            
-            if os.path.exists(thumb_path):
-                pixmap = QPixmap(thumb_path)
-                self.finished.emit(self.filePath, pixmap)
-                # Cleanup temp file
-                try: os.remove(thumb_path)
-                except: pass
-        except Exception as e:
-            print(f"Thumbnail error: {e}")
-
-class MarkerSlider(QSlider):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.loopStartFrame = 0
-        self.loopEndFrame = 0
-        
-    def update_markers(self, start_frame, end_frame):
-        self.loopStartFrame = start_frame
-        self.loopEndFrame = end_frame
-        self.update()
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            val = self.minimum() + ((self.maximum() - self.minimum()) * event.position().x()) / self.width()
-            self.setValue(int(val))
-            self.sliderMoved.emit(int(val))
-        super().mousePressEvent(event)
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        if self.maximum() <= 0:
-            return
-            
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Calculate positions using frame indices
-        w = self.width()
-        start_x = int((self.loopStartFrame / self.maximum()) * w)
-        end_x = int((self.loopEndFrame / self.maximum()) * w)
-        
-        # Draw markers
-        pen = QPen(QColor(0, 153, 255)) # Fluent blue
-        pen.setWidth(2)
-        painter.setPen(pen)
-        
-        if self.loopStartFrame > 0:
-            painter.drawLine(start_x, 0, start_x, self.height())
-        if self.loopEndFrame > 0 and self.loopEndFrame < self.maximum():
-            painter.drawLine(end_x, 0, end_x, self.height())
-
-class ZoomView(QGraphicsView):
-    zoomChanged = pyqtSignal(float)
-    filesDropped = pyqtSignal(list)
-
-    def __init__(self, scene, parent=None):
-        super().__init__(scene, parent)
-        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        self.setAcceptDrops(True)
-        self.zoomLevel = 1.0
-        
-        # Drawing state
-        self.drawing_mode = False
-        self.drawing_tool = 'pen' # 'pen', 'rect', 'ellipse', 'triangle', 'obj_eraser', 'area_eraser'
-        self.pen_color = QColor(255, 0, 0) # Default Red
-        self.pen_width = 3
-        self.start_scene_pos = None
-        self.current_path = None
-        self.current_path_item = None
-        self.strokes = []
-        
-        # Visual brush cursor
-        self.cursor_item = QGraphicsEllipseItem()
-        self.cursor_item.setPen(QPen(QColor(255, 255, 255, 120), 1))
-        self.cursor_item.setBrush(QColor(255, 255, 255, 50))
-        self.cursor_item.setZValue(2000) # Above everything
-        self.cursor_item.setVisible(False)
-        self.scene().addItem(self.cursor_item)
-
-    def set_drawing_mode(self, enabled):
-        self.drawing_mode = enabled
-        self.cursor_item.setVisible(enabled)
-        if enabled:
-            self.setDragMode(QGraphicsView.DragMode.NoDrag)
-            self.setCursor(Qt.CursorShape.BlankCursor) # Hide default cursor
-            self.update_cursor_size()
-        else:
-            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-
-    def update_cursor_size(self):
-        r = self.pen_width / 2.0
-        self.cursor_item.setRect(-r, -r, self.pen_width, self.pen_width)
-
-    def mousePressEvent(self, event):
-        if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
-            scene_pos = self.mapToScene(event.pos())
-            
-            if self.drawing_tool == 'obj_eraser':
-                self.perform_object_erase(scene_pos)
-                return
-            elif self.drawing_tool == 'area_eraser':
-                self.perform_area_erase(scene_pos)
-                return
-            elif self.drawing_tool == 'text':
-                text, ok = QInputDialog.getText(self, "Add Text", "Enter text:")
-                if ok and text:
-                    from PyQt6.QtGui import QFont
-                    text_item = QGraphicsTextItem(text)
-                    text_item.setDefaultTextColor(self.pen_color)
-                    text_item.setFont(QFont("Segoe UI", int(self.pen_width * 3)))
-                    text_item.setPos(scene_pos)
-                    text_item.setZValue(1000)
-                    self.scene().addItem(text_item)
-                    self.strokes.append(text_item)
-                return
-
-            self.start_scene_pos = scene_pos
-            self.current_path = QPainterPath()
-            self.current_path.moveTo(self.start_scene_pos)
-            
-            self.current_path_item = QGraphicsPathItem()
-            
-            if self.drawing_tool == 'laser':
-                color = QColor(self.pen_color.red(), self.pen_color.green(), self.pen_color.blue(), 150)
-                pen = QPen(color, self.pen_width * 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
-            else:
-                pen = QPen(self.pen_color, self.pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
-            
-            self.current_path_item.setPen(pen)
-            self.current_path_item.setZValue(1000)
-            
-            self.scene().addItem(self.current_path_item)
-            self.strokes.append(self.current_path_item)
-        else:
-            super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self.drawing_mode:
-            curr_pos = self.mapToScene(event.pos())
-            self.cursor_item.setPos(curr_pos)
-            
-            if event.buttons() & Qt.MouseButton.LeftButton:
-                if self.drawing_tool in ['obj_eraser', 'stroke_eraser']:
-                    self.perform_object_erase(curr_pos)
-                    return
-                elif self.drawing_tool == 'area_eraser':
-                    self.perform_area_erase(curr_pos)
-                    return
-                    
-                if self.current_path_item:
-                    if self.drawing_tool in ['pen', 'laser']:
-                        self.current_path.lineTo(curr_pos)
-                    else:
-                        # Shapes: recreate path from start to current
-                        new_path = QPainterPath()
-                        rect = QRectF(self.start_scene_pos, curr_pos).normalized()
-                        
-                        if self.drawing_tool == 'rect':
-                            new_path.addRect(rect)
-                        elif self.drawing_tool == 'ellipse':
-                            new_path.addEllipse(rect)
-                        elif self.drawing_tool == 'triangle':
-                            new_path.moveTo(rect.left() + rect.width()/2, rect.top())
-                            new_path.lineTo(rect.bottomLeft())
-                            new_path.lineTo(rect.bottomRight())
-                            new_path.closeSubpath()
-                        elif self.drawing_tool == 'line':
-                            new_path.moveTo(self.start_scene_pos)
-                            new_path.lineTo(curr_pos)
-                        elif self.drawing_tool == 'arrow':
-                            new_path.moveTo(self.start_scene_pos)
-                            new_path.lineTo(curr_pos)
-                            angle = math.atan2(curr_pos.y() - self.start_scene_pos.y(), curr_pos.x() - self.start_scene_pos.x())
-                            headSize = max(15, self.pen_width * 3)
-                            p1 = curr_pos - QPointF(headSize * math.cos(angle - math.pi / 6),
-                                                 headSize * math.sin(angle - math.pi / 6))
-                            p2 = curr_pos - QPointF(headSize * math.cos(angle + math.pi / 6),
-                                                 headSize * math.sin(angle + math.pi / 6))
-                            new_path.moveTo(curr_pos)
-                            new_path.lineTo(p1)
-                            new_path.moveTo(curr_pos)
-                            new_path.lineTo(p2)
-                        
-                        self.current_path = new_path
-                        
-                    self.current_path_item.setPath(self.current_path)
-        else:
-            super().mouseMoveEvent(event)
-
-    def perform_object_erase(self, scene_pos):
-        hit_rect = QRectF(scene_pos.x()-2, scene_pos.y()-2, 4, 4)
-        items = self.scene().items(hit_rect)
-        for item in items:
-            if (isinstance(item, (QGraphicsPathItem, QGraphicsTextItem))) and item in self.strokes:
-                self.scene().removeItem(item)
-                self.strokes.remove(item)
-
-    def perform_area_erase(self, scene_pos):
-        r = self.pen_width / 2.0
-        eraser_path = QPainterPath()
-        eraser_path.addEllipse(scene_pos, r, r)
-        
-        # Find items in the eraser area
-        items = self.scene().items(eraser_path.boundingRect())
-        for item in items:
-            if isinstance(item, QGraphicsPathItem) and item in self.strokes:
-                # Get current path
-                path = item.path()
-                
-                # If it's a thin line (no brush), convert to area for subtraction
-                if item.brush().style() == Qt.BrushStyle.NoBrush:
-                    stroker = QPainterPathStroker()
-                    stroker.setWidth(item.pen().widthF())
-                    stroker.setCapStyle(item.pen().capStyle())
-                    stroker.setJoinStyle(item.pen().joinStyle())
-                    path = stroker.createStroke(path)
-                    
-                    # Convert item to filled mode
-                    item.setBrush(item.pen().color())
-                    item.setPen(QPen(Qt.PenStyle.NoPen))
-                
-                new_path = path.subtracted(eraser_path)
-                
-                if new_path.isEmpty():
-                    if item.scene():
-                        self.scene().removeItem(item)
-                    if item in self.strokes:
-                        self.strokes.remove(item)
-                else:
-                    item.setPath(new_path)
-
-    def mouseReleaseEvent(self, event):
-        if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
-            if self.drawing_tool == 'laser' and self.current_path_item:
-                if self.current_path_item.scene():
-                    self.scene().removeItem(self.current_path_item)
-                if self.current_path_item in self.strokes:
-                    self.strokes.remove(self.current_path_item)
-            self.current_path_item = None
-            self.current_path = None
-        else:
-            super().mouseReleaseEvent(event)
-
-    def undo_stroke(self):
-        if self.strokes:
-            last_stroke = self.strokes.pop()
-            self.scene().removeItem(last_stroke)
-
-    def clear_strokes(self):
-        for stroke in self.strokes:
-            self.scene().removeItem(stroke)
-        self.strokes = []
-
-    def get_scroll_state(self):
-        return (self.horizontalScrollBar().value(), self.verticalScrollBar().value())
-    
-    def set_scroll_state(self, x, y):
-        # We need a small delay to ensure the scene is properly sized before restoring scroll
-        QTimer.singleShot(50, lambda: self._apply_scroll(x, y))
-
-    def _apply_scroll(self, x, y):
-        self.horizontalScrollBar().setValue(x)
-        self.verticalScrollBar().setValue(y)
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        if event.mimeData().hasUrls():
-            files = [u.toLocalFile() for u in event.mimeData().urls()]
-            self.filesDropped.emit(files)
-            event.acceptProposedAction()
-        else:
-            super().dropEvent(event)
-
-    def wheelEvent(self, event):
-        # Zoom factor
-        factor = 1.1 if event.angleDelta().y() > 0 else 1/1.1
-        new_zoom = self.zoomLevel * factor
-        
-        # Limit zoom
-        if 1.0 <= new_zoom <= 10.0:
-            self.zoomLevel = new_zoom
-            self.scale(factor, factor)
-            self.zoomChanged.emit(self.zoomLevel)
-        elif new_zoom < 1.0:
-            # Snap to 1.0
-            factor = 1.0 / self.zoomLevel
-            self.zoomLevel = 1.0
-            self.scale(factor, factor)
-            self.zoomChanged.emit(self.zoomLevel)
 
 class PlayerWindow(FluentWindow):
     def __init__(self):
@@ -1091,35 +616,12 @@ class PlayerWindow(FluentWindow):
             ('Eraser (L)', 'stroke_eraser', 'Delete connected lines')
         ]
         
-        btn_style = """
-            PushButton {
-                font-size: 13px;
-                font-weight: 500;
-                padding: 6px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-            }
-            PushButton:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-            PushButton[checked=true] {
-                background: rgba(0, 242, 255, 0.15);
-                border: 1px solid #00f2ff;
-                color: #00f2ff;
-            }
-            PushButton:checked {
-                background: rgba(0, 242, 255, 0.15);
-                border: 1px solid #00f2ff;
-                color: #00f2ff;
-            }
-        """
         
         for i, (label, tool_id, tip) in enumerate(all_tools):
             btn = PushButton(label)
             btn.setFixedSize(115, 38)
             btn.setToolTip(tip)
-            btn.setStyleSheet(btn_style)
+            btn.setStyleSheet(TOOL_BTN_STYLE)
             
             btn.setCheckable(True)
             if tool_id == 'pen': btn.setChecked(True)
@@ -1192,21 +694,8 @@ class PlayerWindow(FluentWindow):
         self.sidebarClearBtn.clicked.connect(self.clear_all_strokes)
         
         # Apply design style to all
-        drawing_action_style = """
-            PushButton {
-                font-size: 13px;
-                font-weight: 500;
-                padding: 8px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-            }
-            PushButton:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-        """
         for btn in [self.saveScreenshotBtn, self.sidebarUndoBtn, self.sidebarClearBtn]:
-            btn.setStyleSheet(drawing_action_style)
+            btn.setStyleSheet(DRAWING_ACTION_STYLE)
             btn.setMinimumHeight(38)
             
         self.drawingActionsGrid.addWidget(self.saveScreenshotBtn, 0, 0, 1, 2) # Top wide
@@ -1468,7 +957,7 @@ class PlayerWindow(FluentWindow):
             }
         """
         for btn in [self.resetAdjButton, self.infoButton]:
-            btn.setStyleSheet(action_btn_style)
+            btn.setStyleSheet(ACTION_BTN_STYLE)
             
         footerButtonsLayout.addWidget(self.resetAdjButton)
         footerButtonsLayout.addWidget(self.infoButton)
@@ -1511,6 +1000,7 @@ class PlayerWindow(FluentWindow):
         self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-Pong"])
         self.loopCombo.setCurrentIndex(3)
         self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
+        self.loopCombo.setStyleSheet(LOOP_COMBO_STYLE)
         loopGroup.addWidget(self.loopCombo)
         
         markerLayout = QHBoxLayout()
@@ -1579,7 +1069,7 @@ class PlayerWindow(FluentWindow):
         for btn in [self.saveLoopButton, self.saveFrameButton, self.mirrorButton, 
                     self.mirrorVerticalButton, self.rotateButton]:
             btn.setMinimumWidth(100)
-            btn.setStyleSheet(action_btn_style)
+            btn.setStyleSheet(ACTION_BTN_STYLE)
             
         self.actionsGrid.addWidget(self.saveLoopButton, 0, 0)
         self.actionsGrid.addWidget(self.saveFrameButton, 0, 1)
@@ -2489,13 +1979,6 @@ class PlayerWindow(FluentWindow):
             if self.view and self.pixmapItem and self.last_transform_state is None:
                 self.apply_transformations(fit=True)
 
-    def format_time(self, ms):
-        seconds = (ms // 1000) % 60
-        minutes = (ms // (1000 * 60)) % 60
-        hours = (ms // (1000 * 60 * 60))
-        if hours > 0:
-            return f"{hours:02}:{minutes:02}:{seconds:02}"
-        return f"{minutes:02}:{seconds:02}"
 
     def update_loop_frames_label(self):
         start_f = self.loopStartFrame
