@@ -1,8 +1,8 @@
 import os
 import subprocess
 import tempfile
-from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtGui import QPixmap, QPainter, QColor
 from utils import get_resource_path
 
 class FrameExtractionThread(QThread):
@@ -74,9 +74,28 @@ class ThumbnailThread(QThread):
 
     def run(self):
         try:
+            # Native image handling
+            image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+            if self.filePath.lower().endswith(image_exts):
+                pixmap = QPixmap(self.filePath)
+                if not pixmap.isNull():
+                    thumb = pixmap.scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                    # Create a centered crop to match the 120x120 look
+                    final_thumb = QPixmap(120, 120)
+                    final_thumb.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(final_thumb)
+                    x = (120 - thumb.width()) // 2
+                    y = (120 - thumb.height()) // 2
+                    painter.drawPixmap(x, y, thumb)
+                    painter.end()
+                    self.finished.emit(self.filePath, final_thumb)
+                    return
+
+            # Video handling via FFmpeg
             import tempfile
+            import uuid
             temp_dir = tempfile.gettempdir()
-            thumb_name = f"thumb_{hash(self.filePath)}.jpg"
+            thumb_name = f"thumb_{uuid.uuid4().hex}.jpg"
             thumb_path = os.path.join(temp_dir, thumb_name)
             
             ffmpeg_path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
@@ -85,21 +104,28 @@ class ThumbnailThread(QThread):
 
             cmd = [
                 ffmpeg_path, "-y",
-                "-ss", "0.5",
+                "-ss", "1.0", # Skip very beginning
                 "-i", self.filePath,
                 "-vframes", "1",
-                "-vf", "setsar=1,scale=120:120:force_original_aspect_ratio=decrease,pad=120:120:(ow-iw)/2:(oh-ih)/2",
+                "-vf", "setsar=1,scale=120:120:force_original_aspect_ratio=increase,crop=120:120",
                 thumb_path
             ]
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            process = subprocess.Popen(cmd, creationflags=creationflags)
-            process.wait()
+            process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
+            # Wait with timeout to prevent hanging
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return
+
             if os.path.exists(thumb_path):
                 pixmap = QPixmap(thumb_path)
-                self.finished.emit(self.filePath, pixmap)
+                if not pixmap.isNull():
+                    self.finished.emit(self.filePath, pixmap)
                 try: os.remove(thumb_path)
                 except: pass
         except Exception as e:
-            print(f"Thumbnail error: {e}")
+            print(f"Thumbnail error for {self.filePath}: {e}")

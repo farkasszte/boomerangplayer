@@ -17,13 +17,12 @@ try:
 except Exception:
     HAS_PYCAW = False
 
-from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, pyqtSignal, QThread, QPoint, QPointF, QRectF
-from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform, QPainterPath, QPainterPathStroker
+from PyQt6.QtCore import Qt, QUrl, QTimer, QSize, QElapsedTimer, QPoint, QPointF, QRectF
+from PyQt6.QtGui import QIcon, QPainter, QPen, QColor, QImage, QPixmap, QTransform, QPainterPath
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, 
                              QGraphicsView, QGraphicsScene, QSlider, QFrame, QListWidgetItem, 
                              QSplitter, QGraphicsPixmapItem, QLabel, QComboBox, QMenu,
-                             QGraphicsPathItem, QColorDialog, QButtonGroup, QGraphicsEllipseItem, QGridLayout,
-                             QInputDialog, QGraphicsTextItem)
+                             QColorDialog, QButtonGroup, QGridLayout)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaMetaData
 
 # Brute force silence qfluentwidgets during import
@@ -474,7 +473,7 @@ class PlayerWindow(FluentWindow):
         # Splitter for Video + Playlist
         self.mainSplitter = QSplitter(Qt.Orientation.Horizontal)
         self.mainSplitter.setHandleWidth(1)
-        self.mainSplitter.setStyleSheet("QSplitter::handle { background: #333; }")
+        self.mainSplitter.setStyleSheet("QSplitter::handle { background: transparent; }")
         
         self.scene = QGraphicsScene()
         self.view = ZoomView(self.scene, self.playerInterface)
@@ -485,11 +484,25 @@ class PlayerWindow(FluentWindow):
         # Playlist Sidebar
         self.playlistContainer = QFrame()
         self.playlistContainer.setMinimumWidth(250)
-        self.playlistContainer.setStyleSheet("background: #202020; border-left: 1px solid #333;")
+        self.playlistContainer.setStyleSheet("background: #202020; border: none;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
         self.playlistLayout.setContentsMargins(5, 5, 5, 5)
         
         self.playlistLabel = CaptionLabel("Playlist")
+        self.playlistLabel.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.playlistLayout.addWidget(self.playlistLabel)
+        
+        self.thumbToggleRow = QHBoxLayout()
+        self.thumbLabel = CaptionLabel("Show thumbnails")
+        self.thumbToggle = SwitchButton()
+        self.thumbToggle.setChecked(True)
+        self.thumbToggle.setToolTip("Show/Hide thumbnails")
+        self.thumbToggle.checkedChanged.connect(self.on_thumb_toggle_changed)
+        
+        self.thumbToggleRow.addWidget(self.thumbLabel)
+        self.thumbToggleRow.addStretch(1)
+        self.thumbToggleRow.addWidget(self.thumbToggle)
+        self.playlistLayout.addLayout(self.thumbToggleRow)
         self.playlistList = DropListWidget()
         self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -509,11 +522,11 @@ class PlayerWindow(FluentWindow):
         self.btn_add.setToolTip("Add media or load playlist")
         self.addMenu = QMenu(self)
         self.addMenu.setStyleSheet(MENU_STYLE)
-        self.addMenu.addAction("Add Video(s)", self.open_file)
-        self.addMenu.addAction("Add Video Folder", lambda: self.add_folder_contents(type="video"))
-        self.addMenu.addAction("Add Image Folder", lambda: self.add_folder_contents(type="image"))
+        self.addMenu.addAction("Add media", self.open_file)
+        self.addMenu.addAction("Add video folder", lambda: self.add_folder_contents(type="video"))
+        self.addMenu.addAction("Add image folder", lambda: self.add_folder_contents(type="image"))
         self.addMenu.addSeparator()
-        self.addMenu.addAction("Load Playlist", self.load_playlist_from_file)
+        self.addMenu.addAction("Load playlist", self.load_playlist_from_file)
         self.btn_add.clicked.connect(self.show_add_menu)
         
         # --- Sort Button ---
@@ -537,8 +550,8 @@ class PlayerWindow(FluentWindow):
         self.btn_clear.setToolTip("Remove items or clear list")
         self.removeMenu = QMenu(self)
         self.removeMenu.setStyleSheet(MENU_STYLE)
-        self.removeMenu.addAction("Remove Selected", self.remove_from_playlist)
-        self.removeMenu.addAction("Clear All", self.clear_playlist)
+        self.removeMenu.addAction("Remove selected", self.remove_from_playlist)
+        self.removeMenu.addAction("Clear all", self.clear_playlist)
         self.btn_clear.clicked.connect(self.show_clear_menu)
         
         # Add to Grid
@@ -547,19 +560,17 @@ class PlayerWindow(FluentWindow):
         self.playlistButtonsGrid.addWidget(self.btn_save, 1, 0)
         self.playlistButtonsGrid.addWidget(self.btn_clear, 1, 1)
         
-        self.playlistLayout.addWidget(self.playlistLabel)
-        self.playlistLayout.addWidget(self.playlistList)
         self.playlistLayout.addLayout(self.playlistButtonsGrid)
         
         # Drawing Sidebar (Right - Alternative to Playlist)
         self.drawingContainer = QFrame()
         self.drawingContainer.setMinimumWidth(250)
-        self.drawingContainer.setStyleSheet("background: #202020; border-left: 1px solid #333; QScrollBar { width: 0px; height: 0px; }")
+        self.drawingContainer.setStyleSheet("background: #202020; border: none; QScrollBar { width: 0px; height: 0px; }")
         self.drawingSidebarLayout = QVBoxLayout(self.drawingContainer)
         self.drawingSidebarLayout.setContentsMargins(10, 10, 10, 10)
         self.drawingSidebarLayout.setSpacing(15)
         
-        self.drawingSidebarTitle = CaptionLabel("Drawing Settings")
+        self.drawingSidebarTitle = CaptionLabel("Drawing settings")
         self.drawingSidebarTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
         self.drawingSidebarLayout.addWidget(self.drawingSidebarTitle)
         
@@ -669,7 +680,7 @@ class PlayerWindow(FluentWindow):
         self.drawingActionsGrid = QGridLayout()
         self.drawingActionsGrid.setSpacing(8)
         
-        self.saveScreenshotBtn = PushButton("Save Screenshot")
+        self.saveScreenshotBtn = PushButton("Save screenshot")
         self.saveScreenshotBtn.clicked.connect(self.save_drawing_screenshot)
         self.saveScreenshotBtn.setToolTip("Export current frame with drawings")
         
@@ -698,13 +709,13 @@ class PlayerWindow(FluentWindow):
         # Settings Sidebar (Left)
         self.settingsContainer = QFrame()
         self.settingsContainer.setMinimumWidth(250)
-        self.settingsContainer.setStyleSheet("background: #202020; border-right: 1px solid #333;")
+        self.settingsContainer.setStyleSheet("background: #202020; border: none;")
         self.settingsLayout = QVBoxLayout(self.settingsContainer)
-        self.settingsLayout.setContentsMargins(5, 10, 5, 10)
+        self.settingsLayout.setContentsMargins(10, 10, 10, 10)
         self.settingsLayout.setSpacing(10)
         
-        self.settingsTitle = CaptionLabel("Video Settings")
-        self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white; margin-left: 10px;")
+        self.settingsTitle = CaptionLabel("Video settings")
+        self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
         self.settingsLayout.addWidget(self.settingsTitle)
         
         self.scrollArea = SingleDirectionScrollArea(self.settingsContainer, Qt.Orientation.Vertical)
@@ -717,7 +728,7 @@ class PlayerWindow(FluentWindow):
         self.settingsScrollWidget = QWidget()
         self.settingsScrollWidget.setStyleSheet("background: transparent;")
         self.settingsInnerLayout = QVBoxLayout(self.settingsScrollWidget)
-        self.settingsInnerLayout.setContentsMargins(10, 0, 10, 0)
+        self.settingsInnerLayout.setContentsMargins(0, 0, 0, 0)
         self.settingsInnerLayout.setSpacing(10)
         
         self.scrollArea.setWidget(self.settingsScrollWidget)
@@ -743,7 +754,7 @@ class PlayerWindow(FluentWindow):
         self.scene.addItem(self.pixmapItem)
         
         # Overlay for loading
-        self.loadingOverlay = QLabel("Caching RAM Preview...", self.view)
+        self.loadingOverlay = QLabel("Caching RAM preview...", self.view)
         self.loadingOverlay.setStyleSheet("background: rgba(0,0,0,180); color: white; font-size: 24px; font-weight: bold; border-radius: 10px;")
         self.loadingOverlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loadingOverlay.hide()
@@ -786,7 +797,7 @@ class PlayerWindow(FluentWindow):
         
         # Left side: Settings & File Info
         self.toggleSettingsButton = ToolButton(FluentIcon.SETTING)
-        self.toggleSettingsButton.setToolTip("Toggle Settings")
+        self.toggleSettingsButton.setToolTip("Toggle settings")
         self.toggleSettingsButton.clicked.connect(self.toggle_settings)
         self.buttonsLayout.addWidget(self.toggleSettingsButton)
         
@@ -824,7 +835,7 @@ class PlayerWindow(FluentWindow):
         
         # --- Speed ---
         speedHeader = QHBoxLayout()
-        self.speedLabel = CaptionLabel("Playback Speed")
+        self.speedLabel = CaptionLabel("Playback speed")
         self.speedValueLabel = CaptionLabel("1.0x")
         speedHeader.addWidget(self.speedLabel)
         speedHeader.addStretch(1)
@@ -864,7 +875,7 @@ class PlayerWindow(FluentWindow):
         cacheGroup = QVBoxLayout()
         cacheGroup.setSpacing(5)
         cacheHeader = QHBoxLayout()
-        cacheLabel = CaptionLabel("Cache Window (frames)")
+        cacheLabel = CaptionLabel("Cache window (frames)")
         self.cacheValueLabel = CaptionLabel(str(self.cache_window_half))
         cacheHeader.addWidget(cacheLabel)
         cacheHeader.addStretch(1)
@@ -892,7 +903,7 @@ class PlayerWindow(FluentWindow):
         self.settingsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
 
         # Image Adjustments
-        self.adjLabel = CaptionLabel("Image Adjustments")
+        self.adjLabel = CaptionLabel("Image adjustments")
         self.adjLabel.setStyleSheet("font-weight: bold; margin-top: 5px;")
         self.settingsInnerLayout.addWidget(self.adjLabel)
 
@@ -926,11 +937,11 @@ class PlayerWindow(FluentWindow):
         self.settingsInnerLayout.addLayout(l4)
 
         footerButtonsLayout = QHBoxLayout()
-        self.resetAdjButton = PushButton("Reset Image")
+        self.resetAdjButton = PushButton("Reset image")
         self.resetAdjButton.setMinimumWidth(100)
         self.resetAdjButton.clicked.connect(self.reset_adjustments)
         
-        self.infoButton = PushButton("File Info")
+        self.infoButton = PushButton("File info")
         self.infoButton.setMinimumWidth(100)
         self.infoButton.clicked.connect(self.show_file_info)
         
@@ -961,11 +972,11 @@ class PlayerWindow(FluentWindow):
         loopGroup.setSpacing(10)
         
         loopHeader = QHBoxLayout()
-        self.loopLabel = CaptionLabel("Loop Mode")
+        self.loopLabel = CaptionLabel("Global loop mode")
         self.globalLoopToggle = SwitchButton()
         self.globalLoopToggle.setChecked(True)
-        self.globalLoopToggle.setOnText("Global")
-        self.globalLoopToggle.setOffText("Global")
+        self.globalLoopToggle.setOnText("On")
+        self.globalLoopToggle.setOffText("Off")
         self.globalLoopToggle.setToolTip("Apply loop mode to all videos")
         loopHeader.addWidget(self.loopLabel)
         loopHeader.addStretch(1)
@@ -974,7 +985,7 @@ class PlayerWindow(FluentWindow):
         
         # --- Navigation Mode ---
         navGroup = QHBoxLayout()
-        self.navLabel = CaptionLabel("Zoom Navigation")
+        self.navLabel = CaptionLabel("Zoom navigation bar")
         self.navToggle = SwitchButton()
         self.navToggle.setChecked(False)
         self.navToggle.setOnText("On")
@@ -989,37 +1000,33 @@ class PlayerWindow(FluentWindow):
         loopGroup.addLayout(navGroup)
         
         self.loopCombo = QComboBox()
-        self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-Pong"])
+        self.loopCombo.addItems(["None", "Forward", "Backward", "Ping-pong"])
         self.loopCombo.setCurrentIndex(3)
         self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
         self.loopCombo.setStyleSheet(LOOP_COMBO_STYLE)
         loopGroup.addWidget(self.loopCombo)
         
         markerLayout = QHBoxLayout()
-        self.setStartButton = ToolButton()
-        self.setStartButton.setText("[")
-        self.setStartButton.setFixedWidth(36)
+        self.setStartButton = PushButton("Set in")
+        self.setStartButton.setStyleSheet(TOOL_BTN_STYLE)
         self.setStartButton.clicked.connect(self.set_loop_start)
         
-        self.setEndButton = ToolButton()
-        self.setEndButton.setText("]")
-        self.setEndButton.setFixedWidth(36)
+        self.setEndButton = PushButton("Set out")
+        self.setEndButton.setStyleSheet(TOOL_BTN_STYLE)
         self.setEndButton.clicked.connect(self.set_loop_end)
         
-        self.clearMarkersButton = ToolButton(FluentIcon.DELETE)
-        self.clearMarkersButton.setToolTip("Clear markers")
-        self.clearMarkersButton.setFixedWidth(36)
+        self.clearMarkersButton = PushButton("Reset")
+        self.clearMarkersButton.setStyleSheet(TOOL_BTN_STYLE)
         self.clearMarkersButton.clicked.connect(self.clear_loop_markers)
-        
-        self.loopFramesLabel = CaptionLabel("[F: 0 - End]")
-        self.loopFramesLabel.setStyleSheet("color: #888;")
         
         markerLayout.addWidget(self.setStartButton)
         markerLayout.addWidget(self.setEndButton)
         markerLayout.addWidget(self.clearMarkersButton)
-        markerLayout.addStretch(1)
-        markerLayout.addWidget(self.loopFramesLabel)
         loopGroup.addLayout(markerLayout)
+        
+        self.loopFramesLabel = CaptionLabel("[F: 0 - End]")
+        self.loopFramesLabel.setStyleSheet("color: #aaa; font-size: 11px; margin-top: 2px;")
+        loopGroup.addWidget(self.loopFramesLabel)
         
         self.actionsGrid = QGridLayout()
         self.actionsGrid.setSpacing(8)
@@ -1373,7 +1380,10 @@ class PlayerWindow(FluentWindow):
             if os.path.isfile(filePath):
                 # Create item with placeholder icon
                 item = QListWidgetItem(os.path.basename(filePath))
-                item.setSizeHint(QSize(120, 130))
+                if self.thumbToggle.isChecked():
+                    item.setSizeHint(QSize(120, 130))
+                else:
+                    item.setSizeHint(QSize(0, 28))
                 item.setData(Qt.ItemDataRole.UserRole, filePath)
                 # Set a default grey icon while loading
                 placeholder = QPixmap(120, 120)
@@ -1381,11 +1391,12 @@ class PlayerWindow(FluentWindow):
                 item.setIcon(QIcon(placeholder))
                 self.playlistList.addItem(item)
                 
-                # Start thumbnail extraction
-                thread = ThumbnailThread(filePath, self)
-                thread.finished.connect(self.on_thumbnail_ready)
-                self.thumb_threads.append(thread)
-                thread.start()
+                # Start thumbnail extraction only if enabled
+                if self.thumbToggle.isChecked():
+                    thread = ThumbnailThread(filePath, self)
+                    thread.finished.connect(self.on_thumbnail_ready)
+                    self.thumb_threads.append(thread)
+                    thread.start()
 
     def toggle_drawing_mode(self, checked):
         self.view.set_drawing_mode(checked)
@@ -1409,12 +1420,43 @@ class PlayerWindow(FluentWindow):
         self.update_pen_preview()
 
     def on_thumbnail_ready(self, filePath, pixmap):
+        if not self.thumbToggle.isChecked():
+            return
+            
         # Find the item in the list and update its icon
         for i in range(self.playlistList.count()):
             item = self.playlistList.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == filePath:
                 item.setIcon(QIcon(pixmap))
                 break
+
+    def on_thumb_toggle_changed(self, checked):
+        # Update current view
+        if checked:
+            self.playlistList.setIconSize(QSize(120, 120))
+            self.playlistList.setSpacing(5)
+            # Update all items size and re-generate missing thumbnails
+            for i in range(self.playlistList.count()):
+                item = self.playlistList.item(i)
+                item.setSizeHint(QSize(120, 130))
+                filePath = item.data(Qt.ItemDataRole.UserRole)
+                # Set placeholder back if needed
+                placeholder = QPixmap(120, 120)
+                placeholder.fill(QColor(60, 60, 60))
+                item.setIcon(QIcon(placeholder))
+                
+                thread = ThumbnailThread(filePath, self)
+                thread.finished.connect(self.on_thumbnail_ready)
+                self.thumb_threads.append(thread)
+                thread.start()
+        else:
+            self.playlistList.setIconSize(QSize(0, 0))
+            self.playlistList.setSpacing(1)
+            # Reset icons to empty and update size hints for compact view
+            for i in range(self.playlistList.count()):
+                item = self.playlistList.item(i)
+                item.setIcon(QIcon())
+                item.setSizeHint(QSize(0, 28))
 
     def create_shape_icon(self, shape_type):
         pixmap = QPixmap(32, 32)
