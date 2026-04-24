@@ -2,7 +2,8 @@ import math
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QSize
 from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QTransform, QFont
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
-                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsScene)
+                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsScene,
+                             QGraphicsItemGroup)
 from qfluentwidgets import ListWidget
 
 class DropListWidget(ListWidget):
@@ -90,12 +91,39 @@ class ZoomView(QGraphicsView):
         self.current_path = None
         self.current_path_item = None
         self.strokes = [] # List of items in the scene for undo/clear
+        self.laser_mode = False
         
-        # Cursor preview
-        self.cursor_item = QGraphicsEllipseItem()
-        self.cursor_item.setPen(QPen(Qt.PenStyle.NoPen))
-        self.cursor_item.setBrush(QColor(255, 255, 255, 50))
+        # Cursor preview group
+        self.cursor_item = QGraphicsItemGroup()
+        
+        # 1. Circle representing pen width
+        self.cursor_circle = QGraphicsEllipseItem(self.cursor_item)
+        self.cursor_circle.setPen(QPen(QColor(255, 255, 255, 180), 1))
+        self.cursor_circle.setBrush(QColor(255, 255, 255, 40))
+        
+        # 2. Crosshair for precision (High contrast: Black outline + White inner)
+        cross_path = QPainterPath()
+        cross_path.moveTo(-15, 0)
+        cross_path.lineTo(15, 0)
+        cross_path.moveTo(0, -15)
+        cross_path.lineTo(0, 15)
+        cross_path.addRect(-0.5, -0.5, 1, 1) # Center point
+        
+        self.cursor_cross_bg = QGraphicsPathItem(self.cursor_item)
+        bg_pen = QPen(Qt.GlobalColor.black, 3)
+        bg_pen.setCosmetic(True)
+        self.cursor_cross_bg.setPen(bg_pen)
+        self.cursor_cross_bg.setPath(cross_path)
+        
+        self.cursor_cross_fg = QGraphicsPathItem(self.cursor_item)
+        fg_pen = QPen(Qt.GlobalColor.white, 1)
+        fg_pen.setCosmetic(True)
+        self.cursor_cross_fg.setPen(fg_pen)
+        self.cursor_cross_fg.setPath(cross_path)
+        
         self.cursor_item.setZValue(10001)
+        self.cursor_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self.cursor_item.setEnabled(False)
         self.cursor_item.hide()
         self.scene().addItem(self.cursor_item)
 
@@ -112,7 +140,7 @@ class ZoomView(QGraphicsView):
 
     def update_cursor_size(self):
         r = self.pen_width / 2.0
-        self.cursor_item.setRect(-r, -r, self.pen_width, self.pen_width)
+        self.cursor_circle.setRect(-r, -r, self.pen_width, self.pen_width)
 
     def mousePressEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
@@ -143,7 +171,7 @@ class ZoomView(QGraphicsView):
             
             self.current_path_item = QGraphicsPathItem()
             
-            if self.drawing_tool == 'laser':
+            if self.laser_mode:
                 color = QColor(self.pen_color.red(), self.pen_color.green(), self.pen_color.blue(), 150)
                 pen = QPen(color, self.pen_width * 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
             else:
@@ -171,7 +199,7 @@ class ZoomView(QGraphicsView):
                     return
                     
                 if self.current_path_item:
-                    if self.drawing_tool in ['pen', 'laser']:
+                    if self.drawing_tool == 'pen':
                         self.current_path.lineTo(curr_pos)
                     else:
                         new_path = QPainterPath()
@@ -204,7 +232,16 @@ class ZoomView(QGraphicsView):
                             new_path.lineTo(p2)
                         
                         self.current_path = new_path
-                    self.current_path_item.setPath(self.current_path)
+                    
+                    if self.current_path and not self.current_path.isEmpty():
+                        try:
+                            self.current_path_item.setPath(self.current_path)
+                        except RuntimeError:
+                            # Item might have been deleted
+                            self.current_path_item = None
+            
+            # Always call super for movement even in drawing mode to ensure cursor/hover state is correct
+            super().mouseMoveEvent(event)
         else:
             super().mouseMoveEvent(event)
 
@@ -245,15 +282,22 @@ class ZoomView(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
-            if self.drawing_tool == 'laser' and self.current_path_item:
-                if self.current_path_item.scene():
-                    self.scene().removeItem(self.current_path_item)
-                if self.current_path_item in self.strokes:
-                    self.strokes.remove(self.current_path_item)
+            if self.laser_mode and self.current_path_item:
+                try:
+                    scene = self.scene()
+                    if scene and self.current_path_item.scene() == scene:
+                        scene.removeItem(self.current_path_item)
+                    
+                    if self.current_path_item in self.strokes:
+                        self.strokes.remove(self.current_path_item)
+                except Exception:
+                    pass
+                    
             self.current_path_item = None
             self.current_path = None
-        else:
-            super().mouseReleaseEvent(event)
+        
+        # Always call super to ensure QGraphicsView internal state is updated
+        super().mouseReleaseEvent(event)
 
     def undo_stroke(self):
         if self.strokes:
@@ -297,14 +341,43 @@ class ZoomView(QGraphicsView):
             super().dropEvent(event)
 
     def wheelEvent(self, event):
+        # 1. Capture current mouse position in scene coordinates
+        viewport_pos = event.position()
+        old_scene_pos = self.mapToScene(viewport_pos.toPoint())
+        
+        # 2. Calculate zoom factor
         factor = 1.1 if event.angleDelta().y() > 0 else 1/1.1
         new_zoom = self.zoomLevel * factor
-        if 1.0 <= new_zoom <= 10.0:
-            self.zoomLevel = new_zoom
-            self.scale(factor, factor)
-            self.zoomChanged.emit(self.zoomLevel)
+        
+        # 3. Clamp zoom level
+        if new_zoom > 10.0:
+            return
         elif new_zoom < 1.0:
-            factor = 1.0 / self.zoomLevel
+            if self.zoomLevel == 1.0: return
+            actual_factor = 1.0 / self.zoomLevel
             self.zoomLevel = 1.0
-            self.scale(factor, factor)
-            self.zoomChanged.emit(self.zoomLevel)
+        else:
+            self.zoomLevel = new_zoom
+            actual_factor = factor
+            
+        # 4. Apply scale with NoAnchor to handle it manually
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor)
+        self.scale(actual_factor, actual_factor)
+        
+        # 5. Get new scene position of the same viewport point
+        new_scene_pos = self.mapToScene(viewport_pos.toPoint())
+        
+        # 6. Calculate the shift needed in scene coordinates
+        delta = new_scene_pos - old_scene_pos
+        
+        # 7. Translate the view (scroll) to keep the point fixed
+        self.translate(delta.x(), delta.y())
+        
+        # 8. Re-enable anchor for other interactions
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        
+        self.zoomChanged.emit(self.zoomLevel)
+        
+        # Update cursor preview position immediately
+        if self.drawing_mode:
+            self.cursor_item.setPos(self.mapToScene(viewport_pos.toPoint()))

@@ -484,7 +484,7 @@ class PlayerWindow(FluentWindow):
         
         # Playlist Sidebar
         self.playlistContainer = QFrame()
-        self.playlistContainer.setMinimumWidth(280)
+        self.playlistContainer.setMinimumWidth(250)
         self.playlistContainer.setStyleSheet("background: #202020; border-left: 1px solid #333;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
         self.playlistLayout.setContentsMargins(5, 5, 5, 5)
@@ -501,77 +501,55 @@ class PlayerWindow(FluentWindow):
         
         self.thumb_threads = []
         
-        self.playlistButtonsLayout = QHBoxLayout()
-        self.addFileButton = ToolButton(FluentIcon.ADD)
-        self.addFileButton.setToolTip("Add video")
-        self.addFileButton.clicked.connect(self.open_file)
+        self.playlistButtonsGrid = QGridLayout()
+        self.playlistButtonsGrid.setSpacing(8)
         
-        self.savePlaylistButton = ToolButton(FluentIcon.SAVE)
-        self.savePlaylistButton.setToolTip("Save Playlist")
-        self.savePlaylistButton.clicked.connect(self.save_playlist_to_file)
+        # --- Add Button ---
+        self.btn_add = PushButton("Add")
+        self.btn_add.setToolTip("Add media or load playlist")
+        self.addMenu = QMenu(self)
+        self.addMenu.setStyleSheet(MENU_STYLE)
+        self.addMenu.addAction("Add Video(s)", self.open_file)
+        self.addMenu.addAction("Add Video Folder", lambda: self.add_folder_contents(type="video"))
+        self.addMenu.addAction("Add Image Folder", lambda: self.add_folder_contents(type="image"))
+        self.addMenu.addSeparator()
+        self.addMenu.addAction("Load Playlist", self.load_playlist_from_file)
+        self.btn_add.clicked.connect(self.show_add_menu)
         
-        self.loadPlaylistButton = ToolButton(FluentIcon.FOLDER)
-        self.loadPlaylistButton.setToolTip("Load Playlist")
-        self.loadPlaylistButton.clicked.connect(self.load_playlist_from_file)
-        
-        # Create Premium Menus
-        menu_style = """
-            QMenu {
-                background-color: #202020;
-                color: white;
-                border: 1px solid #333;
-                border-radius: 5px;
-                padding: 5px;
-            }
-            QMenu::item {
-                padding: 5px 25px 5px 20px;
-                border-radius: 3px;
-            }
-            QMenu::item:selected {
-                background-color: #333;
-            }
-        """
-        
+        # --- Sort Button ---
+        self.btn_sort = PushButton("Sort")
+        self.btn_sort.setToolTip("Sort current list")
         self.sortMenu = QMenu(self)
-        self.sortMenu.setStyleSheet(menu_style)
+        self.sortMenu.setStyleSheet(MENU_STYLE)
         self.sortMenu.addAction("Name (A-Z)", lambda: self.sort_playlist_by("name_asc"))
         self.sortMenu.addAction("Name (Z-A)", lambda: self.sort_playlist_by("name_desc"))
         self.sortMenu.addAction("Date (Newest)", lambda: self.sort_playlist_by("date_newest"))
         self.sortMenu.addAction("Date (Oldest)", lambda: self.sort_playlist_by("date_oldest"))
-
-        self.removeFileButton = ToolButton(FluentIcon.DELETE)
-        self.removeFileButton.setToolTip("Remove functions")
+        self.btn_sort.clicked.connect(self.show_sort_menu)
         
+        # --- Save Button ---
+        self.btn_save = PushButton("Save")
+        self.btn_save.setToolTip("Save current playlist")
+        self.btn_save.clicked.connect(self.save_playlist_to_file)
+        
+        # --- Clear Button ---
+        self.btn_clear = PushButton("Clear")
+        self.btn_clear.setToolTip("Remove items or clear list")
         self.removeMenu = QMenu(self)
-        self.removeMenu.setStyleSheet(menu_style)
+        self.removeMenu.setStyleSheet(MENU_STYLE)
         self.removeMenu.addAction("Remove Selected", self.remove_from_playlist)
-        self.removeMenu.addAction("Clear Playlist", self.clear_playlist)
-        self.removeFileButton.clicked.connect(self.show_remove_menu)
+        self.removeMenu.addAction("Clear All", self.clear_playlist)
+        self.btn_clear.clicked.connect(self.show_clear_menu)
         
-        self.addVideoFolderButton = ToolButton(FluentIcon.VIDEO)
-        self.addVideoFolderButton.setToolTip("Add all videos from folder")
-        self.addVideoFolderButton.clicked.connect(lambda: self.add_folder_contents(type="video"))
-        
-        self.addImageFolderButton = ToolButton(FluentIcon.PHOTO)
-        self.addImageFolderButton.setToolTip("Add all images from folder")
-        self.addImageFolderButton.clicked.connect(lambda: self.add_folder_contents(type="image"))
-        
-        self.sortPlaylistButton = ToolButton(FluentIcon.MENU)
-        self.sortPlaylistButton.setToolTip("Sort Playlist")
-        self.sortPlaylistButton.clicked.connect(self.show_sort_menu)
-        
-        self.playlistButtonsLayout.addWidget(self.addFileButton)
-        self.playlistButtonsLayout.addWidget(self.addVideoFolderButton)
-        self.playlistButtonsLayout.addWidget(self.addImageFolderButton)
-        self.playlistButtonsLayout.addWidget(self.sortPlaylistButton)
-        self.playlistButtonsLayout.addWidget(self.savePlaylistButton)
-        self.playlistButtonsLayout.addWidget(self.loadPlaylistButton)
-        self.playlistButtonsLayout.addWidget(self.removeFileButton)
-        self.playlistButtonsLayout.addStretch(1)
+        # Add to Grid
+        self.playlistButtonsGrid.addWidget(self.btn_add, 0, 0)
+        self.playlistButtonsGrid.addWidget(self.btn_sort, 0, 1)
+        self.playlistButtonsGrid.addWidget(self.btn_save, 1, 0)
+        self.playlistButtonsGrid.addWidget(self.btn_clear, 1, 1)
         
         self.playlistLayout.addWidget(self.playlistLabel)
         self.playlistLayout.addWidget(self.playlistList)
-        self.playlistLayout.addLayout(self.playlistButtonsLayout)
+        self.playlistLayout.addLayout(self.playlistButtonsGrid)
         
         # Drawing Sidebar (Right - Alternative to Playlist)
         self.drawingContainer = QFrame()
@@ -596,6 +574,17 @@ class PlayerWindow(FluentWindow):
         self.drawModeToggleLayout.addWidget(self.drawModeToggle)
         self.drawingSidebarLayout.addLayout(self.drawModeToggleLayout)
         
+        # Laser Mode Toggle
+        self.laserModeToggleLayout = QHBoxLayout()
+        self.laserModeToggleLabel = QLabel("Laser Mode")
+        self.laserModeToggleLabel.setStyleSheet("color: white; font-size: 13px;")
+        self.laserModeToggle = SwitchButton()
+        self.laserModeToggle.checkedChanged.connect(self.toggle_laser_mode)
+        self.laserModeToggleLayout.addWidget(self.laserModeToggleLabel)
+        self.laserModeToggleLayout.addStretch(1)
+        self.laserModeToggleLayout.addWidget(self.laserModeToggle)
+        self.drawingSidebarLayout.addLayout(self.laserModeToggleLayout)
+        
         self.toolsLayout = QGridLayout()
         self.toolsLayout.setSpacing(8)
         self.toolGroup = QButtonGroup(self)
@@ -610,7 +599,6 @@ class PlayerWindow(FluentWindow):
             ('Square', 'rect', 'Square/Rectangle shape'),
             ('Circle', 'ellipse', 'Circle/Ellipse shape'),
             ('Triangle', 'triangle', 'Triangle shape'),
-            ('Laser', 'laser', 'Temporary pointer'),
             ('Eraser (O)', 'obj_eraser', 'Delete whole objects'),
             ('Eraser (A)', 'area_eraser', 'Precision area eraser'),
             ('Eraser (L)', 'stroke_eraser', 'Delete connected lines')
@@ -657,7 +645,7 @@ class PlayerWindow(FluentWindow):
                 font-weight: 500;
                 background: rgba(255, 255, 255, 0.08);
                 border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 12px;
+                border-radius: 4px;
             }
             PushButton:hover {
                 background: rgba(255, 255, 255, 0.15);
@@ -950,7 +938,7 @@ class PlayerWindow(FluentWindow):
                 padding: 6px;
                 background: rgba(255, 255, 255, 0.05);
                 border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
+                border-radius: 4px;
             }
             PushButton:hover {
                 background: rgba(255, 255, 255, 0.1);
@@ -1060,7 +1048,7 @@ class PlayerWindow(FluentWindow):
                 padding: 6px;
                 background: rgba(255, 255, 255, 0.05);
                 border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
+                border-radius: 4px;
             }
             PushButton:hover {
                 background: rgba(255, 255, 255, 0.1);
@@ -1398,6 +1386,9 @@ class PlayerWindow(FluentWindow):
     def toggle_drawing_mode(self, checked):
         self.view.set_drawing_mode(checked)
 
+    def toggle_laser_mode(self, checked):
+        self.view.laser_mode = checked
+
     def choose_pen_color(self):
         color = QColorDialog.getColor(self.view.pen_color, self, "Select Color")
         if color.isValid():
@@ -1459,10 +1450,10 @@ class PlayerWindow(FluentWindow):
             
         # Update cursor color based on tool (optional logic)
         if tool_id in ['obj_eraser', 'area_eraser', 'stroke_eraser']:
-            self.view.cursor_item.setBrush(QColor(255, 255, 255, 30))
+            self.view.cursor_circle.setBrush(QColor(255, 255, 255, 30))
         else:
             c = self.view.pen_color
-            self.view.cursor_item.setBrush(QColor(c.red(), c.green(), c.blue(), 50))
+            self.view.cursor_circle.setBrush(QColor(c.red(), c.green(), c.blue(), 50))
 
     def undo_last_stroke(self):
         if self.view.strokes:
@@ -1529,9 +1520,17 @@ class PlayerWindow(FluentWindow):
         filePath = item.data(Qt.ItemDataRole.UserRole)
         self.load_video(filePath)
 
+    def show_add_menu(self):
+        menu_hint = self.addMenu.sizeHint()
+        # Popup above the button
+        pos = self.btn_add.mapToGlobal(QPoint(0, -menu_hint.height()))
+        self.addMenu.exec(pos)
+
     def show_sort_menu(self):
+        if self.playlistList.count() == 0:
+            return
         menu_hint = self.sortMenu.sizeHint()
-        pos = self.sortPlaylistButton.mapToGlobal(QPoint(self.sortPlaylistButton.width() - menu_hint.width(), -menu_hint.height()))
+        pos = self.btn_sort.mapToGlobal(QPoint(0, -menu_hint.height()))
         self.sortMenu.exec(pos)
 
     def sort_playlist_by(self, criteria):
@@ -1586,10 +1585,15 @@ class PlayerWindow(FluentWindow):
         self.currentTimeLabel.setText("00:00")
         self.totalTimeLabel.setText("00:00")
 
-    def show_remove_menu(self):
+    def show_clear_menu(self):
+        if self.playlistList.count() == 0:
+            return
         menu_hint = self.removeMenu.sizeHint()
-        pos = self.removeFileButton.mapToGlobal(QPoint(self.removeFileButton.width() - menu_hint.width(), -menu_hint.height()))
+        pos = self.btn_clear.mapToGlobal(QPoint(0, -menu_hint.height()))
         self.removeMenu.exec(pos)
+
+    def show_remove_menu(self):
+        self.show_clear_menu()
 
     def toggle_playlist(self):
         is_visible = self.playlistContainer.isVisible()
@@ -1894,7 +1898,12 @@ class PlayerWindow(FluentWindow):
         self.zoomLevel = snapped / 100.0
         # Sync view scale
         factor = self.zoomLevel / self.view.zoomLevel
+        
+        # Anchor slider zoom to center to avoid jumping towards the mouse on the sidebar
+        self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.view.scale(factor, factor)
+        self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        
         self.view.zoomLevel = self.zoomLevel
         self.zoomValueLabel.setText(f"{snapped}%")
         
