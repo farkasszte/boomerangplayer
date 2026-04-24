@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QGraphicsScene, QGraphicsPixmapItem)
 from qfluentwidgets import (FluentIcon, ToolButton, CardWidget, CaptionLabel,
                              SwitchButton, PushButton)
-from components import DropListWidget, MarkerSlider, ZoomView, ShortcutButton
+from components import DropListWidget, MarkerSlider, ZoomView
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE,
                     DRAWING_ACTION_STYLE, TOOL_BTN_STYLE)
 from translations import tr

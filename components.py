@@ -1,9 +1,8 @@
 import math
-from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QSize
-from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QTransform, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF
+from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
-                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsScene,
-                             QGraphicsItemGroup)
+                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup)
 from qfluentwidgets import ListWidget, PushButton
 from translations import tr
 
