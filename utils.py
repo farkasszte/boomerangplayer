@@ -34,8 +34,7 @@ DEFAULT_CONFIG = {
     'audio_device': '',
     'shortcuts': {
         'play_pause': Qt.Key.Key_Space,
-        'set_loop_start': Qt.Key.Key_BracketLeft,
-        'set_loop_end': Qt.Key.Key_BracketRight,
+        'smart_mark': Qt.Key.Key_S,
         'toggle_loop': Qt.Key.Key_L,
         'next_frame': Qt.Key.Key_Period,
         'prev_frame': Qt.Key.Key_Comma,

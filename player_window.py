@@ -3,10 +3,7 @@ import sys
 import subprocess
 import tempfile
 import shutil
-import glob
 import json
-import time
-import math
 import numpy as np
 
 # System volume control
@@ -33,8 +30,8 @@ try:
     from qfluentwidgets import (FluentWindow, 
                                 FluentIcon, ToolButton, 
                                 CardWidget, CaptionLabel,
-                                SwitchButton, ListWidget, PushButton, MessageBox, 
-                                SingleDirectionScrollArea)
+                                SwitchButton, ListWidget, PushButton, MessageBox, TransparentPushButton,
+                                 SingleDirectionScrollArea, BodyLabel, RoundMenu, Action)
     qfluentwidgets.HELP_MESSAGE = False
 finally:
     sys.stdout.close()
@@ -47,17 +44,12 @@ from utils import get_resource_path, format_time, qt_message_handler, load_confi
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE, 
                     DRAWING_ACTION_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE, 
                     LOOP_COMBO_STYLE, VOLUME_POPUP_STYLE, PEN_COLOR_BTN_STYLE_TEMPLATE)
-from components import DropListWidget, MarkerSlider, ZoomView
+from components import DropListWidget, MarkerSlider, ZoomView, ShortcutButton
 from threads import FrameExtractionThread, ThumbnailThread
-from translations import set_lang, tr, get_lang
-from settings_page import SettingsDialog
+from translations import set_lang, tr
 from PyQt6.QtMultimedia import QMediaDevices
 
 qInstallMessageHandler(qt_message_handler)
-
-
-
-
 
 class PlayerWindow(FluentWindow):
     def __init__(self):
@@ -289,7 +281,7 @@ class PlayerWindow(FluentWindow):
             del self.cached_frame_dict[k]
             
         self.loadingOverlay.hide()
-        print(f"Sliding Window Cache: Extracted frames {start_frame} to {start_frame + num_frames}. Cache size: {len(self.cached_frame_dict)}")
+        self.loadingOverlay.setText(f"{tr('caching')}: {start_frame} - {start_frame + num_frames}. Cache size: {len(self.cached_frame_dict)}")
         
         # Only fit transform if it's the first time
         fit_needed = not hasattr(self, 'initial_fit_done')
@@ -474,6 +466,102 @@ class PlayerWindow(FluentWindow):
             pos = int((self.current_cache_index * 1000) / self.fps)
             self.currentTimeLabel.setText(format_time(pos))
             
+    def init_global_settings_sidebar(self):
+        self.globalSettingsContainer = QFrame()
+        self.globalSettingsContainer.setMinimumWidth(250)
+        self.globalSettingsContainer.setStyleSheet("background: #202020; border: none;")
+        self.globalSettingsLayout = QVBoxLayout(self.globalSettingsContainer)
+        self.globalSettingsLayout.setContentsMargins(10, 10, 10, 10)
+        self.globalSettingsLayout.setSpacing(10)
+        
+        self.globalSettingsTitle = CaptionLabel(tr('settings'))
+        self.globalSettingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.globalSettingsLayout.addWidget(self.globalSettingsTitle)
+        
+        # Scroll Area
+        self.gsScrollArea = SingleDirectionScrollArea(self.globalSettingsContainer, Qt.Orientation.Vertical)
+        self.gsScrollArea.setWidgetResizable(True)
+        self.gsScrollArea.setStyleSheet("background: transparent; border: none;")
+        self.gsScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        self.gsScrollWidget = QWidget()
+        self.gsInnerLayout = QVBoxLayout(self.gsScrollWidget)
+        self.gsInnerLayout.setContentsMargins(0, 0, 10, 0)
+        self.gsInnerLayout.setSpacing(15)
+        
+        # --- General Section ---
+        self.gsGeneralLabel = CaptionLabel(tr('general'))
+        self.gsGeneralLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.gsInnerLayout.addWidget(self.gsGeneralLabel)
+        
+        # Rounded style for triggers
+        TRIGGER_STYLE = """
+            PushButton {
+                background: rgba(255, 255, 255, 0.0605);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 4px;
+                color: white;
+                padding: 8px 12px;
+                text-align: left;
+                font-size: 13px;
+            }
+            PushButton:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        """
+        
+        # Language
+        self.gsLangBtn = PushButton()
+        self.gsLangBtn.setStyleSheet(TRIGGER_STYLE)
+        self.gsLangBtn.clicked.connect(self.show_language_menu)
+        self.gsInnerLayout.addWidget(self.gsLangBtn)
+        
+        # Audio Device
+        self.gsAudioBtn = PushButton()
+        self.gsAudioBtn.setStyleSheet(TRIGGER_STYLE)
+        self.gsAudioBtn.clicked.connect(self.show_audio_menu)
+        self.gsInnerLayout.addWidget(self.gsAudioBtn)
+        
+        self.gsInnerLayout.addWidget(QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken))
+        
+        # --- Shortcuts Section ---
+        self.gsShortcutsLabel = CaptionLabel(tr('playback_shortcuts'))
+        self.gsShortcutsLabel.setStyleSheet("font-weight: bold; color: #aaaaaa;")
+        self.gsInnerLayout.addWidget(self.gsShortcutsLabel)
+        
+        shortGrid = QGridLayout()
+        shortGrid.setContentsMargins(0, 0, 0, 0)
+        shortGrid.setSpacing(10)
+        shortGrid.setColumnStretch(0, 1)
+        shortGrid.setColumnStretch(1, 0)
+        
+        actions = [
+            ('play_pause', 'act_play_pause'),
+            ('smart_mark', 'act_smart_mark'),
+            ('toggle_loop', 'act_toggle_loop'),
+            ('next_frame', 'act_next_frame'),
+            ('prev_frame', 'act_prev_frame'),
+            ('toggle_mute', 'act_toggle_mute')
+        ]
+        
+        for i, (act, label_key) in enumerate(actions):
+            lbl = BodyLabel(tr(label_key))
+            lbl.setWordWrap(True)
+            shortGrid.addWidget(lbl, i, 0)
+            btn = ShortcutButton(self.config['shortcuts'].get(act, 0))
+            btn.setFixedWidth(80)
+            btn.keyChanged.connect(lambda k, a=act: self.update_shortcut_sidebar(a, k))
+            shortGrid.addWidget(btn, i, 1)
+            
+        self.gsInnerLayout.addLayout(shortGrid)
+        self.gsInnerLayout.addStretch(1)
+        
+        self.gsScrollArea.setWidget(self.gsScrollWidget)
+        self.globalSettingsLayout.addWidget(self.gsScrollArea)
+        
+        self.globalSettingsContainer.hide()
+
     def init_ui(self):
         # --- Main Interface ---
         self.playerInterface = QWidget()
@@ -533,11 +621,11 @@ class PlayerWindow(FluentWindow):
         self.btn_add.setToolTip(tr('tip_add'))
         self.addMenu = QMenu(self)
         self.addMenu.setStyleSheet(MENU_STYLE)
-        self.addMenu.addAction(tr('add'), self.open_file) # Using tr('add') for "Add media" too or create new key
-        self.addMenu.addAction("Add video folder", lambda: self.add_folder_contents(type="video"))
-        self.addMenu.addAction("Add image folder", lambda: self.add_folder_contents(type="image"))
+        self.addMenu.addAction(tr('add_media'), self.open_file)
+        self.addMenu.addAction(tr('add_video_folder'), lambda: self.add_folder_contents(type="video"))
+        self.addMenu.addAction(tr('add_image_folder'), lambda: self.add_folder_contents(type="image"))
         self.addMenu.addSeparator()
-        self.addMenu.addAction("Load playlist", self.load_playlist_from_file)
+        self.addMenu.addAction(tr('load_playlist'), self.load_playlist_from_file)
         self.btn_add.clicked.connect(self.show_add_menu)
         
         # --- Sort Button ---
@@ -545,10 +633,10 @@ class PlayerWindow(FluentWindow):
         self.btn_sort.setToolTip(tr('tip_sort'))
         self.sortMenu = QMenu(self)
         self.sortMenu.setStyleSheet(MENU_STYLE)
-        self.sortMenu.addAction("Name (A-Z)", lambda: self.sort_playlist_by("name_asc"))
-        self.sortMenu.addAction("Name (Z-A)", lambda: self.sort_playlist_by("name_desc"))
-        self.sortMenu.addAction("Date (Newest)", lambda: self.sort_playlist_by("date_newest"))
-        self.sortMenu.addAction("Date (Oldest)", lambda: self.sort_playlist_by("date_oldest"))
+        self.sortMenu.addAction(tr('sort_name_asc'), lambda: self.sort_playlist_by("name_asc"))
+        self.sortMenu.addAction(tr('sort_name_desc'), lambda: self.sort_playlist_by("name_desc"))
+        self.sortMenu.addAction(tr('sort_date_newest'), lambda: self.sort_playlist_by("date_newest"))
+        self.sortMenu.addAction(tr('sort_date_oldest'), lambda: self.sort_playlist_by("date_oldest"))
         self.btn_sort.clicked.connect(self.show_sort_menu)
         
         # --- Save Button ---
@@ -561,8 +649,8 @@ class PlayerWindow(FluentWindow):
         self.btn_clear.setToolTip(tr('tip_clear'))
         self.removeMenu = QMenu(self)
         self.removeMenu.setStyleSheet(MENU_STYLE)
-        self.removeMenu.addAction("Remove selected", self.remove_from_playlist)
-        self.removeMenu.addAction("Clear all", self.clear_playlist)
+        self.removeMenu.addAction(tr('remove_selected'), self.remove_from_playlist)
+        self.removeMenu.addAction(tr('clear_all'), self.clear_playlist)
         self.btn_clear.clicked.connect(self.show_clear_menu)
         
         # Add to Grid
@@ -634,7 +722,19 @@ class PlayerWindow(FluentWindow):
             btn.setStyleSheet(TOOL_BTN_STYLE)
             
             btn.setCheckable(True)
-            if tool_id == 'pen': btn.setChecked(True)
+            if tool_id == 'pen': 
+                btn.setChecked(True)
+                self.penTool = btn
+            elif tool_id == 'line': self.lineTool = btn
+            elif tool_id == 'arrow': self.arrowTool = btn
+            elif tool_id == 'text': self.textTool = btn
+            elif tool_id == 'rect': self.rectTool = btn
+            elif tool_id == 'ellipse': self.ellipseTool = btn
+            elif tool_id == 'triangle': self.triangleTool = btn
+            elif tool_id == 'obj_eraser': self.objEraserTool = btn
+            elif tool_id == 'area_eraser': self.areaEraserTool = btn
+            elif tool_id == 'stroke_eraser': self.strokeEraserTool = btn
+            
             self.toolGroup.addButton(btn)
             btn.clicked.connect(lambda checked, t=tool_id: self.set_active_tool(t))
                 
@@ -745,14 +845,16 @@ class PlayerWindow(FluentWindow):
         self.scrollArea.setWidget(self.settingsScrollWidget)
         self.settingsLayout.addWidget(self.scrollArea)
 
+        self.init_global_settings_sidebar()
+        self.mainSplitter.addWidget(self.globalSettingsContainer)
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.playlistContainer)
         self.mainSplitter.addWidget(self.drawingContainer)
-        self.mainSplitter.setStretchFactor(1, 1)
+        self.mainSplitter.setStretchFactor(2, 1)
         
-        # Force initial sizes: 0 for hidden sidebars, large for view, 250 for playlist
-        self.mainSplitter.setSizes([0, 10000, 250, 0])
+        # Force initial sizes: 0 for sidebars, large for view
+        self.mainSplitter.setSizes([0, 0, 10000, 250, 0])
         
         self.settingsContainer.hide() # Hidden by default
         
@@ -765,7 +867,7 @@ class PlayerWindow(FluentWindow):
         self.scene.addItem(self.pixmapItem)
         
         # Overlay for loading
-        self.loadingOverlay = QLabel(tr('caching_ram'), self.view)
+        self.loadingOverlay = QLabel(tr('caching'), self.view)
         self.loadingOverlay.setStyleSheet("background: rgba(0,0,0,180); color: white; font-size: 24px; font-weight: bold; border-radius: 10px;")
         self.loadingOverlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loadingOverlay.hide()
@@ -807,16 +909,22 @@ class PlayerWindow(FluentWindow):
         self.buttonsLayout = QHBoxLayout()
         
         # Left side: Settings & File Info
-        self.toggleSettingsButton = ToolButton(FluentIcon.SETTING)
-        self.toggleSettingsButton.setToolTip("Toggle settings")
+        # Left side: Settings Sidebars Toggle
+        self.toggleSettingsButton = ToolButton(FluentIcon.VIDEO)
+        self.toggleSettingsButton.setToolTip(tr('video_settings'))
         self.toggleSettingsButton.clicked.connect(self.toggle_settings)
         self.buttonsLayout.addWidget(self.toggleSettingsButton)
         
+        self.globalSettingsButton = ToolButton(FluentIcon.SETTING)
+        self.globalSettingsButton.setToolTip(tr('tip_settings'))
+        self.globalSettingsButton.clicked.connect(self.show_global_settings)
+        self.buttonsLayout.addWidget(self.globalSettingsButton)
+        
+        self.buttonsLayout.addSpacing(20)
+        
         self.buttonsLayout.addSpacing(10)
         
-        # Center: Playback controls
-        self.playbackButtonsLayout = QHBoxLayout()
-        self.playbackButtonsLayout.setSpacing(0)
+        self.buttonsLayout.addSpacing(10)
         
         # Center: Playback controls
         self.playbackButtonsLayout = QHBoxLayout()
@@ -940,12 +1048,12 @@ class PlayerWindow(FluentWindow):
             
             layout.addLayout(header)
             layout.addWidget(slider)
-            return slider, layout
+            return slider, lbl, layout
 
-        self.brightnessSlider, l1 = create_adj_slider("Brightness", -100, 100, 0)
-        self.contrastSlider, l2 = create_adj_slider("Contrast", 0, 200, 100)
-        self.gammaSlider, l3 = create_adj_slider("Gamma", 10, 300, 100)
-        self.saturationSlider, l4 = create_adj_slider("Saturation", 0, 200, 100)
+        self.brightnessSlider, self.brightnessLabel, l1 = create_adj_slider(tr('brightness'), -100, 100, 0)
+        self.contrastSlider, self.contrastLabel, l2 = create_adj_slider(tr('contrast'), 0, 200, 100)
+        self.gammaSlider, self.gammaLabel, l3 = create_adj_slider(tr('gamma'), 10, 300, 100)
+        self.saturationSlider, self.saturationLabel, l4 = create_adj_slider(tr('saturation'), 0, 200, 100)
 
         self.settingsInnerLayout.addLayout(l1)
         self.settingsInnerLayout.addLayout(l2)
@@ -988,16 +1096,29 @@ class PlayerWindow(FluentWindow):
         loopGroup.setSpacing(10)
         
         loopHeader = QHBoxLayout()
-        self.loopLabel = CaptionLabel(tr('global_loop_mode'))
-        self.globalLoopToggle = SwitchButton()
-        self.globalLoopToggle.setChecked(True)
-        self.globalLoopToggle.setOnText("On")
-        self.globalLoopToggle.setOffText("Off")
-        self.globalLoopToggle.setToolTip("Apply loop mode to all videos")
+        self.loopLabel = CaptionLabel(tr('loop'))
+        self.loopToggle = SwitchButton()
+        self.loopToggle.setChecked(self.loopCombo.currentIndex() != 0)
+        self.loopToggle.setOnText(tr('on'))
+        self.loopToggle.setOffText(tr('off'))
+        self.loopToggle.checkedChanged.connect(self.on_loop_switch_toggled)
         loopHeader.addWidget(self.loopLabel)
         loopHeader.addStretch(1)
-        loopHeader.addWidget(self.globalLoopToggle)
+        loopHeader.addWidget(self.loopToggle)
         loopGroup.addLayout(loopHeader)
+        
+        # Global Loop Mode (Secondary toggle)
+        globalLoopHeader = QHBoxLayout()
+        self.globalLoopLabel = CaptionLabel(tr('global_loop_mode'))
+        self.globalLoopToggle = SwitchButton()
+        self.globalLoopToggle.setChecked(True)
+        self.globalLoopToggle.setOnText(tr('on'))
+        self.globalLoopToggle.setOffText(tr('off'))
+        self.globalLoopToggle.setToolTip("Apply loop mode to all videos")
+        globalLoopHeader.addWidget(self.globalLoopLabel)
+        globalLoopHeader.addStretch(1)
+        globalLoopHeader.addWidget(self.globalLoopToggle)
+        loopGroup.addLayout(globalLoopHeader)
         
         # --- Navigation Mode ---
         navGroup = QHBoxLayout()
@@ -1136,11 +1257,7 @@ class PlayerWindow(FluentWindow):
         
         self.settingsInnerLayout.addStretch(1)
         
-        self.globalSettingsButton = PushButton(tr('settings'))
-        self.globalSettingsButton.setIcon(FluentIcon.SETTING)
-        self.globalSettingsButton.clicked.connect(self.show_global_settings)
-        self.globalSettingsButton.setStyleSheet(ACTION_BTN_STYLE)
-        self.settingsInnerLayout.addWidget(self.globalSettingsButton)
+        # (Removed globalSettingsButton from here)
         
         # Volume (Modified to Flyout)
         self.volumeContainer = QWidget()
@@ -1170,14 +1287,18 @@ class PlayerWindow(FluentWindow):
         
         self.buttonsLayout.addSpacing(20)
         self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
-        self.togglePlaylistButton.setToolTip("Toggle Playlist")
+        self.togglePlaylistButton.setToolTip(tr('tip_playlist'))
         self.togglePlaylistButton.clicked.connect(self.toggle_playlist)
         self.buttonsLayout.addWidget(self.togglePlaylistButton)
         
         self.toggleDrawingButton = ToolButton(FluentIcon.EDIT)
-        self.toggleDrawingButton.setToolTip("Toggle Drawing Panel")
+        self.toggleDrawingButton.setToolTip(tr('tip_drawing'))
         self.toggleDrawingButton.clicked.connect(self.toggle_drawing_panel)
         self.buttonsLayout.addWidget(self.toggleDrawingButton)
+        
+        # (globalSettingsButton moved to the left)
+        
+        # (toggleSettingsButton was moved back to the left)
         
         self.controlsLayout.addLayout(self.buttonsLayout)
         # Margin around the controls card itself for breathing room, but none on top
@@ -1210,15 +1331,15 @@ class PlayerWindow(FluentWindow):
         self.update_ui_texts()
         
     def open_file(self):
-        fileNames, _ = QFileDialog.getOpenFileNames(self, "Add Files", "", 
-                                                   "Media Files (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff)")
+        fileNames, _ = QFileDialog.getOpenFileNames(self, tr('add_files_title'), "", 
+                                                   f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff)")
         if fileNames:
             self.add_files_to_playlist(fileNames)
             if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
                 self.load_video(fileNames[0])
 
     def add_folder_contents(self, type="video"):
-        folder = QFileDialog.getExistingDirectory(self, f"Select {type.capitalize()} Folder")
+        folder = QFileDialog.getExistingDirectory(self, tr('select_folder'))
         if not folder:
             return
             
@@ -1439,7 +1560,7 @@ class PlayerWindow(FluentWindow):
         self.view.laser_mode = checked
 
     def choose_pen_color(self):
-        color = QColorDialog.getColor(self.view.pen_color, self, "Select Color")
+        color = QColorDialog.getColor(self.view.pen_color, self, tr('select_color'))
         if color.isValid():
             self.view.pen_color = color
             # Just update the background of the tool button subtly or the preview
@@ -1568,7 +1689,7 @@ class PlayerWindow(FluentWindow):
         painter.end()
         
         filePath, _ = QFileDialog.getSaveFileName(
-            self, "Save Screenshot", "boomerang_analysis.png", "PNG file (*.png);;JPG file (*.jpg)"
+            self, tr('save_screenshot'), "boomerang_analysis.png", tr('image_files') + " (*.png *.jpg)"
         )
         if filePath:
             out_pixmap.save(filePath)
@@ -1683,8 +1804,8 @@ class PlayerWindow(FluentWindow):
         
         if not is_visible:
             sizes = self.mainSplitter.sizes()
-            if sizes[2] < 250:
-                sizes[2] = 250
+            if sizes[3] < 250:
+                sizes[3] = 250
                 self.mainSplitter.setSizes(sizes)
 
     def toggle_drawing_panel(self):
@@ -1695,22 +1816,24 @@ class PlayerWindow(FluentWindow):
         
         if not is_visible:
             sizes = self.mainSplitter.sizes()
-            if sizes[3] < 250:
-                sizes[3] = 250
+            if sizes[4] < 250:
+                sizes[4] = 250
                 self.mainSplitter.setSizes(sizes)
 
     def toggle_settings(self):
         is_visible = self.settingsContainer.isVisible()
+        if not is_visible:
+            self.globalSettingsContainer.hide()
         self.settingsContainer.setVisible(not is_visible)
         
         if not is_visible:
             sizes = self.mainSplitter.sizes()
-            if sizes[0] < 250:
-                sizes[0] = 250
+            if sizes[1] < 250:
+                sizes[1] = 250
                 self.mainSplitter.setSizes(sizes)
 
     def save_playlist_to_file(self):
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save Project", "", "JSON Files (*.json)")
+        fileName, _ = QFileDialog.getSaveFileName(self, tr('save_project_title'), "", f"{tr('json_files')} (*.json)")
         if fileName:
             data = {
                 'files': [],
@@ -1724,7 +1847,7 @@ class PlayerWindow(FluentWindow):
                 json.dump(data, f, indent=4)
 
     def load_playlist_from_file(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open Project", "", "JSON Files (*.json)")
+        fileName, _ = QFileDialog.getOpenFileName(self, tr('open_project_title'), "", f"{tr('json_files')} (*.json)")
         if fileName:
             with open(fileName, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -1772,17 +1895,17 @@ class PlayerWindow(FluentWindow):
             container = fmt.get('format_name', 'unknown').split(',')[0]
             
             info_text = (
-                f"File: {os.path.basename(self.currentFilePath)}\n\n"
-                f"Resolution: {res}\n"
-                f"Codec: {codec} ({pix_fmt})\n"
-                f"Container: {container}\n"
-                f"FPS: {float(self.fps):.2f}\n"
-                f"Size: {size_mb:.2f} MB\n\n"
-                f"Path: {self.currentFilePath}"
+                f"{tr('file')}: {os.path.basename(self.currentFilePath)}\n\n"
+                f"{tr('resolution')}: {res}\n"
+                f"{tr('codec')}: {codec} ({pix_fmt})\n"
+                f"{tr('container')}: {container}\n"
+                f"{tr('fps')}: {float(self.fps):.2f}\n"
+                f"{tr('size')}: {size_mb:.2f} MB\n\n"
+                f"{tr('path')}: {self.currentFilePath}"
             )
             
-            w = MessageBox("File Information", info_text, self)
-            w.yesButton.setText("OK")
+            w = MessageBox(tr('file_info_title'), info_text, self)
+            w.yesButton.setText(tr('ok'))
             w.cancelButton.hide()
             w.exec()
             
@@ -1991,6 +2114,19 @@ class PlayerWindow(FluentWindow):
         else:
             # Default to forward for None (0) and Forward (1)
             self.isForward = True
+            
+        # Sync switch state
+        if hasattr(self, 'loopToggle'):
+            self.loopToggle.blockSignals(True)
+            self.loopToggle.setChecked(index != 0)
+            self.loopToggle.blockSignals(False)
+
+        # Save to current playlist item
+        if self.currentFilePath:
+            if self.currentFilePath not in self.playlistData:
+                self.playlistData[self.currentFilePath] = {'markers': [], 'loopMode': 0}
+            self.playlistData[self.currentFilePath]['loopMode'] = index
+
         
     def update_zoom(self, value):
         snapped = round(value / 20) * 20
@@ -2267,14 +2403,7 @@ class PlayerWindow(FluentWindow):
         
         if action == 'play_pause':
             self.play_pause()
-        elif action == 'set_loop_start':
-            self.add_smart_marker() # Actually set_loop_start logic? The current player uses markers.
-            # Wait, the player uses a MarkerSlider and markers list.
-            # In get_active_loop_range it finds the segment containing current_cache_index.
-            # Adding a marker effectively splits a segment.
-            self.add_smart_marker()
-        elif action == 'set_loop_end':
-            # Similar to set_loop_start in this marker-based system
+        elif action == 'smart_mark':
             self.add_smart_marker()
         elif action == 'toggle_loop':
             current = self.loopCombo.currentIndex()
@@ -2290,12 +2419,16 @@ class PlayerWindow(FluentWindow):
             super().keyPressEvent(event)
 
     def show_global_settings(self):
-        dialog = SettingsDialog(self.config, self)
-        if dialog.exec():
-            # Reload config and update UI
-            self.config = load_config()
-            set_lang(self.config.get('language', 'en'))
-            self.shortcuts = self.config.get('shortcuts', {})
+        is_visible = self.globalSettingsContainer.isVisible()
+        if not is_visible:
+            self.settingsContainer.hide()
+        self.globalSettingsContainer.setVisible(not is_visible)
+        
+        if not is_visible:
+            sizes = self.mainSplitter.sizes()
+            if sizes[0] < 250:
+                sizes[0] = 250
+                self.mainSplitter.setSizes(sizes)
             
             # Update audio device
             device_id = self.config.get('audio_device', '')
@@ -2342,47 +2475,195 @@ class PlayerWindow(FluentWindow):
         self.mirrorButton.setText(tr('mirror_h'))
         self.mirrorVerticalButton.setText(tr('mirror_v'))
         self.rotateButton.setText(tr('rotate'))
-        self.globalSettingsButton.setText(tr('settings'))
-        self.loadingOverlay.setText(tr('caching_ram'))
+        # self.globalSettingsButton.setText(tr('settings')) # Now icon only
+        self.globalSettingsButton.setToolTip(tr('settings'))
+        self.toggleSettingsButton.setToolTip(tr('video_settings'))
+        self.loadingOverlay.setText(tr('caching'))
         
-        # Tooltips
-        self.btn_add.setToolTip(tr('tip_add'))
-        self.btn_sort.setToolTip(tr('tip_sort'))
+        # Combo boxes
+        idx = self.loopCombo.currentIndex()
+        self.loopCombo.clear()
+        self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
+        self.loopCombo.setCurrentIndex(idx)
+        
+        # Menus (Re-create to update text)
+        self.addMenu.clear()
+        self.addMenu.addAction(tr('add_media'), self.open_file)
+        self.addMenu.addAction(tr('add_video_folder'), lambda: self.add_folder_contents(type="video"))
+        self.addMenu.addAction(tr('add_image_folder'), lambda: self.add_folder_contents(type="image"))
+        self.addMenu.addSeparator()
+        self.addMenu.addAction(tr('load_playlist'), self.load_playlist_from_file)
+        
+        self.sortMenu.clear()
+        self.sortMenu.addAction(tr('sort_name_asc'), lambda: self.sort_playlist_by("name_asc"))
+        self.sortMenu.addAction(tr('sort_name_desc'), lambda: self.sort_playlist_by("name_desc"))
+        self.sortMenu.addAction(tr('sort_date_newest'), lambda: self.sort_playlist_by("date_newest"))
+        self.sortMenu.addAction(tr('sort_date_oldest'), lambda: self.sort_playlist_by("date_oldest"))
+        
+        self.removeMenu.clear()
+        self.removeMenu.addAction(tr('remove_selected'), self.remove_from_playlist)
+        self.removeMenu.addAction(tr('clear_all'), self.clear_playlist)
+        
+        # Image adjustments labels
+        self.brightnessLabel.setText(tr('brightness'))
+        self.contrastLabel.setText(tr('contrast'))
+        self.gammaLabel.setText(tr('gamma'))
+        self.saturationLabel.setText(tr('saturation'))
+        
+        # Labels that might have changed
+        self.update_loop_frames_label()
         self.btn_save.setToolTip(tr('tip_save'))
         self.btn_clear.setToolTip(tr('tip_clear'))
         self.thumbToggle.setToolTip(tr('tip_thumbnails'))
-        self.saveScreenshotBtn.setToolTip(tr('tip_screenshot'))
+        self.penTool.setToolTip(tr('tip_pen'))
+        self.lineTool.setToolTip(tr('tip_line'))
+        self.arrowTool.setToolTip(tr('tip_arrow'))
+        self.textTool.setToolTip(tr('tip_text'))
+        self.rectTool.setToolTip(tr('tip_rect'))
+        self.ellipseTool.setToolTip(tr('tip_ellipse'))
+        self.triangleTool.setToolTip(tr('tip_triangle'))
+        self.objEraserTool.setToolTip(tr('tip_obj_eraser'))
+        self.areaEraserTool.setToolTip(tr('tip_area_eraser'))
+        self.strokeEraserTool.setToolTip(tr('tip_stroke_eraser'))
         self.sidebarUndoBtn.setToolTip(tr('tip_undo'))
         self.sidebarClearBtn.setToolTip(tr('tip_clear_draw'))
-        self.toggleSettingsButton.setToolTip(tr('tip_settings'))
+        self.saveScreenshotBtn.setToolTip(tr('tip_screenshot'))
+        self.togglePlaylistButton.setToolTip(tr('tip_playlist'))
+        self.toggleDrawingButton.setToolTip(tr('tip_drawing'))
+        self.globalSettingsButton.setToolTip(tr('tip_settings'))
+        self.toggleSettingsButton.setToolTip(tr('video_settings'))
         self.stepBackButton.setToolTip(tr('tip_prev_frame'))
         self.playButton.setToolTip(tr('tip_play_pause'))
         self.stepForwardButton.setToolTip(tr('tip_next_frame'))
         self.volumeButton.setToolTip(tr('tip_mute'))
         
-        # Loop combo items (need to clear and re-add or just update)
-        self.loopCombo.blockSignals(True)
-        current_idx = self.loopCombo.currentIndex()
-        self.loopCombo.clear()
-        self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
-        self.loopCombo.setCurrentIndex(current_idx)
-        self.loopCombo.blockSignals(False)
+        # Loop controls sync
+        self.loopToggle.blockSignals(True)
+        self.loopToggle.setChecked(self.loopCombo.currentIndex() != 0)
+        self.loopToggle.blockSignals(False)
         
-        # Menu actions (re-creating or re-setting text)
-        self.addMenu.clear()
-        self.addMenu.addAction(tr('add'), self.open_file)
-        self.addMenu.addAction("Add video folder", lambda: self.add_folder_contents(type="video"))
-        self.addMenu.addAction("Add image folder", lambda: self.add_folder_contents(type="image"))
-        self.addMenu.addSeparator()
-        self.addMenu.addAction("Load playlist", self.load_playlist_from_file)
+        # Global Settings Sidebar
+        self.globalSettingsTitle.setText(tr('settings'))
+        self.gsGeneralLabel.setText(tr('general'))
+        self.gsShortcutsLabel.setText(tr('playback_shortcuts'))
+        self.loopLabel.setText(tr('loop'))
+        self.globalLoopLabel.setText(tr('global_loop_mode'))
         
-        self.sortMenu.clear()
-        self.sortMenu.addAction("Name (A-Z)", lambda: self.sort_playlist_by("name_asc"))
-        self.sortMenu.addAction("Name (Z-A)", lambda: self.sort_playlist_by("name_desc"))
-        self.sortMenu.addAction("Date (Newest)", lambda: self.sort_playlist_by("date_newest"))
-        self.sortMenu.addAction("Date (Oldest)", lambda: self.sort_playlist_by("date_oldest"))
+        self.gsLangBtn.setText(tr('language'))
+        self.gsAudioBtn.setText(tr('audio_device'))
+
+
+    def show_language_menu(self):
+        menu = QMenu(parent=self)
+        menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #202020;
+                border: none;
+                padding: 4px 0px;
+            }
+            QMenu::item {
+                padding: 8px 25px;
+                color: white;
+                background-color: transparent;
+            }
+            QMenu::item:selected {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            QMenu::item:checked {
+                color: #00f2ff;
+                font-weight: bold;
+            }
+            QMenu::indicator {
+                width: 0px;
+            }
+        """)
+        current_lang = self.config.get('language', 'en')
         
-        self.removeMenu.clear()
-        self.removeMenu.addAction("Remove selected", self.remove_from_playlist)
-        self.removeMenu.addAction(tr('clear') + " all", self.clear_playlist)
+        en_action = menu.addAction(tr('English'))
+        en_action.setCheckable(True)
+        en_action.setChecked(current_lang == 'en')
+        en_action.triggered.connect(lambda: self.on_language_changed_sidebar(0))
+        
+        hu_action = menu.addAction(tr('Magyar'))
+        hu_action.setCheckable(True)
+        hu_action.setChecked(current_lang == 'hu')
+        hu_action.triggered.connect(lambda: self.on_language_changed_sidebar(1))
+        
+        pos = self.gsLangBtn.mapToGlobal(QPoint(0, self.gsLangBtn.height()))
+        menu.exec(pos)
+
+    def show_audio_menu(self):
+        menu = QMenu(parent=self)
+        menu.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #202020;
+                border: none;
+                padding: 4px 0px;
+            }
+            QMenu::item {
+                padding: 8px 25px;
+                color: white;
+                background-color: transparent;
+            }
+            QMenu::item:selected {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            QMenu::item:checked {
+                color: #00f2ff;
+                font-weight: bold;
+            }
+            QMenu::indicator {
+                width: 0px;
+            }
+        """)
+        current_device_id = self.config.get('audio_device', '')
+        try:
+            from PyQt6.QtMultimedia import QMediaDevices
+            # Store reference to prevent garbage collection
+            self.temp_devices = QMediaDevices.audioOutputs()
+            if not self.temp_devices:
+                menu.addAction(tr("no_devices_found")).setEnabled(False)
+            else:
+                for device in self.temp_devices:
+                    name = device.description()
+                    d_id = device.id().data().decode() if hasattr(device.id(), 'data') else str(device.id())
+                    
+                    action = menu.addAction(name)
+                    action.setCheckable(True)
+                    action.setChecked(d_id == current_device_id)
+                    action.triggered.connect(lambda checked, d=device: self.select_audio_device_sidebar(d))
+        except Exception as e:
+            menu.addAction(f"Error: {e}").setEnabled(False)
+            
+        pos = self.gsAudioBtn.mapToGlobal(QPoint(0, self.gsAudioBtn.height()))
+        menu.exec(pos)
+
+    def select_audio_device_sidebar(self, device):
+        d_id = device.id().data().decode() if hasattr(device.id(), 'data') else str(device.id())
+        self.config['audio_device'] = d_id
+        save_config(self.config)
+        self.audioOutput.setDevice(device)
+
+    def on_language_changed_sidebar(self, idx):
+        lang = 'en' if idx == 0 else 'hu'
+        self.config['language'] = lang
+        save_config(self.config)
+        set_lang(lang)
+        self.update_ui_texts()
+
+    def on_loop_switch_toggled(self, checked):
+        if checked:
+            if self.loopCombo.currentIndex() == 0:
+                self.loopCombo.setCurrentIndex(1) # Default to Forward
+        else:
+            self.loopCombo.setCurrentIndex(0) # None
+
+    def update_shortcut_sidebar(self, action_name, new_key):
+        self.shortcuts[action_name] = new_key
+        self.config['shortcuts'] = self.shortcuts
+        save_config(self.config)
 

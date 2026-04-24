@@ -6,6 +6,7 @@ TRANSLATIONS = {
         'add': 'Add',
         'sort': 'Sort',
         'save': 'Save',
+        'cancel': 'Cancel',
         'clear': 'Clear',
         'video_settings': 'Video settings',
         'drawing_settings': 'Drawing settings',
@@ -36,6 +37,21 @@ TRANSLATIONS = {
         'rotate': 'Rotate',
         'settings': 'Settings',
         'caching_ram': 'Caching RAM preview...',
+        'ok': 'OK',
+        'playback_shortcuts': 'Playback shortcuts',
+        'loop': 'Loop',
+        
+        # Menu actions
+        'add_media': 'Add media',
+        'add_video_folder': 'Add video folder',
+        'add_image_folder': 'Add image folder',
+        'load_playlist': 'Load playlist',
+        'sort_name_asc': 'Name (A-Z)',
+        'sort_name_desc': 'Name (Z-A)',
+        'sort_date_newest': 'Date (Newest)',
+        'sort_date_oldest': 'Date (Oldest)',
+        'remove_selected': 'Remove selected',
+        'clear_all': 'Clear all',
         
         # Tools
         'pen': 'Pen',
@@ -73,6 +89,28 @@ TRANSLATIONS = {
         'tip_next_frame': 'Next frame',
         'tip_play_pause': 'Play / Pause',
         'tip_mute': 'Toggle Mute',
+        'tip_playlist': 'Toggle Playlist',
+        'tip_drawing': 'Toggle Drawing Panel',
+        
+        # Dialogs
+        'add_files_title': 'Add Files',
+        'save_project_title': 'Save Project',
+        'open_project_title': 'Open Project',
+        'select_folder': 'Select Folder',
+        'json_files': 'JSON Files',
+        'media_files': 'Media Files',
+        'file_info_title': 'File Information',
+        'end': 'End',
+        'all_files': 'All Files',
+        'image_files': 'Image Files',
+        'select_color': 'Select Color',
+        'file': 'File',
+        'resolution': 'Resolution',
+        'codec': 'Codec',
+        'container': 'Container',
+        'fps': 'FPS',
+        'size': 'Size',
+        'path': 'Path',
         
         # Loop modes
         'loop_none': 'None',
@@ -90,8 +128,7 @@ TRANSLATIONS = {
         
         # Actions for shortcuts
         'act_play_pause': 'Play / Pause',
-        'act_loop_start': 'Set Loop Start',
-        'act_loop_end': 'Set Loop End',
+        'act_smart_mark': 'Marking',
         'act_toggle_loop': 'Toggle Loop',
         'act_next_frame': 'Next Frame',
         'act_prev_frame': 'Previous Frame',
@@ -104,6 +141,7 @@ TRANSLATIONS = {
         'add': 'Hozzáadás',
         'sort': 'Rendezés',
         'save': 'Mentés',
+        'cancel': 'Mégse',
         'clear': 'Törlés',
         'video_settings': 'Videó beállítások',
         'drawing_settings': 'Rajz beállítások',
@@ -134,6 +172,21 @@ TRANSLATIONS = {
         'rotate': 'Forgatás',
         'settings': 'Beállítások',
         'caching_ram': 'RAM gyorsítótárazás...',
+        'ok': 'OK',
+        'playback_shortcuts': 'Lejátszási gyorsbillentyűk',
+        'loop': 'Hurok',
+        
+        # Menu actions
+        'add_media': 'Média hozzáadása',
+        'add_video_folder': 'Videó mappa hozzáadása',
+        'add_image_folder': 'Kép mappa hozzáadása',
+        'load_playlist': 'Lista betöltése',
+        'sort_name_asc': 'Név (A-Z)',
+        'sort_name_desc': 'Név (Z-A)',
+        'sort_date_newest': 'Dátum (Legújabb)',
+        'sort_date_oldest': 'Dátum (Legrégebbi)',
+        'remove_selected': 'Kijelöltek eltávolítása',
+        'clear_all': 'Összes törlése',
         
         # Tools
         'pen': 'Toll',
@@ -171,6 +224,28 @@ TRANSLATIONS = {
         'tip_next_frame': 'Következő képkocka',
         'tip_play_pause': 'Lejátszás / Szünet',
         'tip_mute': 'Némítás ki/be',
+        'tip_playlist': 'Lista ki/be',
+        'tip_drawing': 'Rajz panel ki/be',
+        
+        # Dialogs
+        'add_files_title': 'Fájlok hozzáadása',
+        'save_project_title': 'Projekt mentése',
+        'open_project_title': 'Projekt megnyitása',
+        'select_folder': 'Mappa kiválasztása',
+        'json_files': 'JSON fájlok',
+        'media_files': 'Média fájlok',
+        'file_info_title': 'Fájl információ',
+        'end': 'Vége',
+        'all_files': 'Minden fájl',
+        'image_files': 'Kép fájlok',
+        'select_color': 'Szín választása',
+        'file': 'Fájl',
+        'resolution': 'Felbontás',
+        'codec': 'Kodek',
+        'container': 'Konténer',
+        'fps': 'Képsebesség',
+        'size': 'Méret',
+        'path': 'Útvonal',
         
         # Loop modes
         'loop_none': 'Nincs',
@@ -188,8 +263,7 @@ TRANSLATIONS = {
         
         # Actions for shortcuts
         'act_play_pause': 'Lejátszás / Szünet',
-        'act_loop_start': 'Hurok eleje',
-        'act_loop_end': 'Hurok vége',
+        'act_smart_mark': 'Jelölés',
         'act_toggle_loop': 'Hurok ki/be',
         'act_next_frame': 'Következő képkocka',
         'act_prev_frame': 'Előző képkocka',

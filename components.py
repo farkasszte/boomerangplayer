@@ -4,7 +4,8 @@ from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroke
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
                              QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsScene,
                              QGraphicsItemGroup)
-from qfluentwidgets import ListWidget
+from qfluentwidgets import ListWidget, PushButton
+from translations import tr
 
 class DropListWidget(ListWidget):
     filesDropped = pyqtSignal(list)
@@ -336,7 +337,7 @@ class ZoomView(QGraphicsView):
             super().dropEvent(event)
 
     def wheelEvent(self, event):
-        # 1. Capture current mouse position in scene coordinates
+        # ... (keep existing wheelEvent content)
         viewport_pos = event.position()
         old_scene_pos = self.mapToScene(viewport_pos.toPoint())
         
@@ -376,3 +377,41 @@ class ZoomView(QGraphicsView):
         # Update cursor preview position immediately
         if self.drawing_mode:
             self.cursor_item.setPos(self.mapToScene(viewport_pos.toPoint()))
+
+class ShortcutButton(PushButton):
+    keyChanged = pyqtSignal(int)
+    
+    def __init__(self, key_code, parent=None):
+        super().__init__(parent)
+        self.key_code = key_code
+        self.is_recording = False
+        self.update_text()
+        self.clicked.connect(self.start_recording)
+        
+    def update_text(self):
+        if self.is_recording:
+            self.setText(tr('press_key'))
+        else:
+            try:
+                from PyQt6.QtGui import QKeySequence
+                self.setText(QKeySequence(self.key_code).toString())
+            except Exception:
+                self.setText("None")
+            
+    def start_recording(self):
+        self.is_recording = True
+        self.update_text()
+        self.setFocus()
+        
+    def keyPressEvent(self, event):
+        if self.is_recording:
+            key = event.key()
+            if key != Qt.Key.Key_Escape:
+                self.key_code = key
+                self.keyChanged.emit(key)
+            self.is_recording = False
+            self.update_text()
+            self.clearFocus()
+        else:
+            super().keyPressEvent(event)
+
