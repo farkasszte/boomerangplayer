@@ -1095,6 +1095,12 @@ class PlayerWindow(FluentWindow):
         loopGroup = QVBoxLayout()
         loopGroup.setSpacing(10)
         
+        self.loopCombo = QComboBox()
+        self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
+        self.loopCombo.setCurrentIndex(3)
+        self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
+        self.loopCombo.setStyleSheet(LOOP_COMBO_STYLE)
+        
         loopHeader = QHBoxLayout()
         self.loopLabel = CaptionLabel(tr('loop'))
         self.loopToggle = SwitchButton()
@@ -1136,14 +1142,8 @@ class PlayerWindow(FluentWindow):
         navGroup.addWidget(self.navToggle)
         loopGroup.addLayout(navGroup)
         
-        self.loopCombo = QComboBox()
-        self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
-        self.loopCombo.setCurrentIndex(3)
-        self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
-        self.loopCombo.setStyleSheet(LOOP_COMBO_STYLE)
         loopGroup.addWidget(self.loopCombo)
         
-        markerLayout = QHBoxLayout()
         markerLayout = QHBoxLayout()
         self.smartMarkButton = PushButton(tr('mark'))
         self.smartMarkButton.setStyleSheet(TOOL_BTN_STYLE)

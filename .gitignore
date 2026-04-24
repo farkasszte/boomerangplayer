@@ -46,3 +46,5 @@ ENV/
 temp_frames/
 playlist.json
 settings.json
+config.json
+error_log.txt
