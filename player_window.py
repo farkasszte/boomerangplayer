@@ -82,12 +82,14 @@ class PlayerWindow(FluentWindow):
         
         # State
         self.currentFilePath = None
-        self.playlistData = {} # {path: {'start': 0, 'end': 0, 'loopMode': 0}}
+        self.playlistData = {} # {path: {'markers': [], 'loopMode': 0}}
         self.isPingPong = True
         self.isForward = True
         self.zoomLevel = 1.0
-        self.loopStartFrame = 0
-        self.loopEndFrame = 0
+        self.markers = []
+        self.active_loop_start = 0
+        self.active_loop_end = 0
+        self.needs_range_update = True
         self.fps = 30.0 # Default fallback
         self.userMutedIntent = False
         self.isMirrored = False
@@ -301,12 +303,10 @@ class PlayerWindow(FluentWindow):
             
         self.progressBar.blockSignals(True)
         
-        if getattr(self, 'is_zoomed_nav', False) and self.cached_frame_dict:
-            indices = self.cached_frame_dict.keys()
-            if indices:
-                min_idx = min(indices)
-                max_idx = max(indices)
-                self.progressBar.setRange(min_idx, max_idx)
+        if getattr(self, 'is_zoomed_nav', False):
+            s = getattr(self, 'cache_start', 0)
+            e = getattr(self, 'cache_end', self.total_frames - 1)
+            self.progressBar.setRange(s, e)
         else:
             self.progressBar.setRange(0, max(0, self.total_frames - 1))
             
@@ -344,32 +344,33 @@ class PlayerWindow(FluentWindow):
             
         self.frame_accumulator -= int_delta
         
-        # Get loop points (frames)
+        # Update loop range only if needed (e.g. after seek or jump)
         loop_mode = self.loopCombo.currentIndex()
-        if loop_mode == 0: # None
+        if loop_mode == 0:
             start_frame = 0
             end_frame = max(0, self.total_frames - 1)
         else:
-            start_frame = self.loopStartFrame
-            end_frame = self.loopEndFrame if self.loopEndFrame > 0 else max(0, self.total_frames - 1)
+            if getattr(self, 'needs_range_update', True):
+                self.active_loop_start, self.active_loop_end = self.get_active_loop_range()
+                self.needs_range_update = False
+                self.update_loop_frames_label()
             
-        if start_frame > end_frame:
-            start_frame, end_frame = end_frame, start_frame
+            start_frame = self.active_loop_start
+            end_frame = self.active_loop_end
 
         if self.isForward:
             self.current_cache_index += int_delta
             if self.current_cache_index > end_frame:
-                if loop_mode in (1, 2): # Standard Loop
-                    self.current_cache_index = start_frame + (self.current_cache_index - end_frame - 1)
+                if loop_mode in (1, 2, 3): # Looping
+                    if loop_mode == 3: # Ping-pong
+                        self.isForward = False
+                        self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
+                    else: # Forward/Backward
+                        self.current_cache_index = start_frame + (self.current_cache_index - end_frame - 1)
+                    
                     if self.fps > 0:
                         self.mediaPlayer.setPosition(int(self.current_cache_index * 1000 / self.fps))
                         self.set_volume(self.audioOutput.volume() * 100)
-                    if loop_mode == 2:
-                        self.isForward = False
-                elif loop_mode == 3: # Ping-pong
-                    self.isForward = False
-                    self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
-                    self.set_volume(0)
                 else:
                     self.current_cache_index = end_frame
                     self.stop_playback()
@@ -1007,20 +1008,21 @@ class PlayerWindow(FluentWindow):
         loopGroup.addWidget(self.loopCombo)
         
         markerLayout = QHBoxLayout()
-        self.setStartButton = PushButton("Set in")
-        self.setStartButton.setStyleSheet(TOOL_BTN_STYLE)
-        self.setStartButton.clicked.connect(self.set_loop_start)
+        markerLayout = QHBoxLayout()
+        self.smartMarkButton = PushButton("Mark")
+        self.smartMarkButton.setStyleSheet(TOOL_BTN_STYLE)
+        self.smartMarkButton.clicked.connect(self.add_smart_marker)
         
-        self.setEndButton = PushButton("Set out")
-        self.setEndButton.setStyleSheet(TOOL_BTN_STYLE)
-        self.setEndButton.clicked.connect(self.set_loop_end)
+        self.deleteMarkerButton = PushButton("Delete")
+        self.deleteMarkerButton.setStyleSheet(TOOL_BTN_STYLE)
+        self.deleteMarkerButton.clicked.connect(self.delete_nearest_marker)
         
         self.clearMarkersButton = PushButton("Reset")
         self.clearMarkersButton.setStyleSheet(TOOL_BTN_STYLE)
         self.clearMarkersButton.clicked.connect(self.clear_loop_markers)
         
-        markerLayout.addWidget(self.setStartButton)
-        markerLayout.addWidget(self.setEndButton)
+        markerLayout.addWidget(self.smartMarkButton)
+        markerLayout.addWidget(self.deleteMarkerButton)
         markerLayout.addWidget(self.clearMarkersButton)
         loopGroup.addLayout(markerLayout)
         
@@ -1313,8 +1315,7 @@ class PlayerWindow(FluentWindow):
         if self.currentFilePath:
             scroll_x, scroll_y = self.view.get_scroll_state()
             self.playlistData[self.currentFilePath] = {
-                'startFrame': self.loopStartFrame,
-                'endFrame': self.loopEndFrame,
+                'markers': self.markers,
                 'loopMode': self.loopCombo.currentIndex(),
                 'speed': self.speedSlider.value(),
                 'zoom': self.zoomSlider.value(),
@@ -1331,11 +1332,13 @@ class PlayerWindow(FluentWindow):
     def load_markers_for_current(self):
         if self.currentFilePath in self.playlistData:
             data = self.playlistData[self.currentFilePath]
-            self.loopStartFrame = data.get('startFrame', 0)
-            self.loopEndFrame = data.get('endFrame', 0)
-                
-            self.loopCombo.setCurrentIndex(data.get('loopMode', 0))
-            self.isPingPong = (self.loopCombo.currentIndex() == 3)
+            self.markers = data.get('markers', [])
+            self.markers.sort()
+            self.progressBar.update_markers(self.markers)
+            
+            loop_mode = data.get('loopMode', 3)
+            self.loopCombo.setCurrentIndex(loop_mode)
+            self.isPingPong = (loop_mode == 3)
             
             # Load speed and zoom
             self.speedSlider.setValue(data.get('speed', 100))
@@ -1352,16 +1355,14 @@ class PlayerWindow(FluentWindow):
             
             self.apply_transformations(fit=True)
         else:
-            self.loopStartFrame = 0
-            self.loopEndFrame = 0
+            self.markers = []
+            self.progressBar.update_markers(self.markers)
             if not self.globalLoopToggle.isChecked():
                 self.loopCombo.setCurrentIndex(0) # Default None
             self.speedSlider.setValue(100)
             self.reset_adjustments()
             self.apply_transformations(fit=True)
             
-        # Ensure the UI reflects the loaded/reset markers
-        self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
         self.update_loop_frames_label()
 
     def handle_view_drop(self, files):
@@ -1786,6 +1787,7 @@ class PlayerWindow(FluentWindow):
         
     def set_position(self, index):
         self.current_cache_index = index
+        self.needs_range_update = True
         
         # Trigger extraction if frame is missing
         if index not in getattr(self, 'cached_frame_dict', {}):
@@ -1852,11 +1854,11 @@ class PlayerWindow(FluentWindow):
             self.totalTimeLabel.setText(format_time(duration))
             self.sync_progress_bar()
             
+            # Re-validate existing markers against new duration
             last_valid_frame = max(0, self.total_frames - 1)
-            if self.loopEndFrame == 0 or self.loopEndFrame > last_valid_frame:
-                self.loopEndFrame = last_valid_frame
-                self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
-                self.update_loop_frames_label()
+            self.markers = [m for m in self.markers if m <= last_valid_frame]
+            self.progressBar.update_markers(self.markers)
+            self.update_loop_frames_label()
         
     def set_volume(self, volume):
         self.audioOutput.setVolume(volume / 100.0)
@@ -1951,6 +1953,11 @@ class PlayerWindow(FluentWindow):
     def on_loop_mode_changed(self, index):
         # index: 0: None, 1: Forward, 2: Backward, 3: Ping-Pong
         self.isPingPong = (index == 3)
+        if index == 2: # Backward
+            self.isForward = False
+        else:
+            # Default to forward for None (0) and Forward (1)
+            self.isForward = True
         
     def update_zoom(self, value):
         snapped = round(value / 20) * 20
@@ -2054,35 +2061,71 @@ class PlayerWindow(FluentWindow):
 
 
     def update_loop_frames_label(self):
-        start_f = self.loopStartFrame
-        end_f = self.loopEndFrame
-        if end_f == 0:
-            end_f = self.progressBar.maximum()
+        if not self.currentFilePath:
+            return
             
+        start_f, end_f = self.get_active_loop_range()
         self.loopFramesLabel.setText(f"[F: {start_f} - {end_f}]")
 
-    def set_loop_start(self):
-        self.loopStartFrame = self.current_cache_index
-        if self.loopStartFrame >= self.loopEndFrame and self.loopEndFrame != 0:
-            self.loopEndFrame = max(0, self.total_frames - 1)
+    def get_active_loop_range(self):
+        if not self.currentFilePath or self.total_frames <= 0:
+            return 0, 0
             
-        self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
+        f = int(self.current_cache_index)
+        last_frame = max(0, self.total_frames - 1)
+        valid_markers = [int(m) for m in self.markers if 0 < m < last_frame]
+        full_markers = sorted(list(set([0, last_frame] + valid_markers)))
+        
+        import bisect
+        # Use different bisect logic based on direction to prevent "leaking" through markers
+        # When moving forward, we stay in the left segment until f > marker.
+        # When moving backward, we stay in the right segment until f < marker.
+        if getattr(self, 'isForward', True):
+            idx = bisect.bisect_left(full_markers, f)
+        else:
+            idx = bisect.bisect_right(full_markers, f)
+        
+        if idx == 0:
+            start_frame = full_markers[0]
+            end_frame = full_markers[1] if len(full_markers) > 1 else full_markers[0]
+        elif idx >= len(full_markers):
+            start_frame = full_markers[-2] if len(full_markers) > 1 else 0
+            end_frame = full_markers[-1]
+        else:
+            start_frame = full_markers[idx-1]
+            end_frame = full_markers[idx]
+                
+        return start_frame, end_frame
+
+    def add_smart_marker(self):
+        f = self.current_cache_index
+        if f not in self.markers:
+            self.markers.append(f)
+            self.markers.sort()
+            
+        self.needs_range_update = True
+        self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
 
-    def set_loop_end(self):
-        self.loopEndFrame = self.current_cache_index
-        if self.loopEndFrame <= self.loopStartFrame:
-            self.loopStartFrame = 0
+    def delete_nearest_marker(self):
+        if not self.markers:
+            return
             
-        self.progressBar.update_markers(self.loopStartFrame, self.loopEndFrame)
+        f = self.current_cache_index
+        # Find closest marker
+        closest = min(self.markers, key=lambda m: abs(m - f))
+        # Only delete if it's reasonably close? No, user said "delete nearest"
+        self.markers.remove(closest)
+        
+        self.needs_range_update = True
+        self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
 
     def clear_loop_markers(self):
-        self.loopStartFrame = 0
-        self.loopEndFrame = max(0, self.total_frames - 1)
-        self.progressBar.update_markers(0, self.loopEndFrame)
+        self.markers = []
+        self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
 

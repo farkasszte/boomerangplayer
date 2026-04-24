@@ -32,12 +32,10 @@ class DropListWidget(ListWidget):
 class MarkerSlider(QSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.loopStartFrame = 0
-        self.loopEndFrame = 0
+        self.markers = []
         
-    def update_markers(self, start_frame, end_frame):
-        self.loopStartFrame = start_frame
-        self.loopEndFrame = end_frame
+    def update_markers(self, markers):
+        self.markers = sorted(list(set(markers)))
         self.update()
 
     def mousePressEvent(self, event):
@@ -56,17 +54,14 @@ class MarkerSlider(QSlider):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         w = self.width()
-        start_x = int((self.loopStartFrame / self.maximum()) * w)
-        end_x = int((self.loopEndFrame / self.maximum()) * w)
-        
         pen = QPen(QColor(0, 153, 255))
         pen.setWidth(2)
         painter.setPen(pen)
         
-        if self.loopStartFrame > 0:
-            painter.drawLine(start_x, 0, start_x, self.height())
-        if self.loopEndFrame > 0 and self.loopEndFrame < self.maximum():
-            painter.drawLine(end_x, 0, end_x, self.height())
+        for m in self.markers:
+            if 0 < m < self.maximum():
+                mx = int((m / self.maximum()) * w)
+                painter.drawLine(mx, 0, mx, self.height())
 
 class ZoomView(QGraphicsView):
     zoomChanged = pyqtSignal(float)
