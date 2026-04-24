@@ -728,6 +728,10 @@ class PlayerWindow(FluentWindow):
         self.mainSplitter.addWidget(self.playlistContainer)
         self.mainSplitter.addWidget(self.drawingContainer)
         self.mainSplitter.setStretchFactor(1, 1)
+        
+        # Force initial sizes: 0 for hidden sidebars, large for view, 250 for playlist
+        self.mainSplitter.setSizes([0, 10000, 250, 0])
+        
         self.settingsContainer.hide() # Hidden by default
         
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
@@ -1600,16 +1604,34 @@ class PlayerWindow(FluentWindow):
         if not is_visible:
             self.drawingContainer.hide()
         self.playlistContainer.setVisible(not is_visible)
+        
+        if not is_visible:
+            sizes = self.mainSplitter.sizes()
+            if sizes[2] < 250:
+                sizes[2] = 250
+                self.mainSplitter.setSizes(sizes)
 
     def toggle_drawing_panel(self):
         is_visible = self.drawingContainer.isVisible()
         if not is_visible:
             self.playlistContainer.hide()
         self.drawingContainer.setVisible(not is_visible)
+        
+        if not is_visible:
+            sizes = self.mainSplitter.sizes()
+            if sizes[3] < 250:
+                sizes[3] = 250
+                self.mainSplitter.setSizes(sizes)
 
     def toggle_settings(self):
         is_visible = self.settingsContainer.isVisible()
         self.settingsContainer.setVisible(not is_visible)
+        
+        if not is_visible:
+            sizes = self.mainSplitter.sizes()
+            if sizes[0] < 250:
+                sizes[0] = 250
+                self.mainSplitter.setSizes(sizes)
 
     def save_playlist_to_file(self):
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Project", "", "JSON Files (*.json)")
