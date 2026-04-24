@@ -21,7 +21,8 @@ class FrameExtractionThread(QThread):
     def run(self):
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            ffmpeg_path = os.path.join(base_dir, "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
+            ffmpeg_path = os.path.join(base_dir, "..", "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
+            ffmpeg_path = os.path.normpath(ffmpeg_path)
             if not os.path.exists(ffmpeg_path):
                 ffmpeg_path = "ffmpeg"
                 
@@ -80,7 +81,6 @@ class ThumbnailThread(QThread):
                 pixmap = QPixmap(self.filePath)
                 if not pixmap.isNull():
                     thumb = pixmap.scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-                    # Create a centered crop to match the 120x120 look
                     final_thumb = QPixmap(120, 120)
                     final_thumb.fill(Qt.GlobalColor.transparent)
                     painter = QPainter(final_thumb)
@@ -92,7 +92,6 @@ class ThumbnailThread(QThread):
                     return
 
             # Video handling via FFmpeg
-            import tempfile
             import uuid
             temp_dir = tempfile.gettempdir()
             thumb_name = f"thumb_{uuid.uuid4().hex}.jpg"
@@ -104,7 +103,7 @@ class ThumbnailThread(QThread):
 
             cmd = [
                 ffmpeg_path, "-y",
-                "-ss", "1.0", # Skip very beginning
+                "-ss", "1.0",
                 "-i", self.filePath,
                 "-vframes", "1",
                 "-vf", "setsar=1,scale=120:120:force_original_aspect_ratio=increase,crop=120:120",
@@ -114,7 +113,6 @@ class ThumbnailThread(QThread):
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
-            # Wait with timeout to prevent hanging
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
