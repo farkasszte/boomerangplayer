@@ -395,6 +395,16 @@ class UIMixin:
             COMPACT_BTN_STYLE + "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }"
         )
 
+        self.playBackwardButton = ToolButton(FluentIcon.PLAY)
+        self.playBackwardButton.setToolTip(tr('tip_play_backward'))
+        # Flip the icon for backward
+        self.playBackwardButton.setIconSize(QSize(24, 24))
+        self.playBackwardButton.setFixedSize(32, 32)
+        self.playBackwardButton.setStyleSheet(
+            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; transform: scaleX(-1); }"
+        )
+        self.playBackwardButton.clicked.connect(self.play_pause_backward)
+
         self.playButton = ToolButton(FluentIcon.PLAY)
         self.playButton.setToolTip(tr('tip_play_pause'))
         self.playButton.setIconSize(QSize(24, 24))
@@ -415,6 +425,7 @@ class UIMixin:
         )
 
         playbackButtonsLayout.addWidget(self.stepBackButton)
+        playbackButtonsLayout.addWidget(self.playBackwardButton)
         playbackButtonsLayout.addWidget(self.playButton)
         playbackButtonsLayout.addWidget(self.stepForwardButton)
 

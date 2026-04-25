@@ -183,6 +183,16 @@ class PlaybackMixin:
             else:
                 self.audioOutput.setMuted(True)
 
+    def play_pause_backward(self):
+        if self.is_playing and not self.isForward:
+            self.stop_playback()
+        else:
+            self.isForward = False
+            # If already playing forward, stop first to reset timing
+            if self.is_playing:
+                self.stop_playback()
+            self.play_pause()
+
     def stop_playback(self):
         self.is_playing = False
         self.playbackTimer.stop()
@@ -284,6 +294,7 @@ class PlaybackMixin:
     def set_position(self, index):
         self.current_cache_index = index
         self.needs_range_update = True
+        self.isForward = True
 
         if index not in getattr(self, 'cached_frame_dict', {}):
             self.loadingOverlay.show()
@@ -331,8 +342,10 @@ class PlaybackMixin:
 
         if self.is_playing:
             self.playButton.setIcon(FluentIcon.PAUSE)
+            self.playBackwardButton.setIcon(FluentIcon.PAUSE)
         else:
             self.playButton.setIcon(FluentIcon.PLAY)
+            self.playBackwardButton.setIcon(FluentIcon.PLAY)
 
     def update_duration(self, duration):
         # Use ffprobe nb_frames if available to prevent drift/over-estimation
