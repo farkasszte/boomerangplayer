@@ -132,7 +132,11 @@ TRANSLATIONS = {
         'act_toggle_loop': 'Toggle Loop',
         'act_next_frame': 'Next Frame',
         'act_prev_frame': 'Previous Frame',
-        'act_toggle_mute': 'Toggle Mute'
+        'act_toggle_mute': 'Toggle Mute',
+        'rename': 'Rename',
+        'enter_new_name': 'Enter new name:',
+        'rename_file_title': 'Rename File',
+        'open_in_new_window': 'Open in new window'
     },
     'hu': {
         # Navigation/UI
@@ -165,8 +169,8 @@ TRANSLATIONS = {
         'mark': 'Jelölés',
         'delete': 'Törlés',
         'reset': 'Visszaállítás',
-        'save_loop': 'Hurok mentése',
-        'save_frame': 'Képkocka mentése',
+        'save_loop': 'Hurok mentés',
+        'save_frame': 'Kép mentés',
         'mirror_h': 'Tükrözés V',
         'mirror_v': 'Tükrözés F',
         'rotate': 'Forgatás',
@@ -186,7 +190,7 @@ TRANSLATIONS = {
         'sort_date_newest': 'Dátum (Legújabb)',
         'sort_date_oldest': 'Dátum (Legrégebbi)',
         'remove_selected': 'Kijelöltek eltávolítása',
-        'clear_all': 'Összes törlése',
+        'clear_all': 'Összes eltávolítása',
         
         # Tools
         'pen': 'Toll',
@@ -267,7 +271,11 @@ TRANSLATIONS = {
         'act_toggle_loop': 'Hurok ki/be',
         'act_next_frame': 'Következő képkocka',
         'act_prev_frame': 'Előző képkocka',
-        'act_toggle_mute': 'Némítás ki/be'
+        'act_toggle_mute': 'Némítás ki/be',
+        'rename': 'Átnevezés',
+        'enter_new_name': 'Adj meg új nevet:',
+        'rename_file_title': 'Fájl átnevezése',
+        'open_in_new_window': 'Megnyitás új ablakban'
     }
 }
 

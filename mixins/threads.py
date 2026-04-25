@@ -111,12 +111,12 @@ class ThumbnailThread(QThread):
             ]
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
             try:
-                process.wait(timeout=5)
+                self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()
+                self.process.kill()
                 return
 
             if os.path.exists(thumb_path):
@@ -127,3 +127,11 @@ class ThumbnailThread(QThread):
                 except: pass
         except Exception as e:
             print(f"Thumbnail error for {self.filePath}: {e}")
+            self.finished.emit(self.filePath, QPixmap())
+
+    def cancel(self):
+        if hasattr(self, 'process') and self.process:
+            try:
+                self.process.kill()
+            except:
+                pass

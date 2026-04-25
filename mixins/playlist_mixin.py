@@ -125,6 +125,98 @@ class PlaylistMixin:
     def show_remove_menu(self):
         self.show_clear_menu()
 
+    def show_playlist_context_menu(self, item, pos):
+        from PyQt6.QtWidgets import QMenu
+        menu = QMenu(self)
+        menu.setStyleSheet(MENU_STYLE)
+        menu.addAction(tr('rename'), lambda: self.rename_playlist_item(item))
+        menu.addAction(tr('open_in_new_window'), lambda: self.open_in_new_window(item))
+        menu.addAction(tr('remove_selected'), self.remove_from_playlist)
+        menu.exec(pos)
+
+    def open_in_new_window(self, item):
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if path and os.path.exists(path):
+            import subprocess
+            import sys
+            try:
+                # Launch a new instance of the current script with the file path
+                subprocess.Popen([sys.executable, sys.argv[0], path], 
+                                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            except Exception as e:
+                print(f"Error opening in new window: {e}")
+
+    def rename_playlist_item(self, item):
+        from PyQt6.QtWidgets import QInputDialog
+        old_path = item.data(Qt.ItemDataRole.UserRole)
+        if not old_path or not os.path.exists(old_path):
+            return
+        
+        old_name = os.path.basename(old_path)
+        new_name, ok = QInputDialog.getText(self, tr('rename_file_title'), tr('enter_new_name'), text=old_name)
+        
+        if ok and new_name and new_name != old_name:
+            new_path = os.path.join(os.path.dirname(old_path), new_name)
+            try:
+                # IMPORTANT: If this is the current file, release the lock!
+                is_current = (self.currentFilePath == old_path)
+                if is_current:
+                    # Clear media player source to release file lock on Windows
+                    from PyQt6.QtCore import QUrl
+                    self.mediaPlayer.setSource(QUrl())
+                    
+                    # Also stop extraction if it's running
+                    if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
+                        self.extraction_thread.cancel()
+
+                    # Stop any thumbnail generation for this file
+                    for t in getattr(self, 'thumb_threads', []):
+                        if t.filePath == old_path and t.isRunning():
+                            t.cancel()
+                
+                os.rename(old_path, new_path)
+                
+                # Update item
+                item.setText(new_name)
+                item.setData(Qt.ItemDataRole.UserRole, new_path)
+                
+                # Update playlist data
+                if old_path in self.playlistData:
+                    self.playlistData[new_path] = self.playlistData.pop(old_path)
+                
+                # Restore current file state if it was the one renamed
+                if is_current:
+                    self.currentFilePath = new_path
+                    self.setWindowTitle(f"Boomerang Player - {new_name}")
+                    from PyQt6.QtCore import QUrl
+                    self.mediaPlayer.setSource(QUrl.fromLocalFile(new_path))
+                    # Restore position
+                    if self.fps > 0:
+                        pos = int((self.current_cache_index * 1000) / self.fps)
+                        self.mediaPlayer.setPosition(pos)
+                    self.mediaPlayer.pause()
+                
+                # Update cache path if needed
+                if getattr(self, 'cached_file_path', None) == old_path:
+                    self.cached_file_path = new_path
+            except Exception as e:
+                # If error occurred, try to restore if it was current
+                if is_current and self.currentFilePath == old_path:
+                    from PyQt6.QtCore import QUrl
+                    self.mediaPlayer.setSource(QUrl.fromLocalFile(old_path))
+                
+                from qfluentwidgets import InfoBar, InfoBarPosition
+                InfoBar.error(
+                    title=tr('rename_file_title'),
+                    content=f"Error: {e}",
+                    orient=Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=5000,
+                    parent=self
+                )
+                print(f"Error renaming file: {e}")
+
     # ------------------------------------------------------------------ #
     # Sorting                                                              #
     # ------------------------------------------------------------------ #
@@ -254,19 +346,37 @@ class PlaylistMixin:
             container = fmt.get('format_name', 'unknown').split(',')[0]
 
             info_text = (
-                f"{tr('file')}: {os.path.basename(self.currentFilePath)}\n\n"
-                f"{tr('resolution')}: {res}\n"
-                f"{tr('codec')}: {codec} ({pix_fmt})\n"
-                f"{tr('container')}: {container}\n"
-                f"{tr('fps')}: {float(self.fps):.2f}\n"
-                f"{tr('size')}: {size_mb:.2f} MB\n\n"
-                f"{tr('path')}: {self.currentFilePath}"
+                f"<b>{tr('file')}:</b> {os.path.basename(self.currentFilePath)}<br><br>"
+                f"<b>{tr('resolution')}:</b> {res}<br>"
+                f"<b>{tr('codec')}:</b> {codec} ({pix_fmt})<br>"
+                f"<b>{tr('container')}:</b> {container}<br>"
+                f"<b>{tr('fps')}:</b> {float(self.fps):.2f}<br>"
+                f"<b>{tr('size')}:</b> {size_mb:.2f} MB<br><br>"
+                f"<font color='#888'>{self.currentFilePath}</font>"
             )
 
-            w = MessageBox(tr('file_info_title'), info_text, self)
-            w.yesButton.setText(tr('ok'))
-            w.cancelButton.hide()
-            w.exec()
+            # Create a compact menu instead of a MessageBox
+            from PyQt6.QtWidgets import QMenu, QWidgetAction, QLabel, QVBoxLayout, QWidget
+            menu = QMenu(self)
+            menu.setStyleSheet(MENU_STYLE)
+            
+            content = QWidget()
+            layout = QVBoxLayout(content)
+            layout.setContentsMargins(15, 10, 15, 10)
+            
+            label = QLabel(info_text)
+            label.setStyleSheet("color: white; font-size: 12px; border: none;")
+            label.setWordWrap(True)
+            label.setFixedWidth(280)
+            layout.addWidget(label)
+            
+            action = QWidgetAction(menu)
+            action.setDefaultWidget(content)
+            menu.addAction(action)
+            
+            # Show menu next to the info button
+            pos = self.infoButton.mapToGlobal(QPoint(0, self.infoButton.height() + 5))
+            menu.exec(pos)
 
         except Exception as e:
             print(f"Error getting file info: {e}")

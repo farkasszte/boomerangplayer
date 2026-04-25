@@ -74,7 +74,7 @@ class PlayerWindow(
 
         # ---- Application state ----------------------------------------
         self.currentFilePath = None
-        self.playlistData = {}
+        self.playlistData = self.config.get('markers_data', {})
         self.isPingPong = True
         self.isForward = True
         self.zoomLevel = 1.0

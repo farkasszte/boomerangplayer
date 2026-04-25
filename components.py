@@ -1,5 +1,5 @@
 import math
-from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF
+from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
 from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
                              QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup)
@@ -8,10 +8,16 @@ from translations import tr
 
 class DropListWidget(ListWidget):
     filesDropped = pyqtSignal(list)
+    itemRightClicked = pyqtSignal(object, QPoint)
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+
+    def contextMenuEvent(self, event):
+        item = self.itemAt(event.pos())
+        if item:
+            self.itemRightClicked.emit(item, event.globalPos())
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -116,11 +122,20 @@ class ZoomView(QGraphicsView):
         self.cursor_cross_fg.setPen(fg_pen)
         self.cursor_cross_fg.setPath(cross_path)
         
-        self.cursor_item.setZValue(10001)
+        self.cursor_item.setZValue(20000)
         self.cursor_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         self.cursor_item.setEnabled(False)
         self.cursor_item.hide()
         self.scene().addItem(self.cursor_item)
+
+        # Text preview ghost
+        self.text_preview_item = QGraphicsTextItem()
+        self.text_preview_item.setOpacity(0.5)
+        self.text_preview_item.setZValue(19999)
+        self.text_preview_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self.scene().addItem(self.text_preview_item)
+        self.text_preview_item.hide()
+        self.text_preview_item.setDefaultTextColor(Qt.GlobalColor.white)
 
     def set_drawing_mode(self, enabled):
         self.drawing_mode = enabled
@@ -148,7 +163,8 @@ class ZoomView(QGraphicsView):
                 self.perform_area_erase(scene_pos)
                 return
             elif self.drawing_tool == 'text':
-                text, ok = QInputDialog.getText(self, "Add Text", "Enter text:")
+                self.text_preview_item.hide()
+                text, ok = QInputDialog.getText(self, tr('add_text_title'), tr('enter_text'))
                 if ok and text:
                     item = QGraphicsTextItem(text)
                     item.setDefaultTextColor(self.pen_color)
@@ -184,6 +200,16 @@ class ZoomView(QGraphicsView):
         if self.drawing_mode:
             curr_pos = self.mapToScene(event.pos())
             self.cursor_item.setPos(curr_pos)
+            
+            if self.drawing_tool == 'text':
+                self.text_preview_item.setPos(curr_pos)
+                self.text_preview_item.setDefaultTextColor(self.pen_color)
+                font_size = max(12, self.pen_width * 2)
+                self.text_preview_item.setFont(QFont("Segoe UI", font_size))
+                self.text_preview_item.setPlainText("Text") # Preview placeholder
+                self.text_preview_item.show()
+            else:
+                self.text_preview_item.hide()
             
             if event.buttons() & Qt.MouseButton.LeftButton:
                 if self.drawing_tool in ['obj_eraser', 'stroke_eraser']:
@@ -240,13 +266,53 @@ class ZoomView(QGraphicsView):
         else:
             super().mouseMoveEvent(event)
 
-    def perform_object_erase(self, scene_pos):
+    def perform_object_erase(self, scene_pos, delete_whole=False):
+        # Use modifiers from QApplication if not passed
+        from PyQt6.QtWidgets import QApplication
+        if not delete_whole:
+            delete_whole = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
+
         hit_rect = QRectF(scene_pos.x()-2, scene_pos.y()-2, 4, 4)
         items = self.scene().items(hit_rect)
         for item in items:
-            if (isinstance(item, (QGraphicsPathItem, QGraphicsTextItem))) and item in self.strokes:
+            if isinstance(item, QGraphicsPathItem) and item in self.strokes:
+                path = item.path()
+                pieces = self._split_into_logical_pieces(path)
+                
+                if len(pieces) <= 1 or delete_whole:
+                    # Single piece or user wants to delete whole item
+                    self.scene().removeItem(item)
+                    self.strokes.remove(item)
+                else:
+                    # Multiple pieces, find which one was hit
+                    new_pieces = []
+                    removed_any = False
+                    for piece in pieces:
+                        hit_test_path = piece
+                        if item.brush().style() == Qt.BrushStyle.NoBrush:
+                            stroker = QPainterPathStroker()
+                            stroker.setWidth(item.pen().widthF() + 4)
+                            hit_test_path = stroker.createStroke(piece)
+                        
+                        if hit_test_path.contains(scene_pos):
+                            removed_any = True
+                            continue
+                        new_pieces.append(piece)
+                    
+                    if removed_any:
+                        if not new_pieces:
+                            self.scene().removeItem(item)
+                            self.strokes.remove(item)
+                        else:
+                            new_path = QPainterPath()
+                            for p in new_pieces:
+                                new_path.addPath(p)
+                            item.setPath(new_path)
+                return
+            elif isinstance(item, QGraphicsTextItem) and item in self.strokes:
                 self.scene().removeItem(item)
                 self.strokes.remove(item)
+                return
 
     def perform_area_erase(self, scene_pos):
         r = self.pen_width / 2.0
@@ -273,7 +339,102 @@ class ZoomView(QGraphicsView):
                     if item in self.strokes:
                         self.strokes.remove(item)
                 else:
+                    # STOP splitting into multiple items to maintain object identity
                     item.setPath(new_path)
+            elif isinstance(item, QGraphicsTextItem) and item in self.strokes:
+                # Convert text to path for precise erasing
+                font = item.font()
+                text_path = QPainterPath()
+                # Add text at (0,0) - this is the baseline
+                text_path.addText(0, 0, font, item.toPlainText())
+                
+                # Align the path to match the visual text position
+                # QGraphicsTextItem has a default margin of 4px
+                br = text_path.boundingRect()
+                # Normalize path to start at (0,0)
+                text_path.translate(-br.x(), -br.y())
+                
+                path_item = QGraphicsPathItem()
+                path_item.setPath(text_path)
+                
+                # Match visual position (default margin is 4px)
+                margin = item.document().documentMargin()
+                path_item.setPos(item.pos() + QPointF(margin, margin))
+                
+                path_item.setPen(QPen(Qt.PenStyle.NoPen))
+                path_item.setBrush(item.defaultTextColor())
+                path_item.setZValue(item.zValue())
+                
+                # Replace the text item with the path item
+                idx = self.strokes.index(item)
+                self.strokes[idx] = path_item
+                self.scene().removeItem(item)
+                self.scene().addItem(path_item)
+                
+                # Perform the erase
+                self.perform_area_erase(scene_pos)
+
+    def _split_into_logical_pieces(self, path):
+        subpaths = self._split_path(path)
+        if len(subpaths) <= 1:
+            return subpaths
+            
+        pieces = []
+        used = [False] * len(subpaths)
+        
+        # Sort by bounding box area descending
+        indices = sorted(range(len(subpaths)), 
+                         key=lambda i: subpaths[i].boundingRect().width() * subpaths[i].boundingRect().height(), 
+                         reverse=True)
+        
+        for i in indices:
+            if used[i]: continue
+            
+            current_piece = QPainterPath(subpaths[i])
+            used[i] = True
+            
+            # Find subpaths that are inside this one (holes)
+            outer_path = subpaths[i]
+            outer_rect = outer_path.boundingRect().adjusted(-0.5, -0.5, 0.5, 0.5)
+            for j in indices:
+                if used[j]: continue
+                inner_rect = subpaths[j].boundingRect()
+                if outer_rect.contains(inner_rect):
+                    # Additional check: Does the outer path actually enclose a point of the inner one?
+                    if outer_path.contains(inner_rect.center()):
+                        current_piece.addPath(subpaths[j])
+                        used[j] = True
+            
+            pieces.append(current_piece)
+        return pieces
+
+    def _split_path(self, path):
+        subpaths = []
+        count = path.elementCount()
+        i = 0
+        while i < count:
+            el = path.elementAt(i)
+            if el.isMoveTo():
+                new_p = QPainterPath()
+                new_p.moveTo(el.x, el.y)
+                subpaths.append(new_p)
+                i += 1
+            elif el.isLineTo():
+                if subpaths:
+                    subpaths[-1].lineTo(el.x, el.y)
+                i += 1
+            elif el.isCurveTo():
+                if subpaths:
+                    # CurveTo elements come in triplets: C1, C2, and end point.
+                    # Element i is C1, i+1 is C2, i+2 is the end point.
+                    c1 = path.elementAt(i)
+                    c2 = path.elementAt(i+1)
+                    end = path.elementAt(i+2)
+                    subpaths[-1].cubicTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y)
+                i += 3
+            else:
+                i += 1
+        return subpaths
 
     def mouseReleaseEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:

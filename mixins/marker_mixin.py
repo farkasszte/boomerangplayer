@@ -130,6 +130,9 @@ class MarkerMixin:
                 'gamma': self.gammaSlider.value(),
                 'saturation': self.saturationSlider.value()
             }
+            self.config['markers_data'] = self.playlistData
+            from utils import save_config
+            save_config(self.config)
 
     def load_markers_for_current(self):
         if self.currentFilePath in self.playlistData:

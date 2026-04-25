@@ -133,6 +133,7 @@ class UIMixin:
         )
         self.playlistList.setIconSize(QSize(120, 120))
         self.playlistList.itemDoubleClicked.connect(self.on_playlist_item_clicked)
+        self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
         self.playlistList.filesDropped.connect(self.add_files_to_playlist)
         self.playlistLayout.addWidget(self.playlistList)
 
