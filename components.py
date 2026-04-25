@@ -317,7 +317,7 @@ class ZoomView(QGraphicsView):
                         else:
                             if item not in self.original_paths_in_drag:
                                 self.original_paths_in_drag[item] = item.path()
-                                self.current_undo_transaction.append(('modify', item, item.path()))
+                                self.current_undo_transaction.append(('modify', item, item.path(), item.pen(), item.brush()))
                             
                             new_path = QPainterPath()
                             for p in new_pieces:
@@ -359,7 +359,7 @@ class ZoomView(QGraphicsView):
                     # Record original path before first modification in this drag
                     if item not in self.original_paths_in_drag:
                         self.original_paths_in_drag[item] = item.path()
-                        self.current_undo_transaction.append(('modify', item, item.path()))
+                        self.current_undo_transaction.append(('modify', item, item.path(), item.pen(), item.brush()))
                     
                     # STOP splitting into multiple items to maintain object identity
                     item.setPath(new_path)
@@ -460,9 +460,15 @@ class ZoomView(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
+            was_eraser = self.drawing_tool in ['obj_eraser', 'area_eraser', 'stroke_eraser']
+            
             if self.current_undo_transaction:
                 self.undo_stack.append(self.current_undo_transaction)
                 self.current_undo_transaction = []
+                
+                # In laser mode, erasers are temporary - restore everything immediately
+                if self.laser_mode and was_eraser:
+                    self.undo_stroke()
             
             if self.laser_mode and self.current_path_item:
                 try:
@@ -504,8 +510,10 @@ class ZoomView(QGraphicsView):
                     self.scene().addItem(item)
                     self.strokes.append(item)
                 elif type == 'modify':
-                    item, old_path = action[1], action[2]
+                    item, old_path, old_pen, old_brush = action[1], action[2], action[3], action[4]
                     item.setPath(old_path)
+                    item.setPen(old_pen)
+                    item.setBrush(old_brush)
 
     def clear_strokes(self):
         for stroke in self.strokes:

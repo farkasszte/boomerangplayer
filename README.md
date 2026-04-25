@@ -1,30 +1,31 @@
 # 🪃 Boomerang Player
 
-A high-performance, frame-accurate Windows 11 style video player designed for professional analysis, looping, and variable-speed playback. 
+A high-performance, frame-accurate video player built for Windows 11. Designed for professional motion analysis, sports coaching, and frame-perfect annotation.
 
 <p align="center">
   <img src="app_icon.png" width="128" height="128" alt="Boomerang Player Icon">
 </p>
 
-## 🌟 Key Features
+## 🌟 Premium Features
 
-*   **⚡ RAM-Resident Playback**: Extract video frames directly to RAM for lag-free, frame-perfect scrubbing and looping.
-*   **⏩ Variable Speed Control**: Smooth playback from **10% to 400%** speed using real-time frame synchronization.
-*   **🔊 System Volume Sync**: Integrated with Windows Master Volume for seamless audio control directly from the player.
-*   **🎯 Frame-Accurate Markers**: Set loop start and end points precisely on specific frames using dedicated keybindings or UI controls.
-*   **🔄 Ping-Pong Looping**: Seamlessly bounce playback between markers for detailed motion analysis.
-*   **🖼️ Smart Playlist**: Drag-and-drop support with high-quality thumbnails and blurred background effects for portrait videos.
-*   **🎨 Windows 11 Aesthetics**: Fully compliant with Fluent Design guidelines, featuring a beautiful dark mode and glassmorphism.
-*   **🔍 Zoom & Pan**: Interactive zoom with smooth panning to inspect every detail of your footage.
-*   **💾 Export Segments**: Save your marked loops as high-quality video files with lossless options.
+*   **⚡ Dual-Direction Playback**: Independent forward and backward play buttons. Switch directions instantly with perfect state synchronization.
+*   **🎯 Frame-Accurate Precision**: Powered by `ffprobe` metadata. Zero-drift playback ensures the UI, counter, and visuals are always in 100% sync.
+*   **🎨 Advanced Annotations**: Professional drawing suite including lines, arrows, shapes, and text.
+*   **✨ Laser Mode**: Revolutionary temporary drawing mode. Annotations and erasures vanish after interaction—perfect for live presentations and coaching.
+*   **↩️ Transactional Undo**: Robust multi-step undo system that tracks every stroke, text addition, and precise eraser "bite".
+*   **💾 Smart Persistence**: Remembers everything. Your last viewed frame, markers, zoom level, and color adjustments are automatically saved per video.
+*   **⏩ Variable Speed Engine**: Smooth playback from **10% to 400%** using high-speed RAM caching.
+*   **🔄 Multi-Segment Looping**: Create complex looping patterns with smart marker placement.
+*   **🔍 Interactive Zoom & Pan**: Deep-dive into details with fluid zoom and cursor-anchored panning.
+*   **🖌️ Modern Aesthetics**: Built with the latest Fluent Design guidelines. Features dark mode, glassmorphism, and smooth micro-animations.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Python 3.10+** (3.12 recommended)
-- **FFmpeg & FFprobe**: Required for frame extraction. Included in the pre-built releases.
+- **Python 3.10+**
+- **FFmpeg & FFprobe**: Included in pre-built releases. If running from source, ensure they are in your PATH.
 
-### Installation
+### Quick Start
 1. Clone the repository:
    ```bash
    git clone https://github.com/farkasszte/boomerangplayer.git
@@ -32,31 +33,30 @@ A high-performance, frame-accurate Windows 11 style video player designed for pr
    ```
 2. Install dependencies:
    ```bash
-   pip install PyQt6 qfluentwidgets pycaw comtypes numpy
+   pip install PyQt6 qfluentwidgets numpy
    ```
-
-3. Run the player:
+3. Launch:
    ```bash
    python main.py
    ```
 
-## 🛠️ Building the Distribution
-To create a standalone Windows executable:
+## 🛠️ Building
+To create a portable, single-file Windows executable:
 ```bash
 python build_dist.py
 ```
-The resulting `BoomerangPlayer.exe` will be located in the `dist/` folder and includes all necessary dependencies (including FFmpeg).
+*The build includes all icons, translations, and FFmpeg binaries.*
 
 ## ⌨️ Shortcuts
 | Action | Key |
 | :--- | :--- |
 | **Play / Pause** | `Space` |
-| **Set Loop Start** | `[` |
-| **Set Loop End** | `]` |
-| **Toggle Loop** | `L` |
+| **Add Marker** | `S` |
+| **Toggle Loop Mode** | `L` |
 | **Next Frame** | `.` |
 | **Previous Frame** | `,` |
 | **Toggle Mute** | `M` |
+| **Undo Drawing** | `Ctrl + Z` |
 
 ---
-*Built with ❤️ using PyQt6 and Fluent Design.*
+*Built with ❤️ for detail-oriented professionals.*

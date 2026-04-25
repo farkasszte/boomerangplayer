@@ -13,13 +13,14 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def format_time(ms):
-    if ms is None: return "00:00"
+    if ms is None: return "0:00"
+    ms = int(ms)
     seconds = (ms // 1000) % 60
     minutes = (ms // (1000 * 60)) % 60
     hours = (ms // (1000 * 60 * 60))
     if hours > 0:
-        return f"{hours:02}:{minutes:02}:{seconds:02}"
-    return f"{minutes:02}:{seconds:02}"
+        return f"{hours}:{minutes:02}:{seconds:02}"
+    return f"{minutes}:{seconds:02}"
 
 def qt_message_handler(mode, context, message):
     # Suppress common but harmless Qt warnings that clutter the console
