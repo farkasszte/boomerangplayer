@@ -59,9 +59,9 @@ class MarkerMixin:
         full_markers = sorted(list(set([0, last_frame] + valid_markers)))
 
         if getattr(self, 'isForward', True):
-            idx = bisect.bisect_left(full_markers, f)
-        else:
             idx = bisect.bisect_right(full_markers, f)
+        else:
+            idx = bisect.bisect_left(full_markers, f)
 
         if idx == 0:
             start_frame = full_markers[0]

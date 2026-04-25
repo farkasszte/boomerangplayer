@@ -89,8 +89,14 @@ class PlaybackMixin:
                 self.mediaPlayer.setSource(QUrl.fromLocalFile(filePath))
                 self.setWindowTitle(os.path.basename(filePath))
 
-                if duration_ms > 0:
-                    self.update_duration(duration_ms)
+                # Store ffprobe results for frame-accurate timing
+                self.ffprobe_fps = fps
+                self.ffprobe_duration = duration_ms
+                self.ffprobe_nb_frames = total_frames
+                self.fps = fps
+                self.total_frames = total_frames
+
+                self.update_duration(duration_ms)
 
                 self.mediaPlayer.pause()
                 self.playButton.setIcon(FluentIcon.PLAY)
@@ -127,28 +133,26 @@ class PlaybackMixin:
                 return 30.0, 0, 0
 
             stream = data['streams'][0]
-
-            avg_fps = stream.get('avg_frame_rate', '30/1')
-            if '/' in avg_fps:
-                num, den = map(int, avg_fps.split('/'))
+            fmt = data.get('format', {})
+            
+            # 1. Get FPS (Prefer r_frame_rate for playback timing)
+            fps_str = stream.get('r_frame_rate', stream.get('avg_frame_rate', '30/1'))
+            if '/' in fps_str:
+                num, den = map(int, fps_str.split('/'))
                 fps = num / den if den != 0 else 30.0
             else:
-                fps = float(avg_fps)
-
-            duration = float(stream.get('duration', 0))
-            if duration == 0:
-                cmd_fmt = [ffprobe_path, "-v", "error", "-show_entries",
-                           "format=duration", "-of", "json", file_path]
-                result_fmt = subprocess.check_output(
-                    cmd_fmt, creationflags=creationflags
-                ).decode('utf-8')
-                data_fmt = json.loads(result_fmt)
-                duration = float(data_fmt.get('format', {}).get('duration', 0))
-
+                fps = float(fps_str)
+                
+            # 2. Get Duration (Stream duration is for video, format is for file)
+            s_dur = stream.get('duration')
+            f_dur = fmt.get('duration')
+            duration = float(s_dur if s_dur is not None else (f_dur if f_dur is not None else 0))
+            
+            # 3. Get Number of Frames
             nb_frames = int(stream.get('nb_frames', 0))
             if nb_frames == 0 and duration > 0:
                 nb_frames = int(duration * fps)
-
+            
             return fps, duration * 1000, nb_frames
         except Exception as e:
             print(f"ffprobe error: {e}")
@@ -331,15 +335,22 @@ class PlaybackMixin:
             self.playButton.setIcon(FluentIcon.PLAY)
 
     def update_duration(self, duration):
-        if self.fps > 0:
+        # Use ffprobe nb_frames if available to prevent drift/over-estimation
+        if hasattr(self, 'ffprobe_nb_frames') and self.ffprobe_nb_frames > 0:
+            self.total_frames = self.ffprobe_nb_frames
+            # Sync displayed duration with actual frames
+            if self.fps > 0:
+                duration = (self.total_frames * 1000.0) / self.fps
+        elif self.fps > 0:
             self.total_frames = int((duration / 1000.0) * self.fps)
-            self.totalTimeLabel.setText(format_time(duration))
-            self.sync_progress_bar()
+            
+        self.totalTimeLabel.setText(format_time(duration))
+        self.sync_progress_bar()
 
-            last_valid_frame = max(0, self.total_frames - 1)
-            self.markers = [m for m in self.markers if m <= last_valid_frame]
-            self.progressBar.update_markers(self.markers)
-            self.update_loop_frames_label()
+        last_valid_frame = max(0, self.total_frames - 1)
+        self.markers = [m for m in self.markers if m <= last_valid_frame]
+        self.progressBar.update_markers(self.markers)
+        self.update_loop_frames_label()
 
     def handle_status_change(self, status):
         if status == QMediaPlayer.MediaStatus.LoadedMedia:
@@ -348,13 +359,9 @@ class PlaybackMixin:
                 self.apply_transformations(fit=True)
 
     def handle_metadata_change(self):
-        from PyQt6.QtMultimedia import QMediaMetaData
-        meta = self.mediaPlayer.metaData()
-        fps = meta.value(QMediaMetaData.Key.VideoFrameRate)
-        if fps and float(fps) > 0:
-            self.fps = float(fps)
-            print(f"Detected FPS: {self.fps}")
-            self.update_loop_frames_label()
+        # We generally trust ffprobe more for playback FPS/Frames,
+        # but QMediaPlayer can give us clues about runtime duration.
+        pass
 
     def on_speed_slider_changed(self, value):
         snapped = round(value / 5) * 5
