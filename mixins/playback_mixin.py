@@ -163,41 +163,49 @@ class PlaybackMixin:
     # ------------------------------------------------------------------ #
 
     def play_pause(self):
-        if self.is_playing:
-            self.stop_playback()
-        else:
-            self.is_playing = True
-            self.playButton.setIcon(FluentIcon.PAUSE)
-
-            self.frame_accumulator = 0.0
-            self.elapsedTimer.start()
-            self.last_advance_ms = 0
-
-            self.playbackTimer.start(10)
-
-            if self.isForward and self.fps > 0:
-                audio_pos = int((self.current_cache_index * 1000) / self.fps)
-                self.mediaPlayer.setPosition(audio_pos)
-                self.audioOutput.setMuted(self.userMutedIntent)
-                self.mediaPlayer.play()
-            else:
-                self.audioOutput.setMuted(True)
+        self._toggle_playback(True)
 
     def play_pause_backward(self):
-        if self.is_playing and not self.isForward:
-            self.stop_playback()
-        else:
-            self.isForward = False
-            # If already playing forward, stop first to reset timing
-            if self.is_playing:
+        self._toggle_playback(False)
+
+    def _toggle_playback(self, target_forward):
+        if self.is_playing:
+            if self.isForward == target_forward:
                 self.stop_playback()
-            self.play_pause()
+            else:
+                self.stop_playback()
+                self.isForward = target_forward
+                self._start_playback()
+        else:
+            self.isForward = target_forward
+            self._start_playback()
+
+    def _start_playback(self):
+        if not getattr(self, 'cached_frame_dict', None):
+            return
+        self.is_playing = True
+        self.update_play_icons()
+
+        self.frame_accumulator = 0.0
+        self.elapsedTimer.start()
+        self.last_advance_ms = 0
+
+        self.playbackTimer.start(10)
+
+        if self.isForward and self.fps > 0:
+            audio_pos = int((self.current_cache_index * 1000) / self.fps)
+            self.mediaPlayer.setPosition(audio_pos)
+            self.audioOutput.setMuted(self.userMutedIntent)
+            self.mediaPlayer.play()
+        else:
+            self.mediaPlayer.pause()
+            self.audioOutput.setMuted(True)
 
     def stop_playback(self):
         self.is_playing = False
         self.playbackTimer.stop()
         self.mediaPlayer.pause()
-        self.playButton.setIcon(FluentIcon.PLAY)
+        self.update_play_icons()
 
     # ------------------------------------------------------------------ #
     # Frame advance (timer callback)                                       #
@@ -334,18 +342,24 @@ class PlaybackMixin:
     # Media player signal handlers                                        #
     # ------------------------------------------------------------------ #
 
+    def update_play_icons(self):
+        if self.is_playing:
+            if self.isForward:
+                self.playButton.setIcon(self.pauseIcon)
+                self.playBackwardButton.setIcon(self.flippedPlayIcon)
+            else:
+                self.playButton.setIcon(self.normalPlayIcon)
+                self.playBackwardButton.setIcon(self.pauseIcon)
+        else:
+            self.playButton.setIcon(self.normalPlayIcon)
+            self.playBackwardButton.setIcon(self.flippedPlayIcon)
+
     def handle_state_change(self, state):
         is_paused_or_stopped = not self.is_playing
         if hasattr(self, 'stepBackButton'):
             self.stepBackButton.setEnabled(is_paused_or_stopped)
             self.stepForwardButton.setEnabled(is_paused_or_stopped)
-
-        if self.is_playing:
-            self.playButton.setIcon(FluentIcon.PAUSE)
-            self.playBackwardButton.setIcon(FluentIcon.PAUSE)
-        else:
-            self.playButton.setIcon(FluentIcon.PLAY)
-            self.playBackwardButton.setIcon(FluentIcon.PLAY)
+        self.update_play_icons()
 
     def update_duration(self, duration):
         # Use ffprobe nb_frames if available to prevent drift/over-estimation

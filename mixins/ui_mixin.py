@@ -4,6 +4,7 @@ UIMixin — top-level init_ui orchestrator, playlist sidebar, drawing sidebar,
 """
 
 from PyQt6.QtCore import Qt, QSize, QPoint
+from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QSplitter, QLabel, QGridLayout,
                               QGraphicsScene, QGraphicsPixmapItem)
@@ -395,13 +396,19 @@ class UIMixin:
             COMPACT_BTN_STYLE + "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }"
         )
 
-        self.playBackwardButton = ToolButton(FluentIcon.PLAY)
+        # Create flipped Play icon for backward button
+        play_pixmap = FluentIcon.PLAY.icon().pixmap(QSize(24, 24))
+        flipped_play_pixmap = QPixmap.fromImage(play_pixmap.toImage().mirrored(True, False))
+        self.flippedPlayIcon = QIcon(flipped_play_pixmap)
+        self.normalPlayIcon = FluentIcon.PLAY.icon()
+        self.pauseIcon = FluentIcon.PAUSE.icon()
+
+        self.playBackwardButton = ToolButton(self.flippedPlayIcon)
         self.playBackwardButton.setToolTip(tr('tip_play_backward'))
-        # Flip the icon for backward
         self.playBackwardButton.setIconSize(QSize(24, 24))
         self.playBackwardButton.setFixedSize(32, 32)
         self.playBackwardButton.setStyleSheet(
-            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; transform: scaleX(-1); }"
+            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
         )
         self.playBackwardButton.clicked.connect(self.play_pause_backward)
 
