@@ -137,6 +137,11 @@ class ZoomView(QGraphicsView):
         self.text_preview_item.hide()
         self.text_preview_item.setDefaultTextColor(Qt.GlobalColor.white)
 
+        # Undo system
+        self.undo_stack = []
+        self.current_undo_transaction = []
+        self.original_paths_in_drag = {} # item -> path before this drag
+
     def set_drawing_mode(self, enabled):
         self.drawing_mode = enabled
         self.cursor_item.setVisible(enabled)
@@ -154,6 +159,8 @@ class ZoomView(QGraphicsView):
 
     def mousePressEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
+            self.current_undo_transaction = []
+            self.original_paths_in_drag = {}
             scene_pos = self.mapToScene(event.pos())
             
             if self.drawing_tool == 'obj_eraser':
@@ -174,6 +181,7 @@ class ZoomView(QGraphicsView):
                     item.setZValue(1000)
                     self.scene().addItem(item)
                     self.strokes.append(item)
+                    self.current_undo_transaction.append(('add', item))
                 return
                 
             self.start_scene_pos = scene_pos
@@ -193,6 +201,7 @@ class ZoomView(QGraphicsView):
             
             self.scene().addItem(self.current_path_item)
             self.strokes.append(self.current_path_item)
+            self.current_undo_transaction.append(('add', self.current_path_item))
         else:
             super().mousePressEvent(event)
 
@@ -281,6 +290,7 @@ class ZoomView(QGraphicsView):
                 
                 if len(pieces) <= 1 or delete_whole:
                     # Single piece or user wants to delete whole item
+                    self.current_undo_transaction.append(('delete', item, item.path(), item.pen(), item.brush(), item.zValue()))
                     self.scene().removeItem(item)
                     self.strokes.remove(item)
                 else:
@@ -301,15 +311,21 @@ class ZoomView(QGraphicsView):
                     
                     if removed_any:
                         if not new_pieces:
+                            self.current_undo_transaction.append(('delete', item, item.path(), item.pen(), item.brush(), item.zValue()))
                             self.scene().removeItem(item)
                             self.strokes.remove(item)
                         else:
+                            if item not in self.original_paths_in_drag:
+                                self.original_paths_in_drag[item] = item.path()
+                                self.current_undo_transaction.append(('modify', item, item.path()))
+                            
                             new_path = QPainterPath()
                             for p in new_pieces:
                                 new_path.addPath(p)
                             item.setPath(new_path)
                 return
             elif isinstance(item, QGraphicsTextItem) and item in self.strokes:
+                self.current_undo_transaction.append(('delete', item, None, None, None, item.zValue())) # Special for text
                 self.scene().removeItem(item)
                 self.strokes.remove(item)
                 return
@@ -335,10 +351,16 @@ class ZoomView(QGraphicsView):
                 new_path = path.subtracted(eraser_path)
                 if new_path.isEmpty():
                     if item.scene():
+                        self.current_undo_transaction.append(('delete', item, item.path(), item.pen(), item.brush(), item.zValue()))
                         self.scene().removeItem(item)
                     if item in self.strokes:
                         self.strokes.remove(item)
                 else:
+                    # Record original path before first modification in this drag
+                    if item not in self.original_paths_in_drag:
+                        self.original_paths_in_drag[item] = item.path()
+                        self.current_undo_transaction.append(('modify', item, item.path()))
+                    
                     # STOP splitting into multiple items to maintain object identity
                     item.setPath(new_path)
             elif isinstance(item, QGraphicsTextItem) and item in self.strokes:
@@ -438,6 +460,10 @@ class ZoomView(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
+            if self.current_undo_transaction:
+                self.undo_stack.append(self.current_undo_transaction)
+                self.current_undo_transaction = []
+            
             if self.laser_mode and self.current_path_item:
                 try:
                     scene = self.scene()
@@ -456,9 +482,30 @@ class ZoomView(QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def undo_stroke(self):
-        if self.strokes:
-            last_stroke = self.strokes.pop()
-            self.scene().removeItem(last_stroke)
+        if self.undo_stack:
+            transaction = self.undo_stack.pop()
+            # Process in reverse to maintain order
+            for action in reversed(transaction):
+                type = action[0]
+                if type == 'add':
+                    item = action[1]
+                    if item in self.strokes:
+                        self.strokes.remove(item)
+                    if item.scene():
+                        self.scene().removeItem(item)
+                elif type == 'delete':
+                    item, path, pen, brush, z = action[1], action[2], action[3], action[4], action[5]
+                    if path is not None: # PathItem
+                        item.setPath(path)
+                        item.setPen(pen)
+                        item.setBrush(brush)
+                    # TextItem or PathItem
+                    item.setZValue(z)
+                    self.scene().addItem(item)
+                    self.strokes.append(item)
+                elif type == 'modify':
+                    item, old_path = action[1], action[2]
+                    item.setPath(old_path)
 
     def clear_strokes(self):
         for stroke in self.strokes:

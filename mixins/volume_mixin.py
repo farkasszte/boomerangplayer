@@ -12,33 +12,15 @@ class VolumeMixin:
 
     def set_volume(self, volume):
         self.audioOutput.setVolume(volume / 100.0)
-        if self.volume_ctrl:
-            try:
-                self.volume_ctrl.SetMasterVolumeLevelScalar(volume / 100.0, None)
-            except Exception as e:
-                print(f"Runtime volume sync error: {e}")
-
         self.volumeValueLabel.setText(f"{volume}%")
         is_muted = volume == 0
         self.userMutedIntent = is_muted
-        if self.volume_ctrl:
-            try:
-                self.volume_ctrl.SetMute(is_muted, None)
-            except:
-                pass
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
 
     def toggle_mute(self):
         is_muted = not self.audioOutput.isMuted()
         self.audioOutput.setMuted(is_muted)
         self.userMutedIntent = is_muted
-
-        if self.volume_ctrl:
-            try:
-                self.volume_ctrl.SetMute(is_muted, None)
-            except:
-                pass
-
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
         if is_muted:
             self.volumeValueLabel.setText("0%")
@@ -64,14 +46,7 @@ class VolumeMixin:
         slider = QSlider(Qt.Orientation.Vertical)
         slider.setRange(0, 100)
 
-        current_vol = 50
-        if self.volume_ctrl:
-            try:
-                current_vol = int(self.volume_ctrl.GetMasterVolumeLevelScalar() * 100)
-            except:
-                pass
-        else:
-            current_vol = int(self.audioOutput.volume() * 100)
+        current_vol = int(self.audioOutput.volume() * 100)
 
         slider.setValue(current_vol)
         slider.setFixedHeight(150)

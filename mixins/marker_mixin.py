@@ -128,7 +128,8 @@ class MarkerMixin:
                 'brightness': self.brightnessSlider.value(),
                 'contrast': self.contrastSlider.value(),
                 'gamma': self.gammaSlider.value(),
-                'saturation': self.saturationSlider.value()
+                'saturation': self.saturationSlider.value(),
+                'lastPosition': self.current_cache_index
             }
             self.config['markers_data'] = self.playlistData
             from utils import save_config
@@ -140,6 +141,7 @@ class MarkerMixin:
             self.markers = data.get('markers', [])
             self.markers.sort()
             self.progressBar.update_markers(self.markers)
+            self.needs_range_update = True
 
             loop_mode = data.get('loopMode', 3)
             self.loopCombo.setCurrentIndex(loop_mode)
@@ -157,9 +159,15 @@ class MarkerMixin:
             self.saturationSlider.setValue(data.get('saturation', 100))
 
             self.apply_transformations(fit=True)
+            
+            # Restore position
+            last_pos = data.get('lastPosition', 0)
+            if last_pos > 0:
+                self.set_position(last_pos)
         else:
             self.markers = []
             self.progressBar.update_markers(self.markers)
+            self.needs_range_update = True
             if not self.globalLoopToggle.isChecked():
                 self.loopCombo.setCurrentIndex(0)
             self.speedSlider.setValue(100)
