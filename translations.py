@@ -41,6 +41,8 @@ TRANSLATIONS = {
         'playback_shortcuts': 'Playback shortcuts',
         'loop': 'Loop',
         'full_screen': 'Full screen',
+        'on': 'On',
+        'off': 'Off',
         
         # Menu actions
         'add_media': 'Add media',
@@ -186,6 +188,8 @@ TRANSLATIONS = {
         'loop': 'Hurok',
         'full_screen': 'Teljes képernyő',
         'act_full_screen': 'Teljes képernyő ki/be',
+        'on': 'Be',
+        'off': 'Ki',
         
         # Menu actions
         'add_media': 'Média hozzáadása',

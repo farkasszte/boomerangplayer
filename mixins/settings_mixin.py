@@ -235,8 +235,8 @@ class SettingsMixin:
         self.navLabel = CaptionLabel(tr('zoom_nav_bar'))
         self.navToggle = SwitchButton()
         self.navToggle.setChecked(False)
-        self.navToggle.setOnText("On")
-        self.navToggle.setOffText("Off")
+        self.navToggle.setOnText(tr('on'))
+        self.navToggle.setOffText(tr('off'))
 
         def toggle_nav_mode(checked):
             self.is_zoomed_nav = checked

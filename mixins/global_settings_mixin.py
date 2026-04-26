@@ -77,6 +77,7 @@ class GlobalSettingsMixin:
         shortGrid.setSpacing(10)
         shortGrid.setColumnStretch(0, 1)
         shortGrid.setColumnStretch(1, 0)
+        self.shortcutLabels = []
 
         actions = [
             ('play_pause',   'act_play_pause'),
@@ -91,6 +92,8 @@ class GlobalSettingsMixin:
         for i, (act, label_key) in enumerate(actions):
             lbl = BodyLabel(tr(label_key))
             lbl.setWordWrap(True)
+            lbl._label_key = label_key
+            self.shortcutLabels.append(lbl)
             shortGrid.addWidget(lbl, i, 0)
             btn = ShortcutButton(self.config['shortcuts'].get(act, 0))
             btn.setFixedWidth(80)
@@ -360,3 +363,8 @@ class GlobalSettingsMixin:
         self.globalLoopLabel.setText(tr('global_loop_mode'))
         self.gsLangBtn.setText(tr('language'))
         self.gsAudioBtn.setText(tr('audio_device'))
+        self.navToggle.setOnText(tr('on'))
+        self.navToggle.setOffText(tr('off'))
+
+        for lbl in getattr(self, 'shortcutLabels', []):
+            lbl.setText(tr(lbl._label_key))
