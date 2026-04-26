@@ -17,6 +17,8 @@ from translations import tr
 from PyQt6.QtWidgets import QMenu, QButtonGroup, QSlider
 from PyQt6.QtMultimedia import QMediaDevices
 import qfluentwidgets
+import ctypes
+from ctypes import wintypes
 
 
 class UIMixin:
@@ -36,6 +38,7 @@ class UIMixin:
         self.view = ZoomView(self.scene, self.playerInterface)
         self.view.filesDropped.connect(self.handle_view_drop)
         self.view.zoomChanged.connect(self.sync_zoom_ui)
+        self.view.doubleClicked.connect(self.toggle_full_screen)
         self.view.setStyleSheet("border: none; background: black;")
 
         # Build all sidebars (mixin methods)
@@ -98,6 +101,8 @@ class UIMixin:
                     break
 
         self.update_ui_texts()
+        self.is_full_screen = False
+        self.sidebar_states_before_fs = {}
 
     # ------------------------------------------------------------------ #
     # Playlist sidebar                                                     #
@@ -440,6 +445,11 @@ class UIMixin:
         buttonsLayout.addLayout(playbackButtonsLayout)
         buttonsLayout.addStretch(1)
 
+        self.fullScreenButton = ToolButton(FluentIcon.FULL_SCREEN)
+        self.fullScreenButton.setToolTip(tr('tip_full_screen'))
+        self.fullScreenButton.clicked.connect(self.toggle_full_screen)
+        buttonsLayout.addWidget(self.fullScreenButton)
+
         # Volume
         volumeContainer = QWidget()
         volumeContainerLayout = QHBoxLayout(volumeContainer)
@@ -465,8 +475,6 @@ class UIMixin:
         volumeContainerLayout.addWidget(self.volumeValueLabel)
         buttonsLayout.addWidget(volumeContainer)
 
-        self.audioOutput.setVolume(0.7)
-
         buttonsLayout.addSpacing(20)
 
         self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
@@ -482,6 +490,98 @@ class UIMixin:
         self.controlsLayout.addLayout(buttonsLayout)
 
     # ------------------------------------------------------------------ #
+    # Full Screen                                                          #
+    # ------------------------------------------------------------------ #
+
+    def toggle_full_screen(self):
+        self.is_full_screen = not self.is_full_screen
+        
+        if self.is_full_screen:
+            # Entering Full Screen
+            # Save sidebar states
+            self.sidebar_states_before_fs = {
+                'playlist': self.playlistContainer.isVisible(),
+                'drawing': self.drawingContainer.isVisible(),
+                'settings': self.settingsContainer.isVisible(),
+                'global_settings': self.globalSettingsContainer.isVisible()
+            }
+            
+            # Hide everything extra
+            self.playlistContainer.hide()
+            self.drawingContainer.hide()
+            self.settingsContainer.hide()
+            self.globalSettingsContainer.hide()
+            
+            if hasattr(self, 'titleBar'):
+                self.titleBar.hide()
+            
+            # Remove header margin
+            if hasattr(self, 'widgetLayout'):
+                self.widgetLayout.setContentsMargins(0, 0, 0, 0)
+            
+            # Disable rounded corners and ensure black background to prevent leaks
+            self.setStyleSheet("PlayerWindow { border-radius: 0px; border: none; background: black; }")
+            if hasattr(self, 'stackedWidget'):
+                self.stackedWidget.setStyleSheet("border-radius: 0px; margin: 0px; padding: 0px;")
+            if hasattr(self, 'playerInterface'):
+                self.playerInterface.setStyleSheet("border-radius: 0px; margin: 0px; padding: 0px;")
+            
+            # Windows 11: Disable rounded corners via DWM
+            try:
+                DWMWA_WINDOW_CORNER_PREFERENCE = 33
+                DWMWCP_DONOTROUND = 1
+                hwnd = int(self.winId())
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
+                    ctypes.byref(ctypes.c_int(DWMWCP_DONOTROUND)), 
+                    ctypes.sizeof(ctypes.c_int)
+                )
+            except:
+                pass
+            
+            self.showFullScreen()
+        else:
+            # Exiting Full Screen
+            self.showNormal()
+            
+            # Windows 11: Restore rounded corners (default behavior)
+            try:
+                DWMWA_WINDOW_CORNER_PREFERENCE = 33
+                DWMWCP_DEFAULT = 0
+                hwnd = int(self.winId())
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
+                    ctypes.byref(ctypes.c_int(DWMWCP_DEFAULT)), 
+                    ctypes.sizeof(ctypes.c_int)
+                )
+            except:
+                pass
+            
+            # Restore styles (default for FluentWindow)
+            self.setStyleSheet("")
+            if hasattr(self, 'stackedWidget'):
+                self.stackedWidget.setStyleSheet("")
+            if hasattr(self, 'playerInterface'):
+                self.playerInterface.setStyleSheet("")
+            
+            if hasattr(self, 'titleBar'):
+                self.titleBar.show()
+                
+            # Restore header margin
+            if hasattr(self, 'widgetLayout'):
+                self.widgetLayout.setContentsMargins(0, 32, 0, 0)
+                
+            # Restore sidebars
+            if self.sidebar_states_before_fs.get('playlist'):
+                self.playlistContainer.show()
+            if self.sidebar_states_before_fs.get('drawing'):
+                self.drawingContainer.show()
+            if self.sidebar_states_before_fs.get('settings'):
+                self.settingsContainer.show()
+            if self.sidebar_states_before_fs.get('global_settings'):
+                self.globalSettingsContainer.show()
+
+    # ------------------------------------------------------------------ #
     # Keyboard events                                                      #
     # ------------------------------------------------------------------ #
 
@@ -493,10 +593,15 @@ class UIMixin:
             return
 
         action = None
+        # Only consider actions we actually handle to avoid conflicts with old/unknown config keys
+        handled_actions = ['play_pause', 'smart_mark', 'toggle_loop', 'next_frame', 'prev_frame', 'toggle_mute', 'act_full_screen']
         for act, k in self.shortcuts.items():
-            if k == key:
-                action = act
-                break
+            try:
+                if int(k) == key and act in handled_actions:
+                    action = act
+                    break
+            except (ValueError, TypeError):
+                continue
 
         if action == 'play_pause':
             self.play_pause()
@@ -511,5 +616,7 @@ class UIMixin:
             self.step_frame(-1)
         elif action == 'toggle_mute':
             self.toggle_mute()
+        elif action == 'act_full_screen':
+            self.toggle_full_screen()
         else:
             super().keyPressEvent(event)

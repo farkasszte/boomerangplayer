@@ -40,6 +40,7 @@ TRANSLATIONS = {
         'ok': 'OK',
         'playback_shortcuts': 'Playback shortcuts',
         'loop': 'Loop',
+        'full_screen': 'Full screen',
         
         # Menu actions
         'add_media': 'Add media',
@@ -92,6 +93,7 @@ TRANSLATIONS = {
         'tip_mute': 'Toggle Mute',
         'tip_playlist': 'Toggle Playlist',
         'tip_drawing': 'Toggle Drawing Panel',
+        'tip_full_screen': 'Toggle Full Screen (F)',
         
         # Dialogs
         'add_files_title': 'Add Files',
@@ -134,6 +136,7 @@ TRANSLATIONS = {
         'act_next_frame': 'Next Frame',
         'act_prev_frame': 'Prev Frame',
         'act_toggle_mute': 'Toggle Mute',
+        'act_full_screen': 'Toggle Full Screen',
         'rename': 'Rename',
         'enter_new_name': 'Enter new name:',
         'rename_file_title': 'Rename File',
@@ -180,6 +183,8 @@ TRANSLATIONS = {
         'ok': 'OK',
         'playback_shortcuts': 'Lejátszási gyorsbillentyűk',
         'loop': 'Hurok',
+        'full_screen': 'Teljes képernyő',
+        'act_full_screen': 'Teljes képernyő ki/be',
         
         # Menu actions
         'add_media': 'Média hozzáadása',
@@ -232,6 +237,7 @@ TRANSLATIONS = {
         'tip_mute': 'Némítás ki/be',
         'tip_playlist': 'Lista ki/be',
         'tip_drawing': 'Rajz panel ki/be',
+        'tip_full_screen': 'Teljes képernyő (F)',
         
         # Dialogs
         'add_files_title': 'Fájlok hozzáadása',
@@ -274,6 +280,7 @@ TRANSLATIONS = {
         'act_next_frame': 'Következő képkocka',
         'act_prev_frame': 'Előző képkocka',
         'act_toggle_mute': 'Némítás ki/be',
+        'act_full_screen': 'Teljes képernyő ki/be',
         'rename': 'Átnevezés',
         'enter_new_name': 'Adj meg új nevet:',
         'rename_file_title': 'Fájl átnevezése',

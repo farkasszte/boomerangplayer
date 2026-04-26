@@ -85,6 +85,7 @@ class GlobalSettingsMixin:
             ('next_frame',   'act_next_frame'),
             ('prev_frame',   'act_prev_frame'),
             ('toggle_mute',  'act_toggle_mute'),
+            ('act_full_screen', 'act_full_screen'),
         ]
 
         for i, (act, label_key) in enumerate(actions):

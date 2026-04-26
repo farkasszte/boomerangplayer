@@ -121,10 +121,7 @@ class DrawingMixin:
     # ------------------------------------------------------------------ #
 
     def undo_last_stroke(self):
-        if self.view.strokes:
-            item = self.view.strokes.pop()
-            if item.scene():
-                self.view.scene().removeItem(item)
+        self.view.undo_stroke()
 
     def clear_all_strokes(self):
         for item in self.view.strokes:
@@ -137,10 +134,10 @@ class DrawingMixin:
     # ------------------------------------------------------------------ #
 
     def save_drawing_screenshot(self):
-        if not self.view.pixmapItem.pixmap():
+        if not self.pixmapItem.pixmap():
             return
 
-        rect = self.view.pixmapItem.pixmap().rect()
+        rect = self.pixmapItem.pixmap().rect()
         out_pixmap = QPixmap(rect.size())
         out_pixmap.fill(Qt.GlobalColor.black)
 

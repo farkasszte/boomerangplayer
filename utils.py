@@ -39,7 +39,8 @@ DEFAULT_CONFIG = {
         'toggle_loop': Qt.Key.Key_L,
         'next_frame': Qt.Key.Key_Period,
         'prev_frame': Qt.Key.Key_Comma,
-        'toggle_mute': Qt.Key.Key_M
+        'toggle_mute': Qt.Key.Key_M,
+        'act_full_screen': Qt.Key.Key_F
     }
 }
 

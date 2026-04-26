@@ -169,6 +169,11 @@ class PlayerWindow(
         self.is_scrubbing = False
         self.was_playing_before_cache_miss = False
 
+        # ---- Shortcuts ------------------------------------------------
+        self.shortcuts = self.config.get('shortcuts', {})
+        if 'act_full_screen' not in self.shortcuts:
+            self.shortcuts['act_full_screen'] = int(Qt.Key.Key_F)
+
         # ---- Build UI (UIMixin) ----------------------------------------
         self.init_ui()
 
@@ -185,5 +190,3 @@ class PlayerWindow(
         self.elapsedTimer = QElapsedTimer()
         self.last_advance_ms = 0
 
-        # ---- Shortcuts ------------------------------------------------
-        self.shortcuts = self.config.get('shortcuts', {})

@@ -72,6 +72,7 @@ class MarkerSlider(QSlider):
 class ZoomView(QGraphicsView):
     zoomChanged = pyqtSignal(float)
     filesDropped = pyqtSignal(list)
+    doubleClicked = pyqtSignal()
 
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
@@ -141,6 +142,7 @@ class ZoomView(QGraphicsView):
         self.undo_stack = []
         self.current_undo_transaction = []
         self.original_paths_in_drag = {} # item -> path before this drag
+        self.last_eraser_pos = None
 
     def set_drawing_mode(self, enabled):
         self.drawing_mode = enabled
@@ -163,25 +165,23 @@ class ZoomView(QGraphicsView):
             self.original_paths_in_drag = {}
             scene_pos = self.mapToScene(event.pos())
             
-            if self.drawing_tool == 'obj_eraser':
+            if self.drawing_tool in ['obj_eraser', 'stroke_eraser']:
                 self.perform_object_erase(scene_pos)
+                self.last_eraser_pos = scene_pos
                 return
             elif self.drawing_tool == 'area_eraser':
-                self.perform_area_erase(scene_pos)
+                self.last_eraser_pos = scene_pos
+                self.perform_area_erase(scene_pos) # initial hit
                 return
             elif self.drawing_tool == 'text':
                 self.text_preview_item.hide()
                 text, ok = QInputDialog.getText(self, tr('add_text_title'), tr('enter_text'))
                 if ok and text:
-                    item = QGraphicsTextItem(text)
-                    item.setDefaultTextColor(self.pen_color)
                     font_size = max(12, self.pen_width * 2)
-                    item.setFont(QFont("Segoe UI", font_size))
-                    item.setPos(scene_pos)
-                    item.setZValue(1000)
-                    self.scene().addItem(item)
-                    self.strokes.append(item)
-                    self.current_undo_transaction.append(('add', item))
+                    path_item = self._create_text_path_item(text, scene_pos, self.pen_color, font_size, 1000)
+                    self.scene().addItem(path_item)
+                    self.strokes.append(path_item)
+                    self.current_undo_transaction.append(('add', path_item))
                 return
                 
             self.start_scene_pos = scene_pos
@@ -205,6 +205,12 @@ class ZoomView(QGraphicsView):
         else:
             super().mousePressEvent(event)
 
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.doubleClicked.emit()
+        else:
+            super().mouseDoubleClickEvent(event)
+
     def mouseMoveEvent(self, event):
         if self.drawing_mode:
             curr_pos = self.mapToScene(event.pos())
@@ -225,7 +231,27 @@ class ZoomView(QGraphicsView):
                     self.perform_object_erase(curr_pos)
                     return
                 elif self.drawing_tool == 'area_eraser':
-                    self.perform_area_erase(curr_pos)
+                    # Continuous erasure: create a path from last to current pos
+                    if self.last_eraser_pos:
+                        r = self.pen_width / 2.0
+                        eraser_line = QPainterPath()
+                        eraser_line.moveTo(self.last_eraser_pos)
+                        eraser_line.lineTo(curr_pos)
+                        
+                        stroker = QPainterPathStroker()
+                        stroker.setWidth(self.pen_width)
+                        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
+                        
+                        # The "capsule" path between last and current pos
+                        eraser_path = stroker.createStroke(eraser_line)
+                        eraser_path.addEllipse(curr_pos, r, r) # Ensure circle at end
+                        eraser_path.addEllipse(self.last_eraser_pos, r, r) # Ensure circle at start
+                        
+                        self.perform_area_erase(None, eraser_path)
+                    else:
+                        self.perform_area_erase(curr_pos)
+                    
+                    self.last_eraser_pos = curr_pos
                     return
                     
                 if self.current_path_item:
@@ -281,7 +307,7 @@ class ZoomView(QGraphicsView):
         if not delete_whole:
             delete_whole = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier)
 
-        hit_rect = QRectF(scene_pos.x()-2, scene_pos.y()-2, 4, 4)
+        hit_rect = QRectF(scene_pos.x()-4, scene_pos.y()-4, 8, 8)
         items = self.scene().items(hit_rect)
         for item in items:
             if isinstance(item, QGraphicsPathItem) and item in self.strokes:
@@ -325,76 +351,117 @@ class ZoomView(QGraphicsView):
                             item.setPath(new_path)
                 return
             elif isinstance(item, QGraphicsTextItem) and item in self.strokes:
-                self.current_undo_transaction.append(('delete', item, None, None, None, item.zValue())) # Special for text
-                self.scene().removeItem(item)
-                self.strokes.remove(item)
-                return
+                # More robust hit test for text
+                if item.contains(item.mapFromScene(scene_pos)):
+                    self.current_undo_transaction.append(('delete', item, None, None, None, item.zValue()))
+                    self.scene().removeItem(item)
+                    self.strokes.remove(item)
+                    return
 
-    def perform_area_erase(self, scene_pos):
-        r = self.pen_width / 2.0
-        eraser_path = QPainterPath()
-        eraser_path.addEllipse(scene_pos, r, r)
+    def perform_area_erase(self, scene_pos=None, eraser_path=None):
+        if eraser_path is None:
+            if scene_pos is None: return
+            r = self.pen_width / 2.0
+            eraser_path = QPainterPath()
+            eraser_path.addEllipse(scene_pos, r, r)
         
         items = self.scene().items(eraser_path.boundingRect())
         for item in items:
+            # If it's text, convert it to a path first so we can erase parts of it
+            if isinstance(item, QGraphicsTextItem) and item in self.strokes:
+                item = self._convert_text_to_path(item)
+                if not item: continue
+
             if isinstance(item, QGraphicsPathItem) and item in self.strokes:
-                path = item.path()
+                # If the item was originally a stroke (NoBrush), we convert it to an area
+                # so that subtraction removes "thickness" from the line.
                 if item.brush().style() == Qt.BrushStyle.NoBrush:
+                    path = item.path()
                     stroker = QPainterPathStroker()
                     stroker.setWidth(item.pen().widthF())
                     stroker.setCapStyle(item.pen().capStyle())
                     stroker.setJoinStyle(item.pen().joinStyle())
-                    path = stroker.createStroke(path)
-                    item.setBrush(item.pen().color())
-                    item.setPen(QPen(Qt.PenStyle.NoPen))
-                
-                new_path = path.subtracted(eraser_path)
-                if new_path.isEmpty():
-                    if item.scene():
-                        self.current_undo_transaction.append(('delete', item, item.path(), item.pen(), item.brush(), item.zValue()))
-                        self.scene().removeItem(item)
-                    if item in self.strokes:
-                        self.strokes.remove(item)
-                else:
-                    # Record original path before first modification in this drag
+                    
+                    filled_path = stroker.createStroke(path)
+                    # Use WindingFill for stroke-to-area conversion to prevent weird holes
+                    filled_path.setFillRule(Qt.FillRule.WindingFill)
+                    
+                    # Store original state for undo BEFORE modifying
                     if item not in self.original_paths_in_drag:
                         self.original_paths_in_drag[item] = item.path()
                         self.current_undo_transaction.append(('modify', item, item.path(), item.pen(), item.brush()))
                     
-                    # STOP splitting into multiple items to maintain object identity
+                    item.setPath(filled_path)
+                    item.setBrush(item.pen().color())
+                    item.setPen(QPen(Qt.PenStyle.NoPen))
+                
+                # Now perform subtraction on the (now filled) path
+                path = item.path()
+                if not path.intersects(eraser_path):
+                    continue
+
+                new_path = path.subtracted(eraser_path)
+                if new_path.isEmpty():
+                    if item.scene():
+                        if item not in self.original_paths_in_drag: # Should already be there if modified
+                             self.current_undo_transaction.append(('delete', item, item.path(), item.pen(), item.brush(), item.zValue()))
+                        else:
+                            # If already in modify, we need a way to restore it as deleted
+                            # For simplicity, we just delete it from scene
+                            pass
+                        
+                        self.scene().removeItem(item)
+                        if item in self.strokes:
+                            self.strokes.remove(item)
+                else:
+                    if item not in self.original_paths_in_drag:
+                        self.original_paths_in_drag[item] = item.path()
+                        self.current_undo_transaction.append(('modify', item, item.path(), item.pen(), item.brush()))
+                    
                     item.setPath(new_path)
-            elif isinstance(item, QGraphicsTextItem) and item in self.strokes:
-                # Convert text to path for precise erasing
-                font = item.font()
-                text_path = QPainterPath()
-                # Add text at (0,0) - this is the baseline
-                text_path.addText(0, 0, font, item.toPlainText())
-                
-                # Align the path to match the visual text position
-                # QGraphicsTextItem has a default margin of 4px
-                br = text_path.boundingRect()
-                # Normalize path to start at (0,0)
-                text_path.translate(-br.x(), -br.y())
-                
-                path_item = QGraphicsPathItem()
-                path_item.setPath(text_path)
-                
-                # Match visual position (default margin is 4px)
-                margin = item.document().documentMargin()
-                path_item.setPos(item.pos() + QPointF(margin, margin))
-                
-                path_item.setPen(QPen(Qt.PenStyle.NoPen))
-                path_item.setBrush(item.defaultTextColor())
-                path_item.setZValue(item.zValue())
-                
-                # Replace the text item with the path item
-                idx = self.strokes.index(item)
-                self.strokes[idx] = path_item
-                self.scene().removeItem(item)
-                self.scene().addItem(path_item)
-                
-                # Perform the erase
-                self.perform_area_erase(scene_pos)
+
+    def _create_text_path_item(self, text, pos, color, font_size, z_value):
+        """Creates a QGraphicsPathItem from text string."""
+        font = QFont("Segoe UI", int(font_size))
+        text_path = QPainterPath()
+        # Match QGraphicsTextItem default margin
+        margin = 4.0
+        from PyQt6.QtGui import QFontMetricsF
+        metrics = QFontMetricsF(font)
+        ascent = metrics.ascent()
+        
+        text_path.addText(margin, margin + ascent, font, text)
+        
+        path_item = QGraphicsPathItem()
+        path_item.setPath(text_path)
+        path_item.setPen(QPen(Qt.PenStyle.NoPen))
+        path_item.setBrush(color)
+        path_item.setZValue(z_value)
+        path_item.setPos(pos)
+        return path_item
+
+    def _convert_text_to_path(self, item):
+        """Helper to convert an existing QGraphicsTextItem into a QGraphicsPathItem."""
+        if not isinstance(item, QGraphicsTextItem) or item not in self.strokes:
+            return None
+
+        self.current_undo_transaction.append(('delete', item, None, None, None, item.zValue()))
+        
+        text = item.toPlainText()
+        font = item.font()
+        font_size = font.pointSize() if font.pointSize() > 0 else font.pixelSize()
+        
+        path_item = self._create_text_path_item(text, QPointF(0,0), item.defaultTextColor(), font_size, item.zValue())
+        path_item.setTransform(item.sceneTransform())
+        
+        # Replace in strokes list
+        idx = self.strokes.index(item)
+        self.strokes[idx] = path_item
+        self.current_undo_transaction.append(('add', path_item))
+        
+        self.scene().removeItem(item)
+        self.scene().addItem(path_item)
+        return path_item
 
     def _split_into_logical_pieces(self, path):
         subpaths = self._split_path(path)
