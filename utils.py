@@ -41,7 +41,9 @@ DEFAULT_CONFIG = {
         'prev_frame': Qt.Key.Key_Comma,
         'toggle_mute': Qt.Key.Key_M,
         'act_full_screen': Qt.Key.Key_F
-    }
+    },
+    'palette': ['#000000', '#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#0000FF'],
+    'active_color_index': 2 # Default to Red
 }
 
 def get_config_path():

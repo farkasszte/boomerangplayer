@@ -42,7 +42,7 @@ class DrawingMixin:
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-        if tool_id in ['obj_eraser', 'area_eraser', 'stroke_eraser']:
+        if tool_id in ['obj_eraser', 'area_eraser']:
             self.view.cursor_circle.setBrush(QColor(255, 255, 255, 30))
         else:
             c = self.view.pen_color
@@ -56,8 +56,42 @@ class DrawingMixin:
         color = QColorDialog.getColor(self.view.pen_color, self, tr('select_color'))
         if color.isValid():
             self.view.pen_color = color
+            
+            # Update the active palette square
+            active_idx = self.config.get('active_color_index', 2)
+            palette = self.config.get('palette', [])
+            if 0 <= active_idx < len(palette):
+                palette[active_idx] = color.name().upper()
+                self.config['palette'] = palette
+                from utils import save_config
+                save_config(self.config)
+            
+            self.update_palette_ui()
             self.update_pen_preview()
             self.set_active_tool(self.view.drawing_tool)
+
+    def select_palette_color(self):
+        btn = self.sender()
+        idx = btn.property('color_idx')
+        palette = self.config.get('palette', [])
+        if 0 <= idx < len(palette):
+            self.config['active_color_index'] = idx
+            self.view.pen_color = QColor(palette[idx])
+            from utils import save_config
+            save_config(self.config)
+            self.update_palette_ui()
+            self.update_pen_preview()
+            self.set_active_tool(self.view.drawing_tool)
+
+    def update_palette_ui(self):
+        palette = self.config.get('palette', [])
+        active_idx = self.config.get('active_color_index', 2)
+        accent = "#0099FF" # Accent color for border
+        
+        for i, btn in enumerate(self.paletteButtons):
+            color = palette[i]
+            border = f"2px solid {accent}" if i == active_idx else "1px solid rgba(255,255,255,40)"
+            btn.setStyleSheet(f"background-color: {color}; border: {border}; border-radius: 4px;")
 
     def update_pen_width(self, val):
         self.view.pen_width = val

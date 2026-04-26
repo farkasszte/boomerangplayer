@@ -62,9 +62,10 @@ TRANSLATIONS = {
         'rect': 'Square',
         'ellipse': 'Circle',
         'triangle': 'Triangle',
+        'color_palette': 'Quick Palette',
         'obj_eraser': 'Eraser (O)',
         'area_eraser': 'Eraser (A)',
-        'stroke_eraser': 'Eraser (L)',
+        'measure': 'Measure / Ruler',
         
         # Tooltips
         'tip_add': 'Add media or load playlist',
@@ -81,7 +82,7 @@ TRANSLATIONS = {
         'tip_triangle': 'Triangle shape',
         'tip_obj_eraser': 'Delete whole objects',
         'tip_area_eraser': 'Precision area eraser',
-        'tip_stroke_eraser': 'Delete connected lines',
+        'tip_measure': 'Measure distance and angle',
         'tip_undo': 'Undo last action',
         'tip_clear_draw': 'Clear all drawings',
         'tip_screenshot': 'Export current frame with drawings',
@@ -206,9 +207,10 @@ TRANSLATIONS = {
         'rect': 'Négyzet',
         'ellipse': 'Kör',
         'triangle': 'Háromszög',
+        'color_palette': 'Gyors paletta',
         'obj_eraser': 'Radír (O)',
         'area_eraser': 'Radír (A)',
-        'stroke_eraser': 'Radír (L)',
+        'measure': 'Mérés / Vonalzó',
         
         # Tooltips
         'tip_add': 'Média hozzáadása vagy lista betöltése',
@@ -225,7 +227,7 @@ TRANSLATIONS = {
         'tip_triangle': 'Háromszög alakzat',
         'tip_obj_eraser': 'Teljes objektumok törlése',
         'tip_area_eraser': 'Precíz területi radír',
-        'tip_stroke_eraser': 'Összefüggő vonalak törlése',
+        'tip_measure': 'Távolság és szög mérése',
         'tip_undo': 'Utolsó művelet visszavonása',
         'tip_clear_draw': 'Összes rajz törlése',
         'tip_screenshot': 'Aktuális képkocka exportálása rajzokkal',

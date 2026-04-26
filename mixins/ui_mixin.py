@@ -38,7 +38,6 @@ class UIMixin:
         self.view = ZoomView(self.scene, self.playerInterface)
         self.view.filesDropped.connect(self.handle_view_drop)
         self.view.zoomChanged.connect(self.sync_zoom_ui)
-        self.view.doubleClicked.connect(self.toggle_full_screen)
         self.view.setStyleSheet("border: none; background: black;")
 
         # Build all sidebars (mixin methods)
@@ -238,9 +237,9 @@ class UIMixin:
             (tr('rect'),         'rect',         tr('tip_rect')),
             (tr('ellipse'),      'ellipse',      tr('tip_ellipse')),
             (tr('triangle'),     'triangle',     tr('tip_triangle')),
+            (tr('measure'),      'measure',      tr('tip_measure')),
             (tr('obj_eraser'),   'obj_eraser',   tr('tip_obj_eraser')),
             (tr('area_eraser'),  'area_eraser',  tr('tip_area_eraser')),
-            (tr('stroke_eraser'),'stroke_eraser',tr('tip_stroke_eraser')),
         ]
 
         for i, (label, tool_id, tip) in enumerate(all_tools):
@@ -261,13 +260,36 @@ class UIMixin:
             elif tool_id == 'triangle':      self.triangleTool = btn
             elif tool_id == 'obj_eraser':    self.objEraserTool = btn
             elif tool_id == 'area_eraser':   self.areaEraserTool = btn
-            elif tool_id == 'stroke_eraser': self.strokeEraserTool = btn
+            elif tool_id == 'measure':       self.measureTool = btn
 
             self.toolGroup.addButton(btn)
             btn.clicked.connect(lambda checked, t=tool_id: self.set_active_tool(t))
             toolsLayout.addWidget(btn, i // 2, i % 2)
 
         self.drawingSidebarLayout.addLayout(toolsLayout)
+        self.drawingSidebarLayout.addSpacing(15)
+
+        # ---- Quick Palette ----
+        paletteTitle = CaptionLabel(tr('color_palette'))
+        self.drawingSidebarLayout.addWidget(paletteTitle)
+        
+        paletteLayout = QHBoxLayout()
+        paletteLayout.setSpacing(8)
+        self.paletteButtons = []
+        palette = self.config.get('palette', ['#000000', '#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#0000FF'])
+        active_idx = self.config.get('active_color_index', 2)
+        
+        for i, color_hex in enumerate(palette):
+            p_btn = ToolButton()
+            p_btn.setFixedSize(28, 28)
+            p_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            p_btn.setProperty('color_idx', i)
+            p_btn.clicked.connect(self.select_palette_color)
+            self.paletteButtons.append(p_btn)
+            paletteLayout.addWidget(p_btn)
+            
+        self.drawingSidebarLayout.addLayout(paletteLayout)
+        self.update_palette_ui()
         self.drawingSidebarLayout.addSpacing(15)
 
         # Thickness row

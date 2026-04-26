@@ -2,7 +2,8 @@ import math
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
 from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
-                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup)
+                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup,
+                             QGraphicsPixmapItem)
 from qfluentwidgets import ListWidget, PushButton
 from translations import tr
 
@@ -143,6 +144,7 @@ class ZoomView(QGraphicsView):
         self.current_undo_transaction = []
         self.original_paths_in_drag = {} # item -> path before this drag
         self.last_eraser_pos = None
+        self.measure_group = None
 
     def set_drawing_mode(self, enabled):
         self.drawing_mode = enabled
@@ -182,6 +184,27 @@ class ZoomView(QGraphicsView):
                     self.scene().addItem(path_item)
                     self.strokes.append(path_item)
                     self.current_undo_transaction.append(('add', path_item))
+                return
+            elif self.drawing_tool == 'measure':
+                self.current_undo_transaction = []
+                scene_pos = self.mapToScene(event.pos())
+                self.start_scene_pos = scene_pos
+                
+                # Group for measure items
+                self.measure_group = QGraphicsItemGroup()
+                self.measure_line = QGraphicsPathItem(self.measure_group)
+                self.measure_line.setPen(QPen(self.pen_color, 2))
+                
+                self.measure_text = QGraphicsTextItem(self.measure_group)
+                self.measure_text.setDefaultTextColor(self.pen_color)
+                self.measure_text.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+                # Background for readability
+                self.measure_text.setHtml(f'<div style="background-color: rgba(0,0,0,150); padding: 2px;">0 px / 0°</div>')
+                
+                self.measure_group.setZValue(1001)
+                self.scene().addItem(self.measure_group)
+                self.strokes.append(self.measure_group)
+                self.current_undo_transaction.append(('add', self.measure_group))
                 return
                 
             self.start_scene_pos = scene_pos
@@ -293,10 +316,23 @@ class ZoomView(QGraphicsView):
                         try:
                             self.current_path_item.setPath(self.current_path)
                         except RuntimeError:
-                            # Item might have been deleted
                             self.current_path_item = None
+                elif self.drawing_tool == 'measure' and self.measure_group:
+                    new_path = QPainterPath()
+                    new_path.moveTo(self.start_scene_pos)
+                    new_path.lineTo(curr_pos)
+                    self.measure_line.setPath(new_path)
+                    
+                    # Update text
+                    dx = curr_pos.x() - self.start_scene_pos.x()
+                    dy = curr_pos.y() - self.start_scene_pos.y()
+                    dist = math.sqrt(dx*dx + dy*dy)
+                    angle = -math.degrees(math.atan2(dy, dx))
+                    if angle < 0: angle += 360
+                    
+                    self.measure_text.setHtml(f'<div style="background-color: rgba(0,0,0,150); color: {self.pen_color.name()}; font-family: Segoe UI; font-weight: bold;"> {int(dist)} px / {int(angle)}° </div>')
+                    self.measure_text.setPos(curr_pos + QPointF(10, 10))
             
-            # Always call super for movement even in drawing mode to ensure cursor/hover state is correct
             super().mouseMoveEvent(event)
         else:
             super().mouseMoveEvent(event)
@@ -330,7 +366,8 @@ class ZoomView(QGraphicsView):
                             stroker.setWidth(item.pen().widthF() + 4)
                             hit_test_path = stroker.createStroke(piece)
                         
-                        if hit_test_path.contains(scene_pos):
+                        local_pos = item.mapFromScene(scene_pos)
+                        if hit_test_path.contains(local_pos):
                             removed_any = True
                             continue
                         new_pieces.append(piece)
@@ -397,10 +434,13 @@ class ZoomView(QGraphicsView):
                 
                 # Now perform subtraction on the (now filled) path
                 path = item.path()
-                if not path.intersects(eraser_path):
+                # Map eraser path to item's local coordinates
+                local_eraser_path = item.mapFromScene(eraser_path)
+                
+                if not path.intersects(local_eraser_path):
                     continue
 
-                new_path = path.subtracted(eraser_path)
+                new_path = path.subtracted(local_eraser_path)
                 if new_path.isEmpty():
                     if item.scene():
                         if item not in self.original_paths_in_drag: # Should already be there if modified
@@ -550,6 +590,7 @@ class ZoomView(QGraphicsView):
                     
             self.current_path_item = None
             self.current_path = None
+            self.measure_group = None
         
         # Always call super to ensure QGraphicsView internal state is updated
         super().mouseReleaseEvent(event)

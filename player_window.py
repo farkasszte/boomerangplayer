@@ -11,7 +11,7 @@ except Exception:
     HAS_PYCAW = False
 
 from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QColor
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 # Silence qfluentwidgets during import
@@ -176,6 +176,15 @@ class PlayerWindow(
 
         # ---- Build UI (UIMixin) ----------------------------------------
         self.init_ui()
+        
+        # Load palette color
+        palette = self.config.get('palette', ['#000000', '#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#0000FF'])
+        active_idx = self.config.get('active_color_index', 2)
+        if 0 <= active_idx < len(palette):
+            self.view.pen_color = QColor(palette[active_idx])
+        
+        # Update preview
+        self.update_pen_preview()
 
         # ---- Media player signal connections ---------------------------
         self.mediaPlayer.durationChanged.connect(self.update_duration)
