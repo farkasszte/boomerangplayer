@@ -7,10 +7,11 @@ from PyQt6.QtCore import Qt, QSize, QPoint
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QSplitter, QLabel, QGridLayout,
-                              QGraphicsScene, QGraphicsPixmapItem)
+                              QGraphicsScene, QGraphicsPixmapItem, QGraphicsView)
 from qfluentwidgets import (FluentIcon, ToolButton, CardWidget, CaptionLabel,
                              SwitchButton, PushButton)
-from components import DropListWidget, MarkerSlider, ZoomView
+from components import DropListWidget, MarkerSlider, ZoomView, GPUPixmapItem
+from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE,
                     DRAWING_ACTION_STYLE, TOOL_BTN_STYLE)
 from translations import tr
@@ -59,7 +60,8 @@ class UIMixin:
         # Pen preview (needs to happen after drawing sidebar is built)
         self.update_pen_preview()
 
-        self.pixmapItem = QGraphicsPixmapItem()
+        self.pixmapItem = GPUPixmapItem()
+        self.update_gpu_state()
         self.scene.addItem(self.pixmapItem)
 
         # Loading overlay
@@ -102,6 +104,28 @@ class UIMixin:
         self.update_ui_texts()
         self.is_full_screen = False
         self.sidebar_states_before_fs = {}
+
+    def update_gpu_state(self):
+        if hasattr(self, 'view') and hasattr(self, 'pixmapItem'):
+            enabled = self.config.get('gpu_acceleration', False)
+            
+            # Switch viewport dynamically
+            if enabled:
+                if not isinstance(self.view.viewport(), QOpenGLWidget):
+                    gl_v = QOpenGLWidget()
+                    gl_v.setAutoFillBackground(True)
+                    # Force full viewport update to prevent "ghosting" / leaving previous frames
+                    self.view.setViewport(gl_v)
+                    self.scene.setBackgroundBrush(Qt.GlobalColor.black)
+                    self.view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+            else:
+                if isinstance(self.view.viewport(), QOpenGLWidget):
+                    from PyQt6.QtWidgets import QWidget
+                    self.view.setViewport(QWidget())
+                    self.view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate)
+            
+            self.pixmapItem.gpu_enabled = enabled
+            self.pixmapItem.update()
 
     # ------------------------------------------------------------------ #
     # Playlist sidebar                                                     #

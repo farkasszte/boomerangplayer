@@ -64,6 +64,17 @@ class GlobalSettingsMixin:
         self.gsAudioBtn.clicked.connect(self.show_audio_menu)
         self.gsInnerLayout.addWidget(self.gsAudioBtn)
 
+        gpuRow = QHBoxLayout()
+        self.gsGPULabel = BodyLabel(tr('gpu_acceleration'))
+        self.gsGPUToggle = SwitchButton()
+        self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
+        self.gsGPUToggle.setChecked(self.config.get('gpu_acceleration', False))
+        self.gsGPUToggle.checkedChanged.connect(self.on_gpu_acceleration_changed)
+        gpuRow.addWidget(self.gsGPULabel)
+        gpuRow.addStretch(1)
+        gpuRow.addWidget(self.gsGPUToggle)
+        self.gsInnerLayout.addLayout(gpuRow)
+
         self.gsInnerLayout.addWidget(
             QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken)
         )
@@ -238,6 +249,14 @@ class GlobalSettingsMixin:
         set_lang(lang)
         self.update_ui_texts()
 
+    def on_gpu_acceleration_changed(self, checked):
+        self.config['gpu_acceleration'] = checked
+        save_config(self.config)
+        # Notify the view if it exists
+        if hasattr(self, 'pixmapItem') and hasattr(self, 'update_gpu_state'):
+            self.update_gpu_state()
+        self.update_pixmap_from_cache()
+
     # ------------------------------------------------------------------ #
     # Shortcut update                                                      #
     # ------------------------------------------------------------------ #
@@ -363,6 +382,8 @@ class GlobalSettingsMixin:
         self.globalLoopLabel.setText(tr('global_loop_mode'))
         self.gsLangBtn.setText(tr('language'))
         self.gsAudioBtn.setText(tr('audio_device'))
+        self.gsGPULabel.setText(tr('gpu_acceleration'))
+        self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
         self.navToggle.setOnText(tr('on'))
         self.navToggle.setOffText(tr('off'))
 

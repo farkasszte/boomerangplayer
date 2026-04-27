@@ -201,7 +201,11 @@ class CacheMixin:
             g = self.gammaSlider.value() / 100.0
             s = self.saturationSlider.value() / 100.0
 
-            if b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
+            gpu_enabled = self.config.get('gpu_acceleration', False)
+            if gpu_enabled:
+                if hasattr(self, 'pixmapItem'):
+                    self.pixmapItem.update_params(b, c, g, s)
+            elif b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
                 img = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
                 width, height = img.width(), img.height()
 
