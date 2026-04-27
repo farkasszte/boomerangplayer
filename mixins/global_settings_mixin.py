@@ -117,6 +117,18 @@ class GlobalSettingsMixin:
         self.gsScrollArea.setWidget(self.gsScrollWidget)
         self.globalSettingsLayout.addWidget(self.gsScrollArea)
 
+        # Save button at the bottom
+        self.gsSaveBtn = PushButton(tr('save_settings'))
+        self.gsSaveBtn.clicked.connect(self.save_global_settings)
+        self.gsSaveBtn.setStyleSheet("""
+            PushButton {
+                background: #0078d4; color: white; border: none; 
+                padding: 10px; font-weight: bold; margin-top: 10px;
+            }
+            PushButton:hover { background: #005a9e; }
+        """)
+        self.globalSettingsLayout.addWidget(self.gsSaveBtn)
+
         self.globalSettingsContainer.hide()
 
     # ------------------------------------------------------------------ #
@@ -235,7 +247,7 @@ class GlobalSettingsMixin:
         d_id = (device.id().data().decode()
                 if hasattr(device.id(), 'data') else str(device.id()))
         self.config['audio_device'] = d_id
-        save_config(self.config)
+        # save_config(self.config) -> Removed for manual save
         self.audioOutput.setDevice(device)
 
     # ------------------------------------------------------------------ #
@@ -245,13 +257,13 @@ class GlobalSettingsMixin:
     def on_language_changed_sidebar(self, idx):
         lang = 'en' if idx == 0 else 'hu'
         self.config['language'] = lang
-        save_config(self.config)
+        # save_config(self.config) -> Removed for manual save
         set_lang(lang)
         self.update_ui_texts()
 
     def on_gpu_acceleration_changed(self, checked):
         self.config['gpu_acceleration'] = checked
-        save_config(self.config)
+        # save_config(self.config) -> Removed for manual save
         # Notify the view if it exists
         if hasattr(self, 'pixmapItem') and hasattr(self, 'update_gpu_state'):
             self.update_gpu_state()
@@ -264,7 +276,23 @@ class GlobalSettingsMixin:
     def update_shortcut_sidebar(self, action_name, new_key):
         self.shortcuts[action_name] = new_key
         self.config['shortcuts'] = self.shortcuts
+        # save_config(self.config) -> Removed for manual save
+
+    def save_global_settings(self):
+        from utils import save_config
         save_config(self.config)
+        
+        # Visual feedback
+        from qfluentwidgets import InfoBar, InfoBarPosition
+        InfoBar.success(
+            title=tr('settings'),
+            content=tr('save_settings') + " " + tr('ok'),
+            orient=Qt.Orientation.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=2000,
+            parent=self
+        )
 
     # ------------------------------------------------------------------ #
     # UI text refresh                                                      #
@@ -382,6 +410,7 @@ class GlobalSettingsMixin:
         self.globalLoopLabel.setText(tr('global_loop_mode'))
         self.gsLangBtn.setText(tr('language'))
         self.gsAudioBtn.setText(tr('audio_device'))
+        self.gsSaveBtn.setText(tr('save_settings'))
         self.gsGPULabel.setText(tr('gpu_acceleration'))
         self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
         self.navToggle.setOnText(tr('on'))

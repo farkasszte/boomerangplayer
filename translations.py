@@ -145,7 +145,8 @@ TRANSLATIONS = {
         'rename': 'Rename',
         'enter_new_name': 'Enter new name:',
         'rename_file_title': 'Rename File',
-        'open_in_new_window': 'Open in new window'
+        'open_in_new_window': 'Open in new window',
+        'save_settings': 'Save Settings'
     },
     'hu': {
         # Navigation/UI
@@ -294,7 +295,8 @@ TRANSLATIONS = {
         'rename': 'Átnevezés',
         'enter_new_name': 'Adj meg új nevet:',
         'rename_file_title': 'Fájl átnevezése',
-        'open_in_new_window': 'Megnyitás új ablakban'
+        'open_in_new_window': 'Megnyitás új ablakban',
+        'save_settings': 'Beállítások mentése'
     }
 }
 

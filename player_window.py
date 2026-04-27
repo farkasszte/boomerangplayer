@@ -26,7 +26,7 @@ finally:
     sys.stdout = _temp_stdout
 
 from PyQt6.QtCore import qInstallMessageHandler
-from utils import get_resource_path, qt_message_handler, load_config
+from utils import get_resource_path, qt_message_handler, load_config, load_markers
 from translations import set_lang
 from mixins.cache_mixin import CacheMixin
 from mixins.playback_mixin import PlaybackMixin
@@ -74,7 +74,7 @@ class PlayerWindow(
 
         # ---- Application state ----------------------------------------
         self.currentFilePath = None
-        self.playlistData = self.config.get('markers_data', {})
+        self.playlistData = load_markers()
         self.isPingPong = True
         self.isForward = True
         self.zoomLevel = 1.0

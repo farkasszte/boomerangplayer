@@ -131,9 +131,8 @@ class MarkerMixin:
                 'saturation': self.saturationSlider.value(),
                 'lastPosition': self.current_cache_index
             }
-            self.config['markers_data'] = self.playlistData
-            from utils import save_config
-            save_config(self.config)
+            from utils import save_markers
+            save_markers(self.playlistData)
 
     def load_markers_for_current(self):
         if self.currentFilePath in self.playlistData:
@@ -202,15 +201,16 @@ class MarkerMixin:
                 ffmpeg_path = "ffmpeg"
 
             if self.fps > 0:
-                start_f = self.loopStartFrame
+                # Use current loop range
+                start_f, end_f = self.get_active_loop_range()
                 start_sec = max(0.0, (start_f / self.fps) - 0.001)
             else:
-                start_f = self.loopStartFrame
+                start_f, end_f = self.get_active_loop_range()
                 start_sec = 0.0
 
             encode_args = ["-c:v", "libx264", "-crf", "18", "-preset", "fast", "-c:a", "aac", "-b:a", "192k"]
 
-            if self.loopEndFrame == 0 or self.loopEndFrame >= self.progressBar.maximum():
+            if end_f == 0 or end_f >= self.progressBar.maximum():
                 cmd = [
                     ffmpeg_path, "-y",
                     "-ss", f"{start_sec:.6f}",
@@ -218,7 +218,6 @@ class MarkerMixin:
                 ] + encode_args + [fileName]
             else:
                 if self.fps > 0:
-                    end_f = self.loopEndFrame
                     frames_count = max(1, end_f - start_f)
                     duration_sec = (frames_count / self.fps) + 0.005
 
@@ -230,7 +229,6 @@ class MarkerMixin:
                         "-frames:v", str(frames_count)
                     ] + encode_args + [fileName]
                 else:
-                    end_f = self.loopEndFrame
                     duration_sec = (end_f - start_f) / 30.0
                     cmd = [
                         ffmpeg_path, "-y",

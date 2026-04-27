@@ -3,13 +3,19 @@ import sys
 import json
 from PyQt6.QtCore import Qt
 
+def get_base_path():
+    """ Get the directory where the application is located (next to .exe if bundled) """
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
 def get_resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")
+        base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
 def format_time(ms):
@@ -47,7 +53,10 @@ DEFAULT_CONFIG = {
 }
 
 def get_config_path():
-    return get_resource_path("config.json")
+    return os.path.join(get_base_path(), "config.json")
+
+def get_markers_path():
+    return os.path.join(get_base_path(), "markers.json")
 
 def load_config():
     path = get_config_path()
@@ -70,7 +79,30 @@ def load_config():
 def save_config(config):
     path = get_config_path()
     try:
+        # Don't save markers_data to config anymore
+        config_to_save = config.copy()
+        if 'markers_data' in config_to_save:
+            del config_to_save['markers_data']
+            
         with open(path, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=4)
+            json.dump(config_to_save, f, indent=4)
     except Exception as e:
         print(f"Error saving config: {e}")
+
+def load_markers():
+    path = get_markers_path()
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading markers: {e}")
+    return {}
+
+def save_markers(markers_data):
+    path = get_markers_path()
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(markers_data, f, indent=4)
+    except Exception as e:
+        print(f"Error saving markers: {e}")
