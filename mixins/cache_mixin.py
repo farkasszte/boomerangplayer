@@ -125,6 +125,8 @@ class CacheMixin:
         self.update_pixmap_from_cache()
         if fit_needed:
             self.apply_transformations(fit=True)
+            if hasattr(self, '_apply_file_saved_zoom'):
+                self._apply_file_saved_zoom()
 
         self.sync_progress_bar()
 

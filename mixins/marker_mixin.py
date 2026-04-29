@@ -115,22 +115,29 @@ class MarkerMixin:
 
     def save_current_markers(self):
         if self.currentFilePath:
-            scroll_x, scroll_y = self.view.get_scroll_state()
-            self.playlistData[self.currentFilePath] = {
-                'markers': self.markers,
-                'loopMode': self.loopCombo.currentIndex(),
-                'speed': self.speedSlider.value(),
-                'zoom': self.zoomSlider.value(),
-                'scrollX': scroll_x,
-                'scrollY': scroll_y,
-                'isMirrored': self.isMirrored,
-                'rotationAngle': self.rotationAngle,
-                'brightness': self.brightnessSlider.value(),
-                'contrast': self.contrastSlider.value(),
-                'gamma': self.gammaSlider.value(),
-                'saturation': self.saturationSlider.value(),
-                'lastPosition': self.current_cache_index
-            }
+            if self.currentFilePath not in self.playlistData:
+                self.playlistData[self.currentFilePath] = {}
+                
+            data = self.playlistData[self.currentFilePath]
+            data['markers'] = self.markers
+            data['loopMode'] = self.loopCombo.currentIndex()
+            data['speed'] = self.speedSlider.value()
+            data['isMirrored'] = self.isMirrored
+            data['rotationAngle'] = self.rotationAngle
+            data['brightness'] = self.brightnessSlider.value()
+            data['contrast'] = self.contrastSlider.value()
+            data['gamma'] = self.gammaSlider.value()
+            data['saturation'] = self.saturationSlider.value()
+            data['lastPosition'] = self.current_cache_index
+
+            data['zoom'] = self.zoomSlider.value()
+            if hasattr(self, 'view') and self.view:
+                center = self.view.mapToScene(self.view.viewport().rect().center())
+                data['centerX'] = center.x()
+                data['centerY'] = center.y()
+                data['scrollX'] = center.x()
+                data['scrollY'] = center.y()
+            
             from utils import save_markers
             save_markers(self.playlistData)
 
@@ -147,8 +154,6 @@ class MarkerMixin:
             self.isPingPong = (loop_mode == 3)
 
             self.speedSlider.setValue(data.get('speed', 100))
-            self.zoomSlider.setValue(data.get('zoom', 100))
-            self.view.set_scroll_state(data.get('scrollX', 0), data.get('scrollY', 0))
             self.isMirrored = data.get('isMirrored', False)
             self.rotationAngle = data.get('rotationAngle', 0)
 
@@ -156,6 +161,13 @@ class MarkerMixin:
             self.contrastSlider.setValue(data.get('contrast', 100))
             self.gammaSlider.setValue(data.get('gamma', 100))
             self.saturationSlider.setValue(data.get('saturation', 100))
+
+            # Restore zoom UI immediately to prevent cascade
+            zoom_val = data.get('zoom', 100)
+            self.zoomSlider.blockSignals(True)
+            self.zoomSlider.setValue(zoom_val)
+            self.zoomSlider.blockSignals(False)
+            self.zoomValueLabel.setText(f"{zoom_val}%")
 
             self.apply_transformations(fit=True)
             
@@ -170,6 +182,13 @@ class MarkerMixin:
             if not self.globalLoopToggle.isChecked():
                 self.loopCombo.setCurrentIndex(0)
             self.speedSlider.setValue(100)
+            
+            # Reset zoom UI immediately
+            self.zoomSlider.blockSignals(True)
+            self.zoomSlider.setValue(100)
+            self.zoomSlider.blockSignals(False)
+            self.zoomValueLabel.setText("100%")
+            
             self.reset_adjustments()
             self.apply_transformations(fit=True)
 

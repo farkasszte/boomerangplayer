@@ -38,8 +38,11 @@ class UIMixin:
         self.scene = QGraphicsScene()
         self.view = ZoomView(self.scene, self.playerInterface)
         self.view.filesDropped.connect(self.handle_view_drop)
-        self.view.zoomChanged.connect(self.sync_zoom_ui)
+        self.view.zoomChanged.connect(self.on_user_zoom_changed)
         self.view.setStyleSheet("border: none; background: black;")
+        
+        self.view.horizontalScrollBar().valueChanged.connect(self._save_scroll_x_state)
+        self.view.verticalScrollBar().valueChanged.connect(self._save_scroll_y_state)
 
         # Build all sidebars (mixin methods)
         self.init_global_settings_sidebar()

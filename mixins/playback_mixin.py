@@ -5,7 +5,7 @@ PlaybackMixin — play/pause, frame advance, seeking, file loading, media events
 import os
 import subprocess
 import json
-from PyQt6.QtCore import Qt, QUrl, QTimer, QElapsedTimer
+from PyQt6.QtCore import Qt, QUrl, QTimer, QElapsedTimer, QPointF
 from PyQt6.QtMultimedia import QMediaPlayer
 from qfluentwidgets import FluentIcon
 from utils import get_resource_path, format_time
@@ -54,9 +54,8 @@ class PlaybackMixin:
         self.save_current_markers()
 
         try:
+            self.is_loading_video = True
             self.currentFilePath = filePath
-            self.zoomSlider.setValue(100)
-            self.view.set_scroll_state(0, 0)
             self.last_transform_state = None
             if hasattr(self, 'initial_fit_done'):
                 delattr(self, 'initial_fit_done')
@@ -75,6 +74,8 @@ class PlaybackMixin:
                 self.sync_progress_bar()
                 self.update_pixmap_from_cache()
                 self.apply_transformations(fit=True)
+                if hasattr(self, '_apply_file_saved_zoom'):
+                    self._apply_file_saved_zoom()
                 self.mediaPlayer.stop()
                 self.setWindowTitle(os.path.basename(filePath))
             else:
@@ -384,6 +385,8 @@ class PlaybackMixin:
             self.handle_metadata_change()
             if self.view and self.pixmapItem and self.last_transform_state is None:
                 self.apply_transformations(fit=True)
+                if hasattr(self, '_apply_file_saved_zoom'):
+                    self._apply_file_saved_zoom()
 
     def handle_metadata_change(self):
         # We generally trust ffprobe more for playback FPS/Frames,
@@ -405,4 +408,69 @@ class PlaybackMixin:
 
     def closeEvent(self, event):
         self.cleanup_cache()
+        
+        try:
+            from utils import get_markers_path
+            path = get_markers_path()
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception as e:
+            print(f"Error removing markers.json on exit: {e}")
+            
         super().closeEvent(event)
+
+    def _apply_file_saved_zoom(self):
+        if not self.currentFilePath:
+            return
+        data = self.playlistData.get(self.currentFilePath, {})
+        zoom = data.get('zoom', 100)
+        center_x = data.get('centerX', data.get('scrollX', None))
+        center_y = data.get('centerY', data.get('scrollY', None))
+        
+        current_file = self.currentFilePath
+        
+        QTimer.singleShot(100, lambda: self._execute_file_saved_zoom(zoom, center_x, center_y, current_file))
+
+    def _execute_file_saved_zoom(self, zoom, center_x, center_y, target_file):
+        if self.currentFilePath != target_file:
+            self.is_loading_video = False
+            return
+            
+        val = int(zoom * 100) if zoom < 10 else int(zoom) # Support both ratio and percentage formats
+        self.update_zoom(val)
+        
+        if hasattr(self, 'view') and self.view:
+            if center_x is not None and center_y is not None:
+                self.view.centerOn(QPointF(center_x, center_y))
+            elif hasattr(self, 'pixmapItem') and self.pixmapItem:
+                self.view.centerOn(self.pixmapItem.boundingRect().center())
+            
+        self.is_loading_video = False
+
+    def _save_scroll_x_state(self, val):
+        if getattr(self, 'is_loading_video', False):
+            return
+        if hasattr(self, 'currentFilePath') and self.currentFilePath:
+            if self.currentFilePath not in self.playlistData:
+                self.playlistData[self.currentFilePath] = {}
+            self.playlistData[self.currentFilePath]['scrollX'] = val
+
+    def _save_scroll_y_state(self, val):
+        if getattr(self, 'is_loading_video', False):
+            return
+        if hasattr(self, 'currentFilePath') and self.currentFilePath:
+            if self.currentFilePath not in self.playlistData:
+                self.playlistData[self.currentFilePath] = {}
+            self.playlistData[self.currentFilePath]['scrollY'] = val
+
+    def on_user_zoom_changed(self, zoom_level):
+        if getattr(self, 'is_loading_video', False):
+            return
+        val = int(zoom_level * 100)
+        if hasattr(self, 'currentFilePath') and self.currentFilePath:
+            if self.currentFilePath not in self.playlistData:
+                self.playlistData[self.currentFilePath] = {}
+            self.playlistData[self.currentFilePath]['zoom'] = val
+            
+        self.sync_zoom_ui(zoom_level)
+
