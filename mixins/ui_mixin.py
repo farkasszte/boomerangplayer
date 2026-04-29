@@ -297,8 +297,8 @@ class UIMixin:
         self.drawingSidebarLayout.addSpacing(15)
 
         # ---- Quick Palette ----
-        paletteTitle = CaptionLabel(tr('color_palette'))
-        self.drawingSidebarLayout.addWidget(paletteTitle)
+        self.paletteTitle = CaptionLabel(tr('color_palette'))
+        self.drawingSidebarLayout.addWidget(self.paletteTitle)
         
         paletteLayout = QHBoxLayout()
         paletteLayout.setSpacing(8)

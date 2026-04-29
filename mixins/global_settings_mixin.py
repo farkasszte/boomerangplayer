@@ -10,6 +10,7 @@ from qfluentwidgets import (CaptionLabel, PushButton, SwitchButton,
 from components import ShortcutButton
 from translations import tr, set_lang
 from utils import save_config
+from styles import ACTION_BTN_STYLE
 
 
 class GlobalSettingsMixin:
@@ -120,13 +121,7 @@ class GlobalSettingsMixin:
         # Save button at the bottom
         self.gsSaveBtn = PushButton(tr('save_settings'))
         self.gsSaveBtn.clicked.connect(self.save_global_settings)
-        self.gsSaveBtn.setStyleSheet("""
-            PushButton {
-                background: #0078d4; color: white; border: none; 
-                padding: 10px; font-weight: bold; margin-top: 10px;
-            }
-            PushButton:hover { background: #005a9e; }
-        """)
+        self.gsSaveBtn.setStyleSheet(ACTION_BTN_STYLE)
         self.globalSettingsLayout.addWidget(self.gsSaveBtn)
 
         self.globalSettingsContainer.hide()
@@ -310,12 +305,14 @@ class GlobalSettingsMixin:
         self.laserModeToggleLabel.setText(tr('laser_mode'))
         self.penSizeLabel.setText(f"{self.penSizeSlider.value()} px")
         self.penColorBtn.setText(tr('color'))
+        self.paletteTitle.setText(tr('color_palette'))
         self.saveScreenshotBtn.setText(tr('save_screenshot'))
         self.sidebarUndoBtn.setText(tr('undo'))
         self.sidebarClearBtn.setText(tr('clear'))
         self.settingsTitle.setText(tr('video_settings'))
         self.speedLabel.setText(tr('playback_speed'))
         self.zoomLabel.setText(tr('zoom'))
+        self.cacheLabel.setText(tr('cache_window'))
         self.adjLabel.setText(tr('image_adjustments'))
         self.resetAdjButton.setText(tr('reset_image'))
         self.infoButton.setText(tr('file_info'))
