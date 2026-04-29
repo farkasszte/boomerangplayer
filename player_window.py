@@ -11,7 +11,7 @@ except Exception:
     HAS_PYCAW = False
 
 from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
-from PyQt6.QtGui import QIcon, QColor
+from PyQt6.QtGui import QIcon, QColor, QPalette
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 # Silence qfluentwidgets during import
@@ -64,6 +64,10 @@ class PlayerWindow(
         self.setWindowIcon(QIcon(get_resource_path("app_icon.ico")))
         self.setWindowTitle("Boomerang Player")
         self.titleBar.setFixedHeight(32)
+        
+        # Target the top-level window directly to avoid cascading
+        self.setStyleSheet("PlayerWindow { background-color: #202020; }")
+        
         self.setContentsMargins(0, 0, 0, 0)
         self.widgetLayout.setContentsMargins(0, 32, 0, 0)
 

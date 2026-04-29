@@ -390,7 +390,8 @@ class UIMixin:
     # ------------------------------------------------------------------ #
 
     def _init_controls_card(self):
-        self.controlsCard = CardWidget()
+        self.controlsCard = QFrame()
+        self.controlsCard.setStyleSheet("background-color: #202020; border: none;")
         self.controlsLayout = QVBoxLayout(self.controlsCard)
         self.controlsLayout.setContentsMargins(12, 12, 12, 12)
 

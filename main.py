@@ -18,6 +18,15 @@ def main():
     window = PlayerWindow()
     window.show()
     
+    # Force a small window resize to fix Windows 11 styling and layout glitch on startup
+    def force_resize_fix():
+        window.resize(window.width() + 1, window.height())
+        window.resize(window.width() - 1, window.height())
+        window.update()
+        
+    from PyQt6.QtCore import QTimer
+    QTimer.singleShot(300, force_resize_fix)
+    
     # Load file from command line if provided
     if len(sys.argv) > 1:
         file_path = sys.argv[-1]

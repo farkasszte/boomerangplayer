@@ -35,7 +35,7 @@ class VolumeMixin:
         self.volumePopup.setObjectName("volumePopup")
         self.volumePopup.setStyleSheet("""
             #volumePopup {
-                background: #1e1e1e;
+                background: #202020;
                 border: 1px solid #333;
                 border-radius: 8px;
             }
