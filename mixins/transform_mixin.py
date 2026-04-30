@@ -28,11 +28,6 @@ class TransformMixin:
 
         self.view.zoomLevel = self.zoomLevel
         self.zoomValueLabel.setText(f"{snapped}%")
-        
-        if hasattr(self, 'currentFilePath') and self.currentFilePath:
-            if self.currentFilePath not in self.playlistData:
-                self.playlistData[self.currentFilePath] = {}
-            self.playlistData[self.currentFilePath]['zoom'] = snapped
 
     def sync_zoom_ui(self, zoom_level):
         self.zoomLevel = zoom_level

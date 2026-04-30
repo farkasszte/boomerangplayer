@@ -8,8 +8,7 @@ from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
                               QGridLayout, QWidget, QComboBox)
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea)
-from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE,
-                    LOOP_COMBO_STYLE)
+from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE)
 from translations import tr
 
 
@@ -69,9 +68,7 @@ class SettingsMixin:
         self.speedSlider.setRange(10, 500)
         self.speedSlider.setValue(100)
         self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
-        self.speedSlider.valueChanged.connect(
-            lambda v: self.speedValueLabel.setText(f"{v/100:.1f}x")
-        )
+        self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
         self.settingsInnerLayout.addLayout(speedHeader)
         self.settingsInnerLayout.addWidget(self.speedSlider)
 

@@ -60,22 +60,6 @@ MENU_STYLE = """
     }
 """
 
-DRAWING_ACTION_STYLE = """
-    PushButton {
-        border: none;
-        border-radius: 4px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-        font-size: 13px;
-        font-weight: 500;
-        padding: 8px;
-    }
-    PushButton:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-"""
-
 ACTION_BTN_STYLE = """
     PushButton {
         border: none;
@@ -114,51 +98,4 @@ TOOL_BTN_STYLE = """
         border: 1px solid #00f2ff;
         color: #00f2ff;
     }
-"""
-
-LOOP_COMBO_STYLE = """
-    QComboBox {
-        background: #2a2a2a;
-        border: 1px solid #333;
-        border-radius: 4px;
-        color: white;
-        padding: 4px 10px;
-        min-width: 100px;
-    }
-    QComboBox::drop-down {
-        border: none;
-    }
-    QComboBox QAbstractItemView {
-        background: #2a2a2a;
-        border: 1px solid #333;
-        color: white;
-        selection-background-color: #444;
-    }
-"""
-
-VOLUME_POPUP_STYLE = """
-    QFrame {
-        background-color: #202020;
-        border: 1px solid #333;
-        border-radius: 8px;
-    }
-    QLabel {
-        color: white;
-        border: none;
-    }
-"""
-
-PEN_COLOR_BTN_STYLE_TEMPLATE = """
-    PushButton {{
-        background-color: {color};
-        border: 2px solid rgba(255,255,255,0.2);
-        border-radius: 12px;
-        min-width: 24px;
-        min-height: 24px;
-        max-width: 24px;
-        max-height: 24px;
-    }}
-    PushButton:hover {{
-        border: 2px solid white;
-    }}
 """

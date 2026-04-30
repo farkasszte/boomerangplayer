@@ -19,7 +19,7 @@ class CacheMixin:
         if self.current_temp_dir and os.path.exists(self.current_temp_dir):
             try:
                 shutil.rmtree(self.current_temp_dir, ignore_errors=True)
-            except:
+            except OSError:
                 pass
         self.current_temp_dir = None
         self.cached_frame_dict = {}
@@ -94,23 +94,24 @@ class CacheMixin:
             self.loadingOverlay.hide()
             return
 
-        self.cached_frame_dict.update(frame_dict)
+        # Atomic swap: build the new dict, prune, then assign in one shot
+        # to avoid race conditions with advance_frame reading mid-mutation
+        new_dict = {**self.cached_frame_dict, **frame_dict}
         self.cached_file_path = self.currentFilePath
 
         # Prune old frames to save disk/RAM
-        keys_to_delete = []
         center = self.last_extracted_center
         prune_threshold = self.cache_window_half * 1.5
-        for frame_idx, fpath in self.cached_frame_dict.items():
-            if abs(frame_idx - center) > prune_threshold:
-                keys_to_delete.append(frame_idx)
+        keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold]
 
         for k in keys_to_delete:
             try:
-                os.remove(self.cached_frame_dict[k])
-            except:
+                os.remove(new_dict[k])
+            except OSError:
                 pass
-            del self.cached_frame_dict[k]
+            del new_dict[k]
+
+        self.cached_frame_dict = new_dict
 
         self.loadingOverlay.hide()
         self.loadingOverlay.setText(

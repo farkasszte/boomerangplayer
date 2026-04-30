@@ -137,7 +137,6 @@ class PlaylistMixin:
     def open_in_new_window(self, item):
         path = item.data(Qt.ItemDataRole.UserRole)
         if path and os.path.exists(path):
-            import subprocess
             import sys
             try:
                 # Launch a new instance of the current script with the file path
@@ -241,9 +240,8 @@ class PlaylistMixin:
         elif criteria == "date_oldest":
             items_info.sort(key=lambda x: x['date'])
 
-        taken_items = []
-        for _ in range(self.playlistList.count()):
-            taken_items.append(self.playlistList.takeItem(0))
+        taken_items = [self.playlistList.takeItem(0)
+                       for _ in range(self.playlistList.count())]
 
         for info in items_info:
             self.playlistList.addItem(info['item'])

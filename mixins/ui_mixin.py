@@ -13,7 +13,7 @@ from qfluentwidgets import (FluentIcon, ToolButton, CardWidget, CaptionLabel,
 from components import DropListWidget, MarkerSlider, ZoomView, GPUPixmapItem
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE,
-                    DRAWING_ACTION_STYLE, TOOL_BTN_STYLE)
+                    ACTION_BTN_STYLE, TOOL_BTN_STYLE)
 from translations import tr
 from PyQt6.QtWidgets import QMenu, QButtonGroup, QSlider
 from PyQt6.QtMultimedia import QMediaDevices
@@ -40,9 +40,6 @@ class UIMixin:
         self.view.filesDropped.connect(self.handle_view_drop)
         self.view.zoomChanged.connect(self.on_user_zoom_changed)
         self.view.setStyleSheet("border: none; background: black;")
-        
-        self.view.horizontalScrollBar().valueChanged.connect(self._save_scroll_x_state)
-        self.view.verticalScrollBar().valueChanged.connect(self._save_scroll_y_state)
 
         # Build all sidebars (mixin methods)
         self.init_global_settings_sidebar()
@@ -375,7 +372,7 @@ class UIMixin:
         self.sidebarClearBtn.clicked.connect(self.clear_all_strokes)
 
         for btn in [self.saveScreenshotBtn, self.sidebarUndoBtn, self.sidebarClearBtn]:
-            btn.setStyleSheet(DRAWING_ACTION_STYLE)
+            btn.setStyleSheet(ACTION_BTN_STYLE)
             btn.setMinimumHeight(38)
 
         drawingActionsGrid.addWidget(self.saveScreenshotBtn, 0, 0, 1, 2)

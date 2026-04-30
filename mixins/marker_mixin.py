@@ -123,6 +123,7 @@ class MarkerMixin:
             data['loopMode'] = self.loopCombo.currentIndex()
             data['speed'] = self.speedSlider.value()
             data['isMirrored'] = self.isMirrored
+            data['isMirroredVertical'] = self.isMirroredVertical
             data['rotationAngle'] = self.rotationAngle
             data['brightness'] = self.brightnessSlider.value()
             data['contrast'] = self.contrastSlider.value()
@@ -135,8 +136,6 @@ class MarkerMixin:
                 center = self.view.mapToScene(self.view.viewport().rect().center())
                 data['centerX'] = center.x()
                 data['centerY'] = center.y()
-                data['scrollX'] = center.x()
-                data['scrollY'] = center.y()
             
             from utils import save_markers
             save_markers(self.playlistData)
@@ -155,6 +154,7 @@ class MarkerMixin:
 
             self.speedSlider.setValue(data.get('speed', 100))
             self.isMirrored = data.get('isMirrored', False)
+            self.isMirroredVertical = data.get('isMirroredVertical', False)
             self.rotationAngle = data.get('rotationAngle', 0)
 
             self.brightnessSlider.setValue(data.get('brightness', 0))
@@ -182,6 +182,11 @@ class MarkerMixin:
             if not self.globalLoopToggle.isChecked():
                 self.loopCombo.setCurrentIndex(0)
             self.speedSlider.setValue(100)
+            
+            # Reset transform state so previous video's flips/rotation don't carry over
+            self.isMirrored = False
+            self.isMirroredVertical = False
+            self.rotationAngle = 0
             
             # Reset zoom UI immediately
             self.zoomSlider.blockSignals(True)

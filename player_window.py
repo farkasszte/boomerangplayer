@@ -92,6 +92,7 @@ class PlayerWindow(
         self.isMirroredVertical = False
         self.rotationAngle = 0
         self.last_transform_state = None
+        self.is_loading_video = False
 
         # ---- Media player ---------------------------------------------
         self.mediaPlayer = QMediaPlayer()
@@ -108,7 +109,7 @@ class PlayerWindow(
                     from comtypes import CLSCTX_ALL, GUID
                     try:
                         comtypes.CoInitialize()
-                    except:
+                    except OSError:
                         pass
 
                     from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
@@ -124,9 +125,9 @@ class PlayerWindow(
                                     val = getattr(device_obj, attr)
                                     if hasattr(val, 'Activate'):
                                         potential_targets.append(val)
-                                except:
+                                except (AttributeError, comtypes.COMError):
                                     continue
-                        except:
+                        except (AttributeError, comtypes.COMError):
                             pass
 
                         for target in potential_targets:
@@ -136,16 +137,16 @@ class PlayerWindow(
                                     interface = target.Activate(GUID(iid), CLSCTX_ALL, None)
                                     if interface:
                                         return interface.QueryInterface(IAudioEndpointVolume)
-                                except:
+                                except (AttributeError, comtypes.COMError):
                                     continue
-                            except:
+                            except (AttributeError, comtypes.COMError, OSError):
                                 continue
                         return None
 
                     try:
                         test_dev = AudioUtilities.GetSpeakers()
                         self.volume_ctrl = try_link_flexible(test_dev)
-                    except:
+                    except (comtypes.COMError, OSError):
                         pass
 
                     if self.volume_ctrl is None:
@@ -154,9 +155,9 @@ class PlayerWindow(
                                 self.volume_ctrl = try_link_flexible(d)
                                 if self.volume_ctrl:
                                     break
-                        except:
+                        except (comtypes.COMError, OSError):
                             pass
-                except:
+                except ImportError:
                     pass
 
         # ---- Cache / playback variables --------------------------------

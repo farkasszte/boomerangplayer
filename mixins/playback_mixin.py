@@ -109,6 +109,17 @@ class PlaybackMixin:
 
         except Exception as e:
             print(f"Error opening file: {e}")
+        finally:
+            # For images, _apply_file_saved_zoom clears this flag via QTimer.
+            # For videos, it's cleared in _execute_file_saved_zoom.
+            # But if load_video itself fails, we must always clear it here.
+            if not self.currentFilePath or filePath.lower().endswith(
+                ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+            ):
+                pass  # Image path: flag cleared by _apply_file_saved_zoom timer
+            # On exception the flag would never clear, so ensure it:
+            if not hasattr(self, '_apply_file_saved_zoom'):
+                self.is_loading_video = False
 
     def get_video_info(self, file_path):
         """Get FPS and duration using ffprobe."""
@@ -389,8 +400,9 @@ class PlaybackMixin:
                     self._apply_file_saved_zoom()
 
     def handle_metadata_change(self):
-        # We generally trust ffprobe more for playback FPS/Frames,
-        # but QMediaPlayer can give us clues about runtime duration.
+        """Intentionally empty. We trust ffprobe over QMediaPlayer for FPS/frame-count
+        accuracy, so QMediaPlayer's metaDataChanged signal is ignored. This stub
+        exists to document the architectural decision and prevent accidental reconnection."""
         pass
 
     def on_speed_slider_changed(self, value):
@@ -447,30 +459,10 @@ class PlaybackMixin:
             
         self.is_loading_video = False
 
-    def _save_scroll_x_state(self, val):
-        if getattr(self, 'is_loading_video', False):
-            return
-        if hasattr(self, 'currentFilePath') and self.currentFilePath:
-            if self.currentFilePath not in self.playlistData:
-                self.playlistData[self.currentFilePath] = {}
-            self.playlistData[self.currentFilePath]['scrollX'] = val
-
-    def _save_scroll_y_state(self, val):
-        if getattr(self, 'is_loading_video', False):
-            return
-        if hasattr(self, 'currentFilePath') and self.currentFilePath:
-            if self.currentFilePath not in self.playlistData:
-                self.playlistData[self.currentFilePath] = {}
-            self.playlistData[self.currentFilePath]['scrollY'] = val
-
     def on_user_zoom_changed(self, zoom_level):
-        if getattr(self, 'is_loading_video', False):
+        """Called when the user zooms via mouse wheel in ZoomView.
+        Only syncs the sidebar slider — zoom persistence is centralized
+        in save_current_markers()."""
+        if self.is_loading_video:
             return
-        val = int(zoom_level * 100)
-        if hasattr(self, 'currentFilePath') and self.currentFilePath:
-            if self.currentFilePath not in self.playlistData:
-                self.playlistData[self.currentFilePath] = {}
-            self.playlistData[self.currentFilePath]['zoom'] = val
-            
         self.sync_zoom_ui(zoom_level)
-

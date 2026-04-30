@@ -30,11 +30,16 @@ def format_time(ms):
 
 def qt_message_handler(mode, context, message):
     # Suppress common but harmless Qt warnings that clutter the console
-    if "QFont::setPointSize: Point size <= 0" in message:
+    suppressed = [
+        "QFont::setPointSize: Point size <= 0",
+    ]
+    if any(s in message for s in suppressed):
         return
-    # For others, you could print them, but here we just ignore the known noisy ones
     if not message.strip():
         return
+    # Print non-suppressed messages so real Qt errors are visible
+    import sys
+    print(message, file=sys.stderr)
 
 DEFAULT_CONFIG = {
     'language': 'en',

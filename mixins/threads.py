@@ -63,7 +63,7 @@ class FrameExtractionThread(QThread):
         if self.process:
             try:
                 self.process.kill()
-            except:
+            except OSError:
                 pass
 
 class ThumbnailThread(QThread):
@@ -124,7 +124,7 @@ class ThumbnailThread(QThread):
                 if not pixmap.isNull():
                     self.finished.emit(self.filePath, pixmap)
                 try: os.remove(thumb_path)
-                except: pass
+                except OSError: pass
         except Exception as e:
             print(f"Thumbnail error for {self.filePath}: {e}")
             self.finished.emit(self.filePath, QPixmap())
@@ -133,5 +133,5 @@ class ThumbnailThread(QThread):
         if hasattr(self, 'process') and self.process:
             try:
                 self.process.kill()
-            except:
+            except OSError:
                 pass
