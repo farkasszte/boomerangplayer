@@ -151,10 +151,13 @@ class PlaylistMixin:
         if not old_path or not os.path.exists(old_path):
             return
         
-        old_name = os.path.basename(old_path)
-        new_name, ok = QInputDialog.getText(self, tr('rename_file_title'), tr('enter_new_name'), text=old_name)
+        old_full_name = os.path.basename(old_path)
+        old_base_name, extension = os.path.splitext(old_full_name)
         
-        if ok and new_name and new_name != old_name:
+        new_base_name, ok = QInputDialog.getText(self, tr('rename_file_title'), tr('enter_new_name'), text=old_base_name)
+        
+        if ok and new_base_name and new_base_name != old_base_name:
+            new_name = new_base_name + extension
             new_path = os.path.join(os.path.dirname(old_path), new_name)
             try:
                 # IMPORTANT: If this is the current file, release the lock!
@@ -300,11 +303,7 @@ class PlaylistMixin:
             self.playlistList.clear()
             self.playlistData = data.get('markers', {})
 
-            for filePath in data.get('files', []):
-                if os.path.exists(filePath):
-                    item = QListWidgetItem(os.path.basename(filePath))
-                    item.setData(Qt.ItemDataRole.UserRole, filePath)
-                    self.playlistList.addItem(item)
+            self.add_files_to_playlist(data.get('files', []))
 
             if self.playlistList.count() > 0:
                 self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
