@@ -101,6 +101,7 @@ class UIMixin:
                     self.audioOutput.setDevice(device)
                     break
 
+        self.refresh_custom_styles()
         self.update_ui_texts()
         self.is_full_screen = False
         self.sidebar_states_before_fs = {}
@@ -126,6 +127,96 @@ class UIMixin:
             
             self.pixmapItem.gpu_enabled = enabled
             self.pixmapItem.update()
+
+    def refresh_custom_styles(self):
+        """Updates all custom styled components when accent color changes."""
+        from styles import get_styles
+        accent_color = self.config.get('accent_color', '#00f2ff')
+        s = get_styles(accent_color)
+
+        # Update main UI elements
+        sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 
+                   'brightnessSlider', 'contrastSlider', 'gammaSlider', 'saturationSlider']
+        for slider_name in sliders:
+            if hasattr(self, slider_name):
+                slider = getattr(self, slider_name)
+                slider.setStyleSheet(s['FLUENT_SLIDER_STYLE'])
+        
+        # Tool buttons
+        tool_btns = ['penTool', 'lineTool', 'arrowTool', 'textTool', 'rectTool', 
+                     'ellipseTool', 'triangleTool', 'objEraserTool', 'areaEraserTool', 'measureTool']
+        for btn_name in tool_btns:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                btn.setStyleSheet(s['TOOL_BTN_STYLE'])
+        
+        # Action buttons
+        action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn']
+        for btn_name in action_btns:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                btn.setStyleSheet(s['ACTION_BTN_STYLE'])
+
+        # Menus
+        menus = ['addMenu', 'sortMenu', 'removeMenu']
+        for menu_name in menus:
+            if hasattr(self, menu_name):
+                menu = getattr(self, menu_name)
+                menu.setStyleSheet(s['MENU_STYLE'])
+
+        # Playback buttons
+        pb_btns = ['stepBackButton', 'playBackwardButton', 'playButton', 'stepForwardButton']
+        for btn_name in pb_btns:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                # COMPACT_BTN_STYLE needs specific rounding for ends
+                style = s['COMPACT_BTN_STYLE']
+                if btn_name == 'stepBackButton':
+                    style += "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }"
+                elif btn_name == 'stepForwardButton':
+                    style += "ToolButton { border-right: 1px solid rgba(255,255,255,0.08); border-top-right-radius: 4px; border-bottom-right-radius: 4px; }"
+                btn.setStyleSheet(style)
+
+        # Update palette border in drawing mixin if it exists
+        if hasattr(self, 'paletteButtons') and hasattr(self, 'update_palette_ui'):
+            self.update_palette_ui()
+
+        # Update ComboBox
+        if hasattr(self, 'loopCombo'):
+            self.loopCombo.setStyleSheet(s['COMBO_STYLE'])
+
+        # Update SwitchButtons
+        switches = ['loopToggle', 'globalLoopToggle', 'navToggle', 'gsGPUToggle', 'thumbToggle', 'laserModeToggle']
+        for sw_name in switches:
+            if hasattr(self, sw_name):
+                sw = getattr(self, sw_name)
+                # Apply SWITCH_STYLE
+                sw.setStyleSheet(s['SWITCH_STYLE'])
+
+        # Update Global Settings Trigger buttons
+        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn']
+        for btn_name in gs_btns:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                btn.setStyleSheet(s['TRIGGER_STYLE'])
+
+        # Update pen color label
+        if hasattr(self, 'penSizeLabel'):
+            self.penSizeLabel.setStyleSheet(
+                "color: white; font-size: 13px; font-weight: 500; "
+                "background: transparent; border: none !important;"
+            )
+
+        # Update Sidebar Titles and Category Labels
+        titles = ['settingsTitle', 'globalSettingsTitle', 'drawingSidebarTitle']
+        for t_name in titles:
+            if hasattr(self, t_name):
+                getattr(self, t_name).setStyleSheet(s['TITLE_STYLE'])
+        
+        captions = ['gsGeneralLabel', 'gsShortcutsLabel']
+        for c_name in captions:
+            if hasattr(self, c_name):
+                getattr(self, c_name).setStyleSheet(s['CAPTION_STYLE'])
 
     # ------------------------------------------------------------------ #
     # Playlist sidebar                                                     #
@@ -211,6 +302,7 @@ class UIMixin:
         self.playlistButtonsGrid.addWidget(self.btn_save,  1, 0)
         self.playlistButtonsGrid.addWidget(self.btn_clear, 1, 1)
         self.playlistLayout.addLayout(self.playlistButtonsGrid)
+        self.playlistLayout.setContentsMargins(10, 10, 4, 10)
 
     # ------------------------------------------------------------------ #
     # Drawing sidebar                                                      #
@@ -223,8 +315,8 @@ class UIMixin:
             "background: #202020; border: none; QScrollBar { width: 0px; height: 0px; }"
         )
         self.drawingSidebarLayout = QVBoxLayout(self.drawingContainer)
-        self.drawingSidebarLayout.setContentsMargins(10, 10, 10, 10)
-        self.drawingSidebarLayout.setSpacing(15)
+        self.drawingSidebarLayout.setContentsMargins(10, 10, 4, 10)
+        self.drawingSidebarLayout.setSpacing(6)
 
         self.drawingSidebarTitle = CaptionLabel(tr('drawing_settings'))
         self.drawingSidebarTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
@@ -328,7 +420,7 @@ class UIMixin:
 
         self.penSizeLabel = QLabel("3 px")
         self.penSizeLabel.setStyleSheet(
-            "color: #00f2ff; font-size: 13px; font-weight: 500; "
+            "color: white; font-size: 13px; font-weight: 500; "
             "background: transparent; border: none !important;"
         )
         thicknessRow.addWidget(self.penSizeLabel)

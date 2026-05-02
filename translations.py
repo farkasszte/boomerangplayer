@@ -146,7 +146,8 @@ TRANSLATIONS = {
         'enter_new_name': 'Enter new name:',
         'rename_file_title': 'Rename File',
         'open_in_new_window': 'Open in new window',
-        'save_settings': 'Save settings'
+        'save_settings': 'Save settings',
+        'accent_color': 'Accent color'
     },
     'hu': {
         # Navigation/UI
@@ -296,7 +297,8 @@ TRANSLATIONS = {
         'enter_new_name': 'Adj meg új nevet:',
         'rename_file_title': 'Fájl átnevezése',
         'open_in_new_window': 'Megnyitás új ablakban',
-        'save_settings': 'Beállítások mentése'
+        'save_settings': 'Beállítások mentése',
+        'accent_color': 'Kiemelő szín'
     }
 }
 

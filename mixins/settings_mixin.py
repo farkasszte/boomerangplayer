@@ -20,8 +20,8 @@ class SettingsMixin:
         self.settingsContainer.setMinimumWidth(250)
         self.settingsContainer.setStyleSheet("background: #202020; border: none;")
         self.settingsLayout = QVBoxLayout(self.settingsContainer)
-        self.settingsLayout.setContentsMargins(10, 10, 10, 10)
-        self.settingsLayout.setSpacing(10)
+        self.settingsLayout.setContentsMargins(10, 10, 4, 10)
+        self.settingsLayout.setSpacing(6)
 
         self.settingsTitle = CaptionLabel(tr('video_settings'))
         self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
@@ -38,7 +38,7 @@ class SettingsMixin:
         self.settingsScrollWidget.setStyleSheet("background: transparent;")
         self.settingsInnerLayout = QVBoxLayout(self.settingsScrollWidget)
         self.settingsInnerLayout.setContentsMargins(0, 0, 0, 0)
-        self.settingsInnerLayout.setSpacing(10)
+        self.settingsInnerLayout.setSpacing(6)
 
         self.scrollArea.setWidget(self.settingsScrollWidget)
         self.settingsLayout.addWidget(self.scrollArea)
@@ -60,6 +60,7 @@ class SettingsMixin:
         speedHeader = QHBoxLayout()
         self.speedLabel = CaptionLabel(tr('playback_speed'))
         self.speedValueLabel = CaptionLabel("1.0x")
+        self.speedValueLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         speedHeader.addWidget(self.speedLabel)
         speedHeader.addStretch(1)
         speedHeader.addWidget(self.speedValueLabel)
@@ -78,6 +79,7 @@ class SettingsMixin:
         zoomHeader = QHBoxLayout()
         self.zoomLabel = CaptionLabel(tr('zoom'))
         self.zoomValueLabel = CaptionLabel("100%")
+        self.zoomValueLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         zoomHeader.addWidget(self.zoomLabel)
         zoomHeader.addStretch(1)
         zoomHeader.addWidget(self.zoomValueLabel)
@@ -101,6 +103,7 @@ class SettingsMixin:
         cacheHeader = QHBoxLayout()
         self.cacheLabel = CaptionLabel(tr('cache_window'))
         self.cacheValueLabel = CaptionLabel(str(self.cache_window_half))
+        self.cacheValueLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         cacheHeader.addWidget(self.cacheLabel)
         cacheHeader.addStretch(1)
         cacheHeader.addWidget(self.cacheValueLabel)
@@ -139,6 +142,7 @@ class SettingsMixin:
             header = QHBoxLayout()
             lbl = CaptionLabel(label_text)
             val_lbl = CaptionLabel(str(default))
+            val_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             header.addWidget(lbl)
             header.addStretch(1)
             header.addWidget(val_lbl)
@@ -162,11 +166,10 @@ class SettingsMixin:
             self.settingsInnerLayout.addLayout(l)
 
         footerLayout = QHBoxLayout()
+        footerLayout.setSpacing(6)
         self.resetAdjButton = PushButton(tr('reset_image'))
-        self.resetAdjButton.setMinimumWidth(100)
         self.resetAdjButton.clicked.connect(self.reset_adjustments)
         self.infoButton = PushButton(tr('file_info'))
-        self.infoButton.setMinimumWidth(100)
         self.infoButton.clicked.connect(self.show_file_info)
         for btn in [self.resetAdjButton, self.infoButton]:
             btn.setStyleSheet(ACTION_BTN_STYLE)
@@ -185,24 +188,7 @@ class SettingsMixin:
         self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
         self.loopCombo.setCurrentIndex(3)
         self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
-        self.loopCombo.setStyleSheet("""
-            QComboBox {
-                background: rgba(255,255,255,0.0605);
-                border: 1px solid rgba(255,255,255,0.08);
-                border-bottom: 1px solid rgba(255,255,255,0.2);
-                border-radius: 5px; padding: 4px 10px;
-                min-height: 22px; color: white; font-size: 13px;
-            }
-            QComboBox:hover { background: rgba(255,255,255,0.09); }
-            QComboBox::drop-down { border: none; width: 0px; }
-            QComboBox::down-arrow { image: none; border: none; background: transparent; }
-            QComboBox QAbstractItemView {
-                background-color: #2c2c2c;
-                border: 1px solid rgba(0,0,0,0.4);
-                selection-background-color: rgba(255,255,255,0.1);
-                color: white; outline: none;
-            }
-        """)
+        # Style will be set in refresh_custom_styles
 
         loopHeader = QHBoxLayout()
         self.loopLabel = CaptionLabel(tr('loop'))
@@ -247,6 +233,7 @@ class SettingsMixin:
         loopGroup.addWidget(self.loopCombo)
 
         markerLayout = QHBoxLayout()
+        markerLayout.setSpacing(6)
         self.smartMarkButton = PushButton(tr('mark'))
         self.smartMarkButton.setStyleSheet(TOOL_BTN_STYLE)
         self.smartMarkButton.clicked.connect(self.add_smart_marker)
@@ -266,7 +253,7 @@ class SettingsMixin:
         loopGroup.addWidget(self.loopFramesLabel)
 
         self.actionsGrid = QGridLayout()
-        self.actionsGrid.setSpacing(8)
+        self.actionsGrid.setSpacing(6)
         self.saveLoopButton = PushButton(tr('save_loop'))
         self.saveLoopButton.clicked.connect(self.save_loop_segment)
         self.saveFrameButton = PushButton(tr('save_frame'))
@@ -280,7 +267,6 @@ class SettingsMixin:
 
         for btn in [self.saveLoopButton, self.saveFrameButton,
                     self.mirrorButton, self.mirrorVerticalButton, self.rotateButton]:
-            btn.setMinimumWidth(100)
             btn.setStyleSheet(ACTION_BTN_STYLE)
 
         self.actionsGrid.addWidget(self.saveLoopButton,       0, 0)

@@ -21,8 +21,8 @@ class GlobalSettingsMixin:
         self.globalSettingsContainer.setMinimumWidth(250)
         self.globalSettingsContainer.setStyleSheet("background: #202020; border: none;")
         self.globalSettingsLayout = QVBoxLayout(self.globalSettingsContainer)
-        self.globalSettingsLayout.setContentsMargins(10, 10, 10, 10)
-        self.globalSettingsLayout.setSpacing(10)
+        self.globalSettingsLayout.setContentsMargins(10, 10, 4, 10)
+        self.globalSettingsLayout.setSpacing(6)
 
         self.globalSettingsTitle = CaptionLabel(tr('settings'))
         self.globalSettingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
@@ -38,32 +38,25 @@ class GlobalSettingsMixin:
         self.gsScrollWidget = QWidget()
         self.gsInnerLayout = QVBoxLayout(self.gsScrollWidget)
         self.gsInnerLayout.setContentsMargins(0, 0, 10, 0)
-        self.gsInnerLayout.setSpacing(15)
+        self.gsInnerLayout.setSpacing(10)
 
-        TRIGGER_STYLE = """
-            PushButton {
-                background: rgba(255,255,255,0.0605);
-                border: 1px solid rgba(255,255,255,0.08);
-                border-bottom: 1px solid rgba(255,255,255,0.2);
-                border-radius: 4px; color: white;
-                padding: 8px 12px; text-align: left; font-size: 13px;
-            }
-            PushButton:hover { background: rgba(255,255,255,0.1); }
-        """
+        # TRIGGER_STYLE will be set in refresh_custom_styles
 
         self.gsGeneralLabel = CaptionLabel(tr('general'))
         self.gsGeneralLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
         self.gsInnerLayout.addWidget(self.gsGeneralLabel)
 
         self.gsLangBtn = PushButton()
-        self.gsLangBtn.setStyleSheet(TRIGGER_STYLE)
         self.gsLangBtn.clicked.connect(self.show_language_menu)
         self.gsInnerLayout.addWidget(self.gsLangBtn)
 
         self.gsAudioBtn = PushButton()
-        self.gsAudioBtn.setStyleSheet(TRIGGER_STYLE)
         self.gsAudioBtn.clicked.connect(self.show_audio_menu)
         self.gsInnerLayout.addWidget(self.gsAudioBtn)
+
+        self.gsAccentBtn = PushButton()
+        self.gsAccentBtn.clicked.connect(self.choose_accent_color)
+        self.gsInnerLayout.addWidget(self.gsAccentBtn)
 
         gpuRow = QHBoxLayout()
         self.gsGPULabel = BodyLabel(tr('gpu_acceleration'))
@@ -86,7 +79,7 @@ class GlobalSettingsMixin:
 
         shortGrid = QGridLayout()
         shortGrid.setContentsMargins(0, 0, 0, 0)
-        shortGrid.setSpacing(10)
+        shortGrid.setSpacing(6)
         shortGrid.setColumnStretch(0, 1)
         shortGrid.setColumnStretch(1, 0)
         self.shortcutLabels = []
@@ -174,7 +167,7 @@ class GlobalSettingsMixin:
         QMenu { background-color: #202020; border: none; padding: 4px 0px; }
         QMenu::item { padding: 8px 25px; color: white; background-color: transparent; }
         QMenu::item:selected { background-color: rgba(255,255,255,0.1); }
-        QMenu::item:checked { color: #00f2ff; font-weight: bold; }
+        QMenu::item:checked { color: %ACCENT%; font-weight: bold; }
         QMenu::indicator { width: 0px; }
     """
 
@@ -185,7 +178,10 @@ class GlobalSettingsMixin:
             | Qt.WindowType.NoDropShadowWindowHint
         )
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        menu.setStyleSheet(self._MENU_POPUP_STYLE)
+        
+        accent = self.config.get('accent_color', '#00f2ff')
+        style = self._MENU_POPUP_STYLE.replace('%ACCENT%', accent)
+        menu.setStyleSheet(style)
 
         current_lang = self.config.get('language', 'en')
 
@@ -213,7 +209,10 @@ class GlobalSettingsMixin:
             | Qt.WindowType.NoDropShadowWindowHint
         )
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        menu.setStyleSheet(self._MENU_POPUP_STYLE)
+        
+        accent = self.config.get('accent_color', '#00f2ff')
+        style = self._MENU_POPUP_STYLE.replace('%ACCENT%', accent)
+        menu.setStyleSheet(style)
 
         current_device_id = self.config.get('audio_device', '')
         try:
@@ -244,6 +243,28 @@ class GlobalSettingsMixin:
         self.config['audio_device'] = d_id
         # save_config(self.config) -> Removed for manual save
         self.audioOutput.setDevice(device)
+
+    # ------------------------------------------------------------------ #
+    # Accent color picker                                                  #
+    # ------------------------------------------------------------------ #
+
+    def choose_accent_color(self):
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+        current_hex = self.config.get('accent_color', '#00f2ff')
+        color = QColorDialog.getColor(QColor(current_hex), self, tr('select_color'))
+        if color.isValid():
+            self.apply_accent_color(color.name())
+
+    def apply_accent_color(self, color_hex):
+        self.config['accent_color'] = color_hex
+        
+        from qfluentwidgets import setThemeColor
+        from PyQt6.QtGui import QColor
+        setThemeColor(QColor(color_hex))
+        
+        if hasattr(self, 'refresh_custom_styles'):
+            self.refresh_custom_styles()
 
     # ------------------------------------------------------------------ #
     # Language change handler                                              #
@@ -410,6 +431,7 @@ class GlobalSettingsMixin:
         self.gsSaveBtn.setText(tr('save_settings'))
         self.gsGPULabel.setText(tr('gpu_acceleration'))
         self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
+        self.gsAccentBtn.setText(tr('accent_color'))
         self.navToggle.setOnText(tr('on'))
         self.navToggle.setOffText(tr('off'))
 

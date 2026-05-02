@@ -57,8 +57,12 @@ class PlayerWindow(
         self.videoItem = None
         self.view = None
 
-        from qfluentwidgets import setTheme, Theme
+        from qfluentwidgets import setTheme, Theme, setThemeColor
         setTheme(Theme.DARK)
+        
+        accent_color = self.config.get('accent_color', '#00f2ff')
+        from PyQt6.QtGui import QColor
+        setThemeColor(QColor(accent_color))
 
         super().__init__()
         self.setWindowIcon(QIcon(get_resource_path("app_icon.ico")))
@@ -181,6 +185,8 @@ class PlayerWindow(
 
         # ---- Build UI (UIMixin) ----------------------------------------
         self.init_ui()
+        if hasattr(self, 'refresh_custom_styles'):
+            self.refresh_custom_styles()
         
         # Load palette color
         palette = self.config.get('palette', ['#000000', '#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#0000FF'])
