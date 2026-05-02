@@ -72,6 +72,8 @@ class ThumbnailThread(QThread):
     def __init__(self, filePath, parent=None):
         super().__init__(parent)
         self.filePath = filePath
+        self._is_cancelled = False
+        self.process = None
 
     def run(self):
         try:
@@ -88,7 +90,9 @@ class ThumbnailThread(QThread):
                     y = (120 - thumb.height()) // 2
                     painter.drawPixmap(x, y, thumb)
                     painter.end()
-                    self.finished.emit(self.filePath, final_thumb)
+                    
+                    if not self._is_cancelled:
+                        self.finished.emit(self.filePath, final_thumb)
                     return
 
             # Video handling via FFmpeg
@@ -119,18 +123,26 @@ class ThumbnailThread(QThread):
                 self.process.kill()
                 return
 
+            if self._is_cancelled:
+                try: os.remove(thumb_path)
+                except OSError: pass
+                return
+
             if os.path.exists(thumb_path):
                 pixmap = QPixmap(thumb_path)
                 if not pixmap.isNull():
-                    self.finished.emit(self.filePath, pixmap)
+                    if not self._is_cancelled:
+                        self.finished.emit(self.filePath, pixmap)
                 try: os.remove(thumb_path)
                 except OSError: pass
         except Exception as e:
             print(f"Thumbnail error for {self.filePath}: {e}")
-            self.finished.emit(self.filePath, QPixmap())
+            if not self._is_cancelled:
+                self.finished.emit(self.filePath, QPixmap())
 
     def cancel(self):
-        if hasattr(self, 'process') and self.process:
+        self._is_cancelled = True
+        if self.process:
             try:
                 self.process.kill()
             except OSError:

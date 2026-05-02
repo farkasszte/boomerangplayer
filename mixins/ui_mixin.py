@@ -167,6 +167,8 @@ class UIMixin:
         self.playlistLayout.addWidget(self.playlistList)
 
         self.thumb_threads = []
+        self.thumb_queue = []
+        self.MAX_THUMB_THREADS = 2
 
         self.playlistButtonsGrid = QGridLayout()
         self.playlistButtonsGrid.setSpacing(8)

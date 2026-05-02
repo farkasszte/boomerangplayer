@@ -49,23 +49,51 @@ class PlaylistMixin:
                 self.playlistList.addItem(item)
 
                 if self.thumbToggle.isChecked():
-                    thread = ThumbnailThread(filePath, self)
-                    thread.finished.connect(self.on_thumbnail_ready)
-                    self.thumb_threads.append(thread)
-                    thread.start()
+                    self.thumb_queue.append(filePath)
+        
+        if self.thumbToggle.isChecked():
+            self._process_thumb_queue()
+
+    def _process_thumb_queue(self):
+        """Starts the next thumbnail thread if there's space."""
+        if not self.thumbToggle.isChecked():
+            self.thumb_queue.clear()
+            return
+
+        while len(self.thumb_threads) < self.MAX_THUMB_THREADS and self.thumb_queue:
+            filePath = self.thumb_queue.pop(0)
+            
+            # Don't process if already being processed or finished (though queue should handle this)
+            already_running = any(t.filePath == filePath for t in self.thumb_threads)
+            if already_running:
+                continue
+
+            thread = ThumbnailThread(filePath, self)
+            thread.finished.connect(self.on_thumbnail_ready)
+            self.thumb_threads.append(thread)
+            thread.start()
 
     # ------------------------------------------------------------------ #
     # Thumbnail callbacks                                                  #
     # ------------------------------------------------------------------ #
 
     def on_thumbnail_ready(self, filePath, pixmap):
+        # Cleanup finished thread
+        sender = self.sender()
+        if sender in self.thumb_threads:
+            self.thumb_threads.remove(sender)
+
         if not self.thumbToggle.isChecked():
+            self._process_thumb_queue()
             return
+            
         for i in range(self.playlistList.count()):
             item = self.playlistList.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == filePath:
                 item.setIcon(QIcon(pixmap))
                 break
+        
+        self._process_thumb_queue()
 
     def on_thumb_toggle_changed(self, checked):
         if checked:
@@ -78,11 +106,9 @@ class PlaylistMixin:
                 placeholder = QPixmap(120, 120)
                 placeholder.fill(QColor(60, 60, 60))
                 item.setIcon(QIcon(placeholder))
-
-                thread = ThumbnailThread(filePath, self)
-                thread.finished.connect(self.on_thumbnail_ready)
-                self.thumb_threads.append(thread)
-                thread.start()
+                self.thumb_queue.append(filePath)
+            
+            self._process_thumb_queue()
         else:
             self.playlistList.setIconSize(QSize(0, 0))
             self.playlistList.setSpacing(1)
@@ -90,6 +116,12 @@ class PlaylistMixin:
                 item = self.playlistList.item(i)
                 item.setIcon(QIcon())
                 item.setSizeHint(QSize(0, 28))
+            
+            # Cancel active and clear queue
+            self.thumb_queue.clear()
+            for t in self.thumb_threads:
+                t.cancel()
+            self.thumb_threads.clear()
 
     # ------------------------------------------------------------------ #
     # Item interaction                                                     #
@@ -172,9 +204,15 @@ class PlaylistMixin:
                         self.extraction_thread.cancel()
 
                     # Stop any thumbnail generation for this file
+                    if old_path in self.thumb_queue:
+                        self.thumb_queue.remove(old_path)
+
                     for t in getattr(self, 'thumb_threads', []):
-                        if t.filePath == old_path and t.isRunning():
+                        if t.filePath == old_path:
                             t.cancel()
+                            # It will be removed from self.thumb_threads in on_thumbnail_ready
+                            # or we can remove it now if we're sure it's not emitting anymore
+                            # but safer to let the callback handle it.
                 
                 os.rename(old_path, new_path)
                 
@@ -262,6 +300,11 @@ class PlaylistMixin:
             self.playlistList.takeItem(self.playlistList.row(item))
 
     def clear_playlist(self):
+        self.thumb_queue.clear()
+        for t in self.thumb_threads:
+            t.cancel()
+        self.thumb_threads.clear()
+
         self.playlistList.clear()
         self.playlistData = {}
         self.stop_playback()
