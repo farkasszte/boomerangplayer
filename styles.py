@@ -1,6 +1,6 @@
 # Styles for Boomerang Player
 
-def get_styles(accent_color="#00f2ff"):
+def get_styles(accent_color="#00f2ff", bg_color="#202020"):
     styles = {}
     
     styles['FLUENT_SLIDER_STYLE'] = f"""
@@ -46,21 +46,21 @@ def get_styles(accent_color="#00f2ff"):
     }
     """
 
-    styles['MENU_STYLE'] = """
-        QMenu {
-            background-color: #202020;
+    styles['MENU_STYLE'] = f"""
+        QMenu {{
+            background-color: {bg_color};
             color: white;
             border: 1px solid #333;
             border-radius: 5px;
             padding: 5px;
-        }
-        QMenu::item {
+        }}
+        QMenu::item {{
             padding: 5px 25px 5px 20px;
             border-radius: 3px;
-        }
-        QMenu::item:selected {
+        }}
+        QMenu::item:selected {{
             background-color: #333;
-        }
+        }}
     """
 
     styles['COMBO_STYLE'] = f"""
@@ -75,7 +75,7 @@ def get_styles(accent_color="#00f2ff"):
         QComboBox::drop-down {{ border: none; width: 0px; }}
         QComboBox::down-arrow {{ image: none; border: none; background: transparent; }}
         QComboBox QAbstractItemView {{
-            background-color: #2c2c2c;
+            background-color: {bg_color};
             border: 1px solid rgba(0,0,0,0.4);
             selection-background-color: {accent_color};
             selection-color: white;

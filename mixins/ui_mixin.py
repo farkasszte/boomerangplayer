@@ -128,11 +128,15 @@ class UIMixin:
             self.pixmapItem.gpu_enabled = enabled
             self.pixmapItem.update()
 
-    def refresh_custom_styles(self):
-        """Updates all custom styled components when accent color changes."""
+    def refresh_custom_styles(self, accent_color=None, bg_color=None):
+        """Updates all custom styled components when accent or background color changes."""
+        if not accent_color:
+            accent_color = self.config.get('accent_color', '#00f2ff')
+        if not bg_color:
+            bg_color = self.config.get('bg_color', '#202020')
+
         from styles import get_styles
-        accent_color = self.config.get('accent_color', '#00f2ff')
-        s = get_styles(accent_color)
+        s = get_styles(accent_color, bg_color)
 
         # Update main UI elements
         sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 
@@ -217,6 +221,39 @@ class UIMixin:
         for c_name in captions:
             if hasattr(self, c_name):
                 getattr(self, c_name).setStyleSheet(s['CAPTION_STYLE'])
+
+        # Update Background Colors
+        bg_style = f"background-color: {bg_color}; border: none;"
+        
+        # Main window (PlayerWindow)
+        self.setStyleSheet(f"PlayerWindow {{ background-color: {bg_color}; }}")
+        
+        # Title bar
+        if hasattr(self, 'titleBar'):
+            self.titleBar.setStyleSheet(f"background-color: {bg_color}; border: none;")
+            
+        # Controls card (Footer)
+        if hasattr(self, 'controlsCard'):
+            self.controlsCard.setStyleSheet(bg_style)
+            
+        # Sidebars
+        sidebar_containers = ['settingsContainer', 'globalSettingsContainer', 
+                              'drawingContainer', 'playlistContainer']
+        for container_name in sidebar_containers:
+            if hasattr(self, container_name):
+                getattr(self, container_name).setStyleSheet(bg_style)
+                
+        # Drawing scroll area and widget
+        if hasattr(self, 'drawingScrollWidget'):
+            self.drawingScrollWidget.setStyleSheet("background: transparent;")
+        if hasattr(self, 'drawingScrollArea'):
+            self.drawingScrollArea.setStyleSheet("background: transparent; border: none;")
+            
+        # Settings scroll widget
+        if hasattr(self, 'settingsScrollWidget'):
+            self.settingsScrollWidget.setStyleSheet("background: transparent;")
+        if hasattr(self, 'gsScrollWidget'):
+            self.gsScrollWidget.setStyleSheet("background: transparent;")
 
     # ------------------------------------------------------------------ #
     # Playlist sidebar                                                     #

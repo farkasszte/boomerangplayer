@@ -147,7 +147,9 @@ TRANSLATIONS = {
         'rename_file_title': 'Rename File',
         'open_in_new_window': 'Open in new window',
         'save_settings': 'Save settings',
-        'accent_color': 'Accent color'
+        'accent_color': 'Accent color',
+        'bg_color': 'Background color',
+        'choose_bg_color': 'Choose background color'
     },
     'hu': {
         # Navigation/UI
@@ -298,7 +300,9 @@ TRANSLATIONS = {
         'rename_file_title': 'Fájl átnevezése',
         'open_in_new_window': 'Megnyitás új ablakban',
         'save_settings': 'Beállítások mentése',
-        'accent_color': 'Kiemelő szín'
+        'accent_color': 'Kiemelő szín',
+        'bg_color': 'Háttérszín',
+        'choose_bg_color': 'Válassz háttérszínt'
     }
 }
 

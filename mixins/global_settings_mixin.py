@@ -24,6 +24,9 @@ class GlobalSettingsMixin:
         self.globalSettingsLayout.setContentsMargins(10, 10, 4, 10)
         self.globalSettingsLayout.setSpacing(6)
 
+        self.pending_accent_color = self.config.get('accent_color', '#00f2ff')
+        self.pending_bg_color = self.config.get('bg_color', '#202020')
+
         self.globalSettingsTitle = CaptionLabel(tr('settings'))
         self.globalSettingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
         self.globalSettingsLayout.addWidget(self.globalSettingsTitle)
@@ -57,6 +60,10 @@ class GlobalSettingsMixin:
         self.gsAccentBtn = PushButton()
         self.gsAccentBtn.clicked.connect(self.choose_accent_color)
         self.gsInnerLayout.addWidget(self.gsAccentBtn)
+
+        self.gsBgBtn = PushButton()
+        self.gsBgBtn.clicked.connect(self.choose_bg_color)
+        self.gsInnerLayout.addWidget(self.gsBgBtn)
 
         gpuRow = QHBoxLayout()
         self.gsGPULabel = BodyLabel(tr('gpu_acceleration'))
@@ -254,7 +261,8 @@ class GlobalSettingsMixin:
         current_hex = self.config.get('accent_color', '#00f2ff')
         color = QColorDialog.getColor(QColor(current_hex), self, tr('select_color'))
         if color.isValid():
-            self.apply_accent_color(color.name())
+            self.pending_accent_color = color.name()
+            self.apply_accent_color(self.pending_accent_color)
 
     def apply_accent_color(self, color_hex):
         self.config['accent_color'] = color_hex
@@ -265,6 +273,25 @@ class GlobalSettingsMixin:
         
         if hasattr(self, 'refresh_custom_styles'):
             self.refresh_custom_styles()
+
+    # ------------------------------------------------------------------ #
+    # Background color picker                                              #
+    # ------------------------------------------------------------------ #
+
+    def choose_bg_color(self):
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+        current_hex = self.pending_bg_color
+        color = QColorDialog.getColor(QColor(current_hex), self, tr('choose_bg_color'))
+        if color.isValid():
+            self.pending_bg_color = color.name()
+            self.apply_bg_color(self.pending_bg_color)
+
+    def apply_bg_color(self, color_hex):
+        self.config['bg_color'] = color_hex
+        if hasattr(self, 'refresh_custom_styles'):
+            self.refresh_custom_styles()
+        self.update_ui_texts()
 
     # ------------------------------------------------------------------ #
     # Language change handler                                              #
@@ -296,6 +323,8 @@ class GlobalSettingsMixin:
 
     def save_global_settings(self):
         from utils import save_config
+        self.config['accent_color'] = self.pending_accent_color
+        self.config['bg_color'] = self.pending_bg_color
         save_config(self.config)
         
         # Visual feedback
@@ -432,6 +461,7 @@ class GlobalSettingsMixin:
         self.gsGPULabel.setText(tr('gpu_acceleration'))
         self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
         self.gsAccentBtn.setText(tr('accent_color'))
+        self.gsBgBtn.setText(tr('bg_color'))
         self.navToggle.setOnText(tr('on'))
         self.navToggle.setOffText(tr('off'))
 
