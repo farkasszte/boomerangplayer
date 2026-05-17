@@ -158,6 +158,11 @@ class PlaylistMixin:
         self.show_clear_menu()
 
     def show_playlist_context_menu(self, item, pos):
+        if not item.isSelected():
+            self.playlistList.clearSelection()
+            item.setSelected(True)
+            self.playlistList.setCurrentItem(item)
+
         from PyQt6.QtWidgets import QMenu
         menu = QMenu(self)
         menu.setStyleSheet(MENU_STYLE)
@@ -292,12 +297,19 @@ class PlaylistMixin:
     # ------------------------------------------------------------------ #
 
     def remove_from_playlist(self):
-        item = self.playlistList.currentItem()
-        if item:
+        selected_items = self.playlistList.selectedItems()
+        if not selected_items:
+            curr = self.playlistList.currentItem()
+            if curr:
+                selected_items = [curr]
+
+        for item in selected_items:
             path = item.data(Qt.ItemDataRole.UserRole)
             if path in self.playlistData:
                 del self.playlistData[path]
-            self.playlistList.takeItem(self.playlistList.row(item))
+            row = self.playlistList.row(item)
+            if row >= 0:
+                self.playlistList.takeItem(row)
 
     def clear_playlist(self):
         self.thumb_queue.clear()
@@ -335,21 +347,38 @@ class PlaylistMixin:
             with open(fileName, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
 
+    def load_playlist_by_path(self, fileName):
+        if fileName and os.path.exists(fileName):
+            try:
+                with open(fileName, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                self.playlistList.clear()
+                self.playlistData = data.get('markers', {})
+
+                self.add_files_to_playlist(data.get('files', []))
+
+                if self.playlistList.count() > 0:
+                    self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
+            except Exception as e:
+                print(f"Error loading playlist: {e}")
+                from qfluentwidgets import InfoBar, InfoBarPosition
+                InfoBar.error(
+                    title=tr('open_project_title'),
+                    content=f"Error: {e}",
+                    orient=Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=5000,
+                    parent=self
+                )
+
     def load_playlist_from_file(self):
         fileName, _ = QFileDialog.getOpenFileName(
             self, tr('open_project_title'), "", f"{tr('json_files')} (*.json)"
         )
         if fileName:
-            with open(fileName, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            self.playlistList.clear()
-            self.playlistData = data.get('markers', {})
-
-            self.add_files_to_playlist(data.get('files', []))
-
-            if self.playlistList.count() > 0:
-                self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
+            self.load_playlist_by_path(fileName)
 
     # ------------------------------------------------------------------ #
     # File info dialog                                                     #

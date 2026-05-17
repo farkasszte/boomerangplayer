@@ -192,12 +192,12 @@ class GlobalSettingsMixin:
 
         current_lang = self.config.get('language', 'en')
 
-        en_action = menu.addAction(tr('English'))
+        en_action = menu.addAction(tr('lang_en'))
         en_action.setCheckable(True)
         en_action.setChecked(current_lang == 'en')
         en_action.triggered.connect(lambda: self.on_language_changed_sidebar(0))
 
-        hu_action = menu.addAction(tr('Magyar'))
+        hu_action = menu.addAction(tr('lang_hu'))
         hu_action.setCheckable(True)
         hu_action.setChecked(current_lang == 'hu')
         hu_action.triggered.connect(lambda: self.on_language_changed_sidebar(1))
@@ -319,7 +319,8 @@ class GlobalSettingsMixin:
     def update_shortcut_sidebar(self, action_name, new_key):
         self.shortcuts[action_name] = new_key
         self.config['shortcuts'] = self.shortcuts
-        # save_config(self.config) -> Removed for manual save
+        if hasattr(self, 'setup_shortcuts'):
+            self.setup_shortcuts()
 
     def save_global_settings(self):
         from utils import save_config
@@ -390,8 +391,6 @@ class GlobalSettingsMixin:
         self.addMenu.addAction(tr('add_media'), self.open_file)
         self.addMenu.addAction(tr('add_video_folder'), lambda: self.add_folder_contents(type="video"))
         self.addMenu.addAction(tr('add_image_folder'), lambda: self.add_folder_contents(type="image"))
-        self.addMenu.addSeparator()
-        self.addMenu.addAction(tr('load_playlist'), self.load_playlist_from_file)
 
         self.sortMenu.clear()
         self.sortMenu.addAction(tr('sort_name_asc'),    lambda: self.sort_playlist_by("name_asc"))

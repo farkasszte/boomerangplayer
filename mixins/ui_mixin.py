@@ -105,6 +105,7 @@ class UIMixin:
         self.update_ui_texts()
         self.is_full_screen = False
         self.sidebar_states_before_fs = {}
+        self.setup_shortcuts()
 
     def update_gpu_state(self):
         if hasattr(self, 'view') and hasattr(self, 'pixmapItem'):
@@ -308,8 +309,6 @@ class UIMixin:
         self.addMenu.addAction(tr('add_media'), self.open_file)
         self.addMenu.addAction(tr('add_video_folder'), lambda: self.add_folder_contents(type="video"))
         self.addMenu.addAction(tr('add_image_folder'), lambda: self.add_folder_contents(type="image"))
-        self.addMenu.addSeparator()
-        self.addMenu.addAction(tr('load_playlist'), self.load_playlist_from_file)
         self.btn_add.clicked.connect(self.show_add_menu)
 
         self.btn_sort = PushButton(tr('sort'))
@@ -760,41 +759,54 @@ class UIMixin:
                 self.globalSettingsContainer.show()
 
     # ------------------------------------------------------------------ #
-    # Keyboard events                                                      #
+    # Keyboard events & Shortcuts                                          #
     # ------------------------------------------------------------------ #
 
-    def keyPressEvent(self, event):
-        key = event.key()
+    def setup_shortcuts(self):
+        from PyQt6.QtGui import QKeySequence, QShortcut
+        from PyQt6.QtWidgets import QLineEdit, QTextEdit
+        
+        # Clean up existing shortcuts if any
+        if hasattr(self, '_shortcut_objects'):
+            for sc in self._shortcut_objects:
+                sc.setEnabled(False)
+                sc.setParent(None)
+        
+        self._shortcut_objects = []
+        
+        handled_actions = {
+            'play_pause': self.play_pause,
+            'smart_mark': self.add_smart_marker,
+            'toggle_loop': self.toggle_shortcut_loop,
+            'next_frame': lambda: self.step_frame(1),
+            'prev_frame': lambda: self.step_frame(-1),
+            'toggle_mute': self.toggle_mute,
+            'act_full_screen': self.toggle_full_screen
+        }
+        
+        for act, slot in handled_actions.items():
+            key_val = self.shortcuts.get(act)
+            if key_val is not None:
+                try:
+                    key_code = int(key_val)
+                    shortcut = QShortcut(QKeySequence(key_code), self)
+                    shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
+                    shortcut.activated.connect(lambda s=slot: self.trigger_shortcut_action(s))
+                    self._shortcut_objects.append(shortcut)
+                except (ValueError, TypeError) as e:
+                    print(f"Error setting up shortcut for {act}: {e}")
 
-        if isinstance(self.focusWidget(), (qfluentwidgets.LineEdit, qfluentwidgets.TextEdit)):
-            super().keyPressEvent(event)
+    def trigger_shortcut_action(self, slot):
+        from PyQt6.QtWidgets import QLineEdit, QTextEdit
+        import qfluentwidgets
+        focused = self.focusWidget()
+        if isinstance(focused, (QLineEdit, QTextEdit, qfluentwidgets.LineEdit, qfluentwidgets.TextEdit)):
             return
+        slot()
 
-        action = None
-        # Only consider actions we actually handle to avoid conflicts with old/unknown config keys
-        handled_actions = ['play_pause', 'smart_mark', 'toggle_loop', 'next_frame', 'prev_frame', 'toggle_mute', 'act_full_screen']
-        for act, k in self.shortcuts.items():
-            try:
-                if int(k) == key and act in handled_actions:
-                    action = act
-                    break
-            except (ValueError, TypeError):
-                continue
+    def toggle_shortcut_loop(self):
+        current = self.loopCombo.currentIndex()
+        self.loopCombo.setCurrentIndex(0 if current != 0 else 3)
 
-        if action == 'play_pause':
-            self.play_pause()
-        elif action == 'smart_mark':
-            self.add_smart_marker()
-        elif action == 'toggle_loop':
-            current = self.loopCombo.currentIndex()
-            self.loopCombo.setCurrentIndex(0 if current != 0 else 3)
-        elif action == 'next_frame':
-            self.step_frame(1)
-        elif action == 'prev_frame':
-            self.step_frame(-1)
-        elif action == 'toggle_mute':
-            self.toggle_mute()
-        elif action == 'act_full_screen':
-            self.toggle_full_screen()
-        else:
-            super().keyPressEvent(event)
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)

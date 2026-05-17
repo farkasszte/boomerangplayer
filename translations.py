@@ -45,7 +45,7 @@ TRANSLATIONS = {
         'off': 'Off',
         
         # Menu actions
-        'add_media': 'Add media',
+        'add_media': 'Add media / playlist',
         'add_video_folder': 'Add video folder',
         'add_image_folder': 'Add image folder',
         'load_playlist': 'Load playlist',
@@ -99,7 +99,7 @@ TRANSLATIONS = {
         'tip_full_screen': 'Toggle full screen (F)',
         
         # Dialogs
-        'add_files_title': 'Add files',
+        'add_files_title': 'Add files / playlist',
         'save_project_title': 'Save project',
         'open_project_title': 'Open project',
         'select_folder': 'Select folder',
@@ -130,6 +130,8 @@ TRANSLATIONS = {
         'general': 'General',
         'shortcuts': 'Shortcuts',
         'language': 'Language',
+        'lang_en': 'English',
+        'lang_hu': 'Hungarian',
         'audio_device': 'Audio output device',
         'record': 'Record',
         'press_key': 'Press any key...',
@@ -198,7 +200,7 @@ TRANSLATIONS = {
         'off': 'Ki',
         
         # Menu actions
-        'add_media': 'Média hozzáadása',
+        'add_media': 'Média / lista hozzáadása',
         'add_video_folder': 'Videó mappa hozzáadása',
         'add_image_folder': 'Kép mappa hozzáadása',
         'load_playlist': 'Lista betöltése',
@@ -252,7 +254,7 @@ TRANSLATIONS = {
         'tip_full_screen': 'Teljes képernyő (F)',
         
         # Dialogs
-        'add_files_title': 'Fájlok hozzáadása',
+        'add_files_title': 'Fájlok / lista hozzáadása',
         'save_project_title': 'Projekt mentése',
         'open_project_title': 'Projekt megnyitása',
         'select_folder': 'Mappa kiválasztása',
@@ -283,6 +285,8 @@ TRANSLATIONS = {
         'general': 'Általános',
         'shortcuts': 'Gyorsbillentyűk',
         'language': 'Nyelv',
+        'lang_en': 'Angol',
+        'lang_hu': 'Magyar',
         'audio_device': 'Kimeneti hangeszköz',
         'record': 'Rögzítés',
         'press_key': 'Nyomj meg egy billentyűt...',

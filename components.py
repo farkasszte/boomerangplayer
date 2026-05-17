@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
 from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont, QImage
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
                              QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup,
-                             QGraphicsPixmapItem, QStyleOptionGraphicsItem)
+                             QGraphicsPixmapItem, QStyleOptionGraphicsItem, QAbstractItemView)
 from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtGui import QMatrix4x4
@@ -17,6 +17,7 @@ class DropListWidget(ListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def contextMenuEvent(self, event):
         item = self.itemAt(event.pos())

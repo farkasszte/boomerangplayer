@@ -21,12 +21,20 @@ class PlaybackMixin:
         from PyQt6.QtWidgets import QFileDialog
         fileNames, _ = QFileDialog.getOpenFileNames(
             self, tr('add_files_title'), "",
-            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff)"
+            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff *.json)"
         )
         if fileNames:
-            self.add_files_to_playlist(fileNames)
-            if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
-                self.load_video(fileNames[0])
+            json_files = [f for f in fileNames if f.lower().endswith('.json')]
+            media_files = [f for f in fileNames if not f.lower().endswith('.json')]
+            
+            if json_files:
+                self.load_playlist_by_path(json_files[0])
+                if media_files:
+                    self.add_files_to_playlist(media_files)
+            else:
+                self.add_files_to_playlist(media_files)
+                if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
+                    self.load_video(media_files[0])
 
     def add_folder_contents(self, type="video"):
         from PyQt6.QtWidgets import QFileDialog
