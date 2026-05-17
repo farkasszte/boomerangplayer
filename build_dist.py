@@ -28,7 +28,7 @@ args = [
 # Exclude heavy machine learning and scientific modules to keep the build size minimal (~147MB)
 excludes = [
     'torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sklearn', 'cv2',
-    'matplotlib', 'numpy', 'pyarrow', 'lxml', 'openpyxl', 'jinja2', 'numba',
+    'matplotlib', 'pyarrow', 'lxml', 'openpyxl', 'jinja2', 'numba',
     'llvmlite', 'lz4', 'fsspec', 'astropy', 'PIL', 'h5py', 'sympy', 'IPython',
     'yt_dlp', 'requests', 'urllib3', 'curl_cffi', 'brotli', 'mutagen', 'secretstorage',
     'Cryptodome'
