@@ -26,7 +26,7 @@ finally:
     sys.stdout = _temp_stdout
 
 from PyQt6.QtCore import qInstallMessageHandler
-from utils import get_resource_path, qt_message_handler, load_config, load_markers
+from utils import get_resource_path, qt_message_handler, load_config, load_markers, VERSION
 from translations import set_lang
 from mixins.cache_mixin import CacheMixin
 from mixins.playback_mixin import PlaybackMixin
@@ -66,7 +66,7 @@ class PlayerWindow(
 
         super().__init__()
         self.setWindowIcon(QIcon(get_resource_path("app_icon.ico")))
-        self.setWindowTitle("Boomerang Player")
+        self.setWindowTitle(f"Boomerang Player v{VERSION}")
         self.titleBar.setFixedHeight(32)
         
         # Target the top-level window directly to avoid cascading

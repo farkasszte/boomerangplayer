@@ -11,7 +11,7 @@ from qfluentwidgets import MessageBox
 from mixins.threads import ThumbnailThread
 from styles import MENU_STYLE
 from translations import tr
-from utils import get_resource_path
+from utils import get_resource_path, VERSION
 import subprocess
 
 
@@ -232,7 +232,7 @@ class PlaylistMixin:
                 # Restore current file state if it was the one renamed
                 if is_current:
                     self.currentFilePath = new_path
-                    self.setWindowTitle(f"Boomerang Player - {new_name}")
+                    self.setWindowTitle(f"Boomerang Player v{VERSION} - {new_name}")
                     from PyQt6.QtCore import QUrl
                     self.mediaPlayer.setSource(QUrl.fromLocalFile(new_path))
                     # Restore position
@@ -322,7 +322,7 @@ class PlaylistMixin:
         self.stop_playback()
         self.cleanup_cache()
         self.currentFilePath = None
-        self.setWindowTitle("Boomerang Player")
+        self.setWindowTitle(f"Boomerang Player v{VERSION}")
         if hasattr(self, 'pixmapItem'):
             self.pixmapItem.setPixmap(QPixmap())
         self.progressBar.setRange(0, 0)

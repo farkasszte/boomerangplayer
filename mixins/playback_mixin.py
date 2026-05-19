@@ -8,7 +8,7 @@ import json
 from PyQt6.QtCore import Qt, QUrl, QTimer, QElapsedTimer, QPointF
 from PyQt6.QtMultimedia import QMediaPlayer
 from qfluentwidgets import FluentIcon
-from utils import get_resource_path, format_time
+from utils import get_resource_path, format_time, VERSION
 from translations import tr
 
 
@@ -85,7 +85,7 @@ class PlaybackMixin:
                 if hasattr(self, '_apply_file_saved_zoom'):
                     self._apply_file_saved_zoom()
                 self.mediaPlayer.stop()
-                self.setWindowTitle(os.path.basename(filePath))
+                self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
             else:
                 fps, duration_ms, total_frames = self.get_video_info(filePath)
                 if fps > 0:
@@ -96,7 +96,7 @@ class PlaybackMixin:
                 self.update_pixmap_from_cache()
 
                 self.mediaPlayer.setSource(QUrl.fromLocalFile(filePath))
-                self.setWindowTitle(os.path.basename(filePath))
+                self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
 
                 # Store ffprobe results for frame-accurate timing
                 self.ffprobe_fps = fps

@@ -2,6 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
+VERSION = "1.6"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -111,3 +112,49 @@ def save_markers(markers_data):
             json.dump(markers_data, f, indent=4)
     except Exception as e:
         print(f"Error saving markers: {e}")
+
+def cleanup_nvidia_dxcache():
+    """ Garbage collect Nvidia DXCache (.nvph) files to prevent disk exhaustion.
+    Only files older than 15 minutes are targeted, and locked files are safely skipped.
+    Runs asynchronously in a background daemon thread to avoid blocking startup.
+    """
+    import threading
+    
+    def worker():
+        try:
+            local_app_data = os.environ.get('LOCALAPPDATA')
+            if not local_app_data:
+                return
+            
+            dxcache_dir = os.path.join(local_app_data, 'Nvidia', 'DXCache')
+            if not os.path.exists(dxcache_dir) or not os.path.isdir(dxcache_dir):
+                return
+            
+            import time
+            now = time.time()
+            deleted_count = 0
+            freed_bytes = 0
+            
+            for filename in os.listdir(dxcache_dir):
+                if filename.lower().endswith('.nvph'):
+                    file_path = os.path.join(dxcache_dir, filename)
+                    try:
+                        # Safety check: only delete files older than 15 minutes (900 seconds)
+                        mtime = os.path.getmtime(file_path)
+                        if now - mtime > 900:
+                            file_size = os.path.getsize(file_path)
+                            os.remove(file_path)
+                            deleted_count += 1
+                            freed_bytes += file_size
+                    except (PermissionError, OSError):
+                        # File is locked or in use, skip it
+                        continue
+            
+            if deleted_count > 0:
+                print(f"[DXCache GC] Cleaned up {deleted_count} .nvph files, freeing {freed_bytes / (1024 * 1024):.2f} MB.")
+        except Exception as e:
+            print(f"[DXCache GC] Error running cache cleanup: {e}")
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+
