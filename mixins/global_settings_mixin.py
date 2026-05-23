@@ -76,9 +76,54 @@ class GlobalSettingsMixin:
         gpuRow.addWidget(self.gsGPUToggle)
         self.gsInnerLayout.addLayout(gpuRow)
 
-        self.gsInnerLayout.addWidget(
-            QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken)
-        )
+        hline1 = QFrame()
+        hline1.setFrameShape(QFrame.Shape.HLine)
+        hline1.setFrameShadow(QFrame.Shadow.Sunken)
+        self.gsInnerLayout.addWidget(hline1)
+
+        self.playlistSettingsTitle = CaptionLabel(tr('playlist'))
+        self.playlistSettingsTitle.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.gsInnerLayout.addWidget(self.playlistSettingsTitle)
+
+        thumbRow = QHBoxLayout()
+        self.thumbLabel = CaptionLabel(tr('show_thumbnails'))
+        self.thumbToggle = SwitchButton()
+        self.thumbToggle.setChecked(self.config.get('show_thumbnails', True))
+        self.thumbToggle.setOnText(tr('on'))
+        self.thumbToggle.setOffText(tr('off'))
+        self.thumbToggle.checkedChanged.connect(self.on_thumb_toggle_changed)
+        thumbRow.addWidget(self.thumbLabel)
+        thumbRow.addStretch(1)
+        thumbRow.addWidget(self.thumbToggle)
+        self.gsInnerLayout.addLayout(thumbRow)
+
+        fileNameRow = QHBoxLayout()
+        self.fileNameLabel = CaptionLabel(tr('show_filenames'))
+        self.fileNameToggle = SwitchButton()
+        self.fileNameToggle.setChecked(self.config.get('show_filenames', True))
+        self.fileNameToggle.setOnText(tr('on'))
+        self.fileNameToggle.setOffText(tr('off'))
+        self.fileNameToggle.checkedChanged.connect(self.on_filename_toggle_changed)
+        fileNameRow.addWidget(self.fileNameLabel)
+        fileNameRow.addStretch(1)
+        fileNameRow.addWidget(self.fileNameToggle)
+        self.gsInnerLayout.addLayout(fileNameRow)
+
+        sizeRow = QHBoxLayout()
+        self.thumbSizeLabel = CaptionLabel(tr('thumbnail_size'))
+        self.thumbSizeBtn = PushButton()
+        self.thumbSizeBtn.clicked.connect(self.show_thumb_size_menu)
+        sizeRow.addWidget(self.thumbSizeLabel)
+        sizeRow.addStretch(1)
+        sizeRow.addWidget(self.thumbSizeBtn)
+        self.gsInnerLayout.addLayout(sizeRow)
+
+        self.update_thumb_size_btn_text()
+
+        hline2 = QFrame()
+        hline2.setFrameShape(QFrame.Shape.HLine)
+        hline2.setFrameShadow(QFrame.Shadow.Sunken)
+        self.gsInnerLayout.addWidget(hline2)
 
         self.gsShortcutsLabel = CaptionLabel(tr('playback_shortcuts'))
         self.gsShortcutsLabel.setStyleSheet("font-weight: bold; color: #aaaaaa;")
@@ -347,6 +392,7 @@ class GlobalSettingsMixin:
     def update_ui_texts(self):
         self.playlistLabel.setText(tr('playlist'))
         self.thumbLabel.setText(tr('show_thumbnails'))
+        self.fileNameLabel.setText(tr('show_filenames'))
         self.btn_add.setText(tr('add'))
         self.btn_sort.setText(tr('sort'))
         self.btn_save.setText(tr('save'))
@@ -411,7 +457,25 @@ class GlobalSettingsMixin:
 
         self.btn_save.setToolTip(tr('tip_save'))
         self.btn_clear.setToolTip(tr('tip_clear'))
-        self.thumbToggle.setToolTip(tr('tip_thumbnails'))
+        
+        if hasattr(self, 'thumbLabel'):
+            self.thumbLabel.setText(tr('show_thumbnails'))
+        if hasattr(self, 'fileNameLabel'):
+            self.fileNameLabel.setText(tr('show_filenames'))
+        if hasattr(self, 'thumbToggle'):
+            self.thumbToggle.setOnText(tr('on'))
+            self.thumbToggle.setOffText(tr('off'))
+            self.thumbToggle.setToolTip(tr('tip_thumbnails'))
+        if hasattr(self, 'fileNameToggle'):
+            self.fileNameToggle.setOnText(tr('on'))
+            self.fileNameToggle.setOffText(tr('off'))
+            self.fileNameToggle.setToolTip(tr('tip_filenames'))
+        if hasattr(self, 'playlistSettingsTitle'):
+            self.playlistSettingsTitle.setText(tr('playlist'))
+        if hasattr(self, 'thumbSizeLabel'):
+            self.thumbSizeLabel.setText(tr('thumbnail_size'))
+        if hasattr(self, 'update_thumb_size_btn_text'):
+            self.update_thumb_size_btn_text()
         self.penTool.setText(tr('pen'))
         self.lineTool.setText(tr('line'))
         self.arrowTool.setText(tr('arrow'))

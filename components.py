@@ -40,6 +40,16 @@ class DropListWidget(ListWidget):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         self.filesDropped.emit(files)
 
+    def wheelEvent(self, event):
+        scrollbar = self.verticalScrollBar()
+        if scrollbar.isVisible():
+            delta = event.angleDelta().y()
+            scroll_amount = -int(delta / 3)
+            scrollbar.setValue(scrollbar.value() + scroll_amount)
+            event.accept()
+        else:
+            super().wheelEvent(event)
+
 class MarkerSlider(QSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -96,12 +96,12 @@ class ThumbnailThread(QThread):
             if self.filePath.lower().endswith(image_exts):
                 pixmap = QPixmap(self.filePath)
                 if not pixmap.isNull():
-                    thumb = pixmap.scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-                    final_thumb = QPixmap(120, 120)
+                    thumb = pixmap.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                    final_thumb = QPixmap(160, 160)
                     final_thumb.fill(Qt.GlobalColor.transparent)
                     painter = QPainter(final_thumb)
-                    x = (120 - thumb.width()) // 2
-                    y = (120 - thumb.height()) // 2
+                    x = (160 - thumb.width()) // 2
+                    y = (160 - thumb.height()) // 2
                     painter.drawPixmap(x, y, thumb)
                     painter.end()
                     
@@ -124,7 +124,7 @@ class ThumbnailThread(QThread):
                 "-ss", "1.0",
                 "-i", self.filePath,
                 "-vframes", "1",
-                "-vf", "setsar=1,scale=120:120:force_original_aspect_ratio=increase,crop=120:120",
+                "-vf", "setsar=1,scale=160:160:force_original_aspect_ratio=increase,crop=160:160",
                 thumb_path
             ]
             

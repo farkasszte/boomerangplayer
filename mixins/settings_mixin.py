@@ -93,9 +93,10 @@ class SettingsMixin:
         zoomGroup.addWidget(self.zoomSlider)
 
         self.settingsInnerLayout.addLayout(zoomGroup)
-        self.settingsInnerLayout.addWidget(
-            QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken)
-        )
+        hline1 = QFrame()
+        hline1.setFrameShape(QFrame.Shape.HLine)
+        hline1.setFrameShadow(QFrame.Shadow.Sunken)
+        self.settingsInnerLayout.addWidget(hline1)
 
     def _build_cache_section(self):
         cacheGroup = QVBoxLayout()
@@ -128,9 +129,10 @@ class SettingsMixin:
         self.cacheSlider.valueChanged.connect(update_cache_size)
         cacheGroup.addWidget(self.cacheSlider)
         self.settingsInnerLayout.addLayout(cacheGroup)
-        self.settingsInnerLayout.addWidget(
-            QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken)
-        )
+        hline2 = QFrame()
+        hline2.setFrameShape(QFrame.Shape.HLine)
+        hline2.setFrameShadow(QFrame.Shadow.Sunken)
+        self.settingsInnerLayout.addWidget(hline2)
 
     def _build_image_adj_section(self):
         self.adjLabel = CaptionLabel(tr('image_adjustments'))
@@ -176,9 +178,10 @@ class SettingsMixin:
         footerLayout.addWidget(self.resetAdjButton)
         footerLayout.addWidget(self.infoButton)
         self.settingsInnerLayout.addLayout(footerLayout)
-        self.settingsInnerLayout.addWidget(
-            QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken)
-        )
+        hline3 = QFrame()
+        hline3.setFrameShape(QFrame.Shape.HLine)
+        hline3.setFrameShadow(QFrame.Shadow.Sunken)
+        self.settingsInnerLayout.addWidget(hline3)
 
     def _build_loop_section(self):
         loopGroup = QVBoxLayout()
@@ -277,6 +280,9 @@ class SettingsMixin:
         loopGroup.addLayout(self.actionsGrid)
 
         self.settingsInnerLayout.addLayout(loopGroup)
-        self.settingsInnerLayout.addWidget(
-            QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Sunken)
-        )
+        hline4 = QFrame()
+        hline4.setFrameShape(QFrame.Shape.HLine)
+        hline4.setFrameShadow(QFrame.Shadow.Sunken)
+        self.settingsInnerLayout.addWidget(hline4)
+
+

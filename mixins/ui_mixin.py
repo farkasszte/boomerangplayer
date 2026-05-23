@@ -7,9 +7,10 @@ from PyQt6.QtCore import Qt, QSize, QPoint
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QSplitter, QLabel, QGridLayout,
-                              QGraphicsScene, QGraphicsPixmapItem, QGraphicsView)
+                              QGraphicsScene, QGraphicsPixmapItem, QGraphicsView,
+                              QAbstractItemView)
 from qfluentwidgets import (FluentIcon, ToolButton, CardWidget, CaptionLabel,
-                             SwitchButton, PushButton)
+                             SwitchButton, PushButton, ComboBox)
 from components import DropListWidget, MarkerSlider, ZoomView, GPUPixmapItem
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE,
@@ -156,7 +157,7 @@ class UIMixin:
                 btn.setStyleSheet(s['TOOL_BTN_STYLE'])
         
         # Action buttons
-        action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn']
+        action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn', 'thumbSizeBtn']
         for btn_name in action_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -191,7 +192,7 @@ class UIMixin:
             self.loopCombo.setStyleSheet(s['COMBO_STYLE'])
 
         # Update SwitchButtons
-        switches = ['loopToggle', 'globalLoopToggle', 'navToggle', 'gsGPUToggle', 'thumbToggle', 'laserModeToggle']
+        switches = ['loopToggle', 'globalLoopToggle', 'navToggle', 'gsGPUToggle', 'thumbToggle', 'fileNameToggle', 'laserModeToggle']
         for sw_name in switches:
             if hasattr(self, sw_name):
                 sw = getattr(self, sw_name)
@@ -271,18 +272,11 @@ class UIMixin:
         self.playlistLabel.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
         self.playlistLayout.addWidget(self.playlistLabel)
 
-        self.thumbToggleRow = QHBoxLayout()
-        self.thumbLabel = CaptionLabel(tr('show_thumbnails'))
-        self.thumbToggle = SwitchButton()
-        self.thumbToggle.setChecked(True)
-        self.thumbToggle.setToolTip(tr('tip_thumbnails'))
-        self.thumbToggle.checkedChanged.connect(self.on_thumb_toggle_changed)
-        self.thumbToggleRow.addWidget(self.thumbLabel)
-        self.thumbToggleRow.addStretch(1)
-        self.thumbToggleRow.addWidget(self.thumbToggle)
-        self.playlistLayout.addLayout(self.thumbToggleRow)
+
 
         self.playlistList = DropListWidget()
+        self.playlistList.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.playlistList.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.playlistList.setStyleSheet(
@@ -339,6 +333,7 @@ class UIMixin:
         self.playlistButtonsGrid.addWidget(self.btn_clear, 1, 1)
         self.playlistLayout.addLayout(self.playlistButtonsGrid)
         self.playlistLayout.setContentsMargins(10, 10, 4, 10)
+        self.update_playlist_layout(force_reload_thumbs=self.thumbToggle.isChecked())
 
     # ------------------------------------------------------------------ #
     # Drawing sidebar                                                      #
