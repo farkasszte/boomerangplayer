@@ -29,6 +29,17 @@ def format_time(ms):
         return f"{hours}:{minutes:02}:{seconds:02}"
     return f"{minutes}:{seconds:02}"
 
+
+def format_chrono_time(ms):
+    """Format milliseconds as MM:SS.mmm for chronometer display."""
+    if ms is None:
+        return "00:00.000"
+    ms = int(ms)
+    minutes = (ms // (1000 * 60)) % 60
+    seconds = (ms // 1000) % 60
+    millis = ms % 1000
+    return f"{minutes:02}:{seconds:02}.{millis:03d}"
+
 def qt_message_handler(mode, context, message):
     # Suppress common but harmless Qt warnings that clutter the console
     suppressed = [

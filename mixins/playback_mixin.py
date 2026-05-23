@@ -326,6 +326,7 @@ class PlaybackMixin:
         self.update_pixmap_from_cache()
         self.check_sliding_window()
         self.sync_progress_bar()
+        self.update_chronometer()
 
     # ------------------------------------------------------------------ #
     # Seeking / stepping                                                   #
@@ -342,6 +343,7 @@ class PlaybackMixin:
         else:
             self.update_pixmap_from_cache()
             self.check_sliding_window()
+            self.update_chronometer()
 
         if self.fps > 0:
             ms = int((index * 1000) / self.fps)
@@ -359,6 +361,7 @@ class PlaybackMixin:
             pos = int((self.current_cache_index * 1000) / self.fps)
             self.mediaPlayer.setPosition(pos)
         self.update_pixmap_from_cache()
+        self.update_chronometer()
 
     def step_frame(self, direction):
         self.current_cache_index += direction
@@ -372,6 +375,7 @@ class PlaybackMixin:
 
         self.update_pixmap_from_cache()
         self.check_sliding_window()
+        self.update_chronometer()
 
         if not getattr(self, '_block_broadcast', False):
             self.broadcast_sync_event("step", direction)

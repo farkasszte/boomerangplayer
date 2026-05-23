@@ -1,11 +1,12 @@
 """
-DrawingMixin — drawing sidebar logic, tool management, pen, screenshot.
+DrawingMixin — drawing sidebar logic, tool management, pen, screenshot, chronometer.
 """
 
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QColor, QPixmap, QPainter, QPen, QPainterPath, QIcon
 from PyQt6.QtWidgets import QFileDialog, QColorDialog
 from translations import tr
+from utils import format_chrono_time
 
 
 class DrawingMixin:
@@ -15,9 +16,66 @@ class DrawingMixin:
 
     def toggle_drawing_mode(self, checked):
         self.view.set_drawing_mode(checked)
+        # When drawing mode is on, make the chronometer overlay transparent to mouse
+        # so it doesn't intercept drawing events
+        if hasattr(self, 'chronometerOverlay'):
+            if checked:
+                self.chronometerOverlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            else:
+                self.chronometerOverlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
 
     def toggle_laser_mode(self, checked):
         self.view.laser_mode = checked
+
+    def toggle_chronometer(self, checked):
+        if checked:
+            self.chronometerOverlay.show()
+        else:
+            self.chronometerOverlay.hide()
+
+    # ------------------------------------------------------------------ #
+    # Chronometer update (time since last section boundary)                 #
+    # ------------------------------------------------------------------ #
+
+    def update_chronometer(self):
+        """Update the chronometer display with time since the last section boundary."""
+        if not hasattr(self, 'chronometerOverlay') or not self.chronometerOverlay.isVisible():
+            return
+        if not self.currentFilePath or self.fps <= 0:
+            self.chronoTimeLabel.setText("00:00.000")
+            self.chronoSectionLabel.setText("")
+            self.chronoPositionLabel.setText("")
+            return
+
+        current_frame = self.current_cache_index
+
+        # Get the most recent marker/section boundary before or at the current frame
+        last_section_start = 0
+        if self.markers:
+            for m in sorted(self.markers):
+                if m <= current_frame:
+                    last_section_start = m
+                else:
+                    break
+
+        # Calculate elapsed time from the last section boundary
+        elapsed_frames = current_frame - last_section_start
+        elapsed_ms = int((elapsed_frames * 1000.0) / self.fps)
+
+        # Also compute total time from the very beginning to current position
+        total_ms = int((current_frame * 1000.0) / self.fps)
+
+        self.chronoTimeLabel.setText(format_chrono_time(elapsed_ms))
+
+        # Section start boundary line (accent colored)
+        boundary_sec = int((last_section_start * 1000.0) / self.fps)
+        self.chronoSectionLabel.setText(f"Section: F {last_section_start} ({format_chrono_time(boundary_sec)})")
+
+        # Position line (grey)
+        self.chronoPositionLabel.setText(f"Position: F {current_frame} ({format_chrono_time(total_ms)})")
+
+        # Auto-resize after text is set
+        self.chronometerOverlay.adjustSize()
 
     def toggle_drawing_panel(self):
         is_visible = self.drawingContainer.isVisible()

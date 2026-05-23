@@ -105,6 +105,9 @@ TRANSLATIONS = {
         'tip_full_screen': 'Toggle full screen (F)',
         'tip_sync_lock': 'Toggle network sync lock',
         'tip_sync_frame': 'Force frame sync to other windows',
+        'chronometer_title': 'Chronometer',
+        'chronometer_overlay': 'Chronometer',
+        'no_media': 'No media loaded',
         
         # Dialogs
         'add_files_title': 'Add files / playlist',
@@ -273,6 +276,9 @@ TRANSLATIONS = {
         'tip_full_screen': 'Teljes képernyő (F)',
         'tip_sync_lock': 'Hálózati szinkronizáció zárolása ki/be',
         'tip_sync_frame': 'Képkocka szinkronizálása a többi ablakban',
+        'chronometer_title': 'Időmérő',
+        'chronometer_overlay': 'Időmérő',
+        'no_media': 'Nincs betöltött média',
         
         # Dialogs
         'add_files_title': 'Fájlok / lista hozzáadása',

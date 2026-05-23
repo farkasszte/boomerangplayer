@@ -72,6 +72,57 @@ class UIMixin:
         self.loadingOverlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loadingOverlay.hide()
 
+        # Chronometer Overlay
+        self.chronometerOverlay = QFrame(self.view)
+        self.chronometerOverlay.setStyleSheet("""
+            QFrame {
+                background-color: rgba(15, 15, 15, 0.85);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 8px;
+            }
+            QLabel {
+                color: #e3e3e3;
+                background: transparent;
+                border: none;
+            }
+        """)
+        self.chronometerOverlayLayout = QVBoxLayout(self.chronometerOverlay)
+        self.chronometerOverlayLayout.setContentsMargins(12, 10, 12, 10)
+        self.chronometerOverlayLayout.setSpacing(4)
+        
+        self.chronoTimeLabel = QLabel("00:00.000")
+        accent = self.config.get('accent_color', '#00f2ff')
+        self.chronoTimeLabel.setStyleSheet(f"font-size: 24px; font-weight: bold; font-family: 'Segoe UI Semibold', 'Courier New'; color: {accent};")
+        self.chronoSectionLabel = QLabel("")
+        self.chronoSectionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+        self.chronoPositionLabel = QLabel("")
+        self.chronoPositionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+        
+        self.chronometerOverlayLayout.addWidget(self.chronoTimeLabel)
+        self.chronometerOverlayLayout.addWidget(self.chronoSectionLabel)
+        self.chronometerOverlayLayout.addWidget(self.chronoPositionLabel)
+        
+        self.chronometerOverlay.adjustSize()
+        self.chronometerOverlay.move(20, 20)
+        self.chronometerOverlay.hide()
+
+        # Premium drag feature
+        def overlayMousePressEvent(event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.chronometerOverlay._drag_start_pos = event.globalPosition().toPoint() - self.chronometerOverlay.pos()
+                event.accept()
+                
+        def overlayMouseMoveEvent(event):
+            if event.buttons() & Qt.MouseButton.LeftButton and hasattr(self.chronometerOverlay, '_drag_start_pos'):
+                new_pos = event.globalPosition().toPoint() - self.chronometerOverlay._drag_start_pos
+                vx = max(10, min(self.view.width() - self.chronometerOverlay.width() - 10, new_pos.x()))
+                vy = max(10, min(self.view.height() - self.chronometerOverlay.height() - 10, new_pos.y()))
+                self.chronometerOverlay.move(vx, vy)
+                event.accept()
+
+        self.chronometerOverlay.mousePressEvent = overlayMousePressEvent
+        self.chronometerOverlay.mouseMoveEvent = overlayMouseMoveEvent
+
         # Controls card
         self._init_controls_card()
 
@@ -190,7 +241,7 @@ class UIMixin:
             self.loopCombo.setStyleSheet(s['COMBO_STYLE'])
 
         # Update SwitchButtons
-        switches = ['loopToggle', 'globalLoopToggle', 'navToggle', 'gsGPUToggle', 'thumbToggle', 'fileNameToggle', 'laserModeToggle']
+        switches = ['loopToggle', 'globalLoopToggle', 'navToggle', 'gsGPUToggle', 'thumbToggle', 'fileNameToggle', 'laserModeToggle', 'chronometerToggle']
         for sw_name in switches:
             if hasattr(self, sw_name):
                 sw = getattr(self, sw_name)
@@ -203,6 +254,13 @@ class UIMixin:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
                 btn.setStyleSheet(s['TRIGGER_STYLE'])
+
+        if hasattr(self, 'chronoTimeLabel') and self.chronoTimeLabel:
+            self.chronoTimeLabel.setStyleSheet(f"font-size: 26px; font-weight: bold; font-family: 'Segoe UI Semibold', 'Courier New'; color: {accent_color};")
+        if hasattr(self, 'chronoSectionLabel') and self.chronoSectionLabel:
+            self.chronoSectionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+        if hasattr(self, 'chronoPositionLabel') and self.chronoPositionLabel:
+            self.chronoPositionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
 
         # Update pen color label
         if hasattr(self, 'penSizeLabel'):
@@ -373,6 +431,16 @@ class UIMixin:
         laserModeToggleLayout.addStretch(1)
         laserModeToggleLayout.addWidget(self.laserModeToggle)
         self.drawingSidebarLayout.addLayout(laserModeToggleLayout)
+
+        chronometerToggleLayout = QHBoxLayout()
+        self.chronometerToggleLabel = QLabel(tr('chronometer_overlay'))
+        self.chronometerToggleLabel.setStyleSheet("color: white; font-size: 13px;")
+        self.chronometerToggle = SwitchButton()
+        self.chronometerToggle.checkedChanged.connect(self.toggle_chronometer)
+        chronometerToggleLayout.addWidget(self.chronometerToggleLabel)
+        chronometerToggleLayout.addStretch(1)
+        chronometerToggleLayout.addWidget(self.chronometerToggle)
+        self.drawingSidebarLayout.addLayout(chronometerToggleLayout)
 
         toolsLayout = QGridLayout()
         toolsLayout.setSpacing(8)
