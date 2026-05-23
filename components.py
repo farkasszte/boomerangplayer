@@ -3,14 +3,14 @@ from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
 from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont, QImage
 from PyQt6.QtWidgets import (QGraphicsView, QSlider, QInputDialog, QGraphicsPathItem, 
                              QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup,
-                             QGraphicsPixmapItem, QStyleOptionGraphicsItem, QAbstractItemView)
+                             QGraphicsPixmapItem, QStyleOptionGraphicsItem, QAbstractItemView, QListWidget)
 from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtGui import QMatrix4x4
 from qfluentwidgets import ListWidget, PushButton
 from translations import tr
 
-class DropListWidget(ListWidget):
+class DropListWidget(QListWidget):
     filesDropped = pyqtSignal(list)
     itemRightClicked = pyqtSignal(object, QPoint)
     
@@ -42,9 +42,10 @@ class DropListWidget(ListWidget):
 
     def wheelEvent(self, event):
         scrollbar = self.verticalScrollBar()
-        if scrollbar.isVisible():
+        if scrollbar.maximum() > scrollbar.minimum():
             delta = event.angleDelta().y()
-            scroll_amount = -int(delta / 3)
+            # Fine scrolling: 20 pixels per wheel tick (120 / 6) for maximum smoothness
+            scroll_amount = -int(delta)
             scrollbar.setValue(scrollbar.value() + scroll_amount)
             event.accept()
         else:
