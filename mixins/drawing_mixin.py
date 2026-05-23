@@ -69,10 +69,10 @@ class DrawingMixin:
 
         # Section start boundary line (accent colored)
         boundary_sec = int((last_section_start * 1000.0) / self.fps)
-        self.chronoSectionLabel.setText(f"Section: F {last_section_start} ({format_chrono_time(boundary_sec)})")
+        self.chronoSectionLabel.setText(f"{tr('chrono_section')}: F {last_section_start} ({format_chrono_time(boundary_sec)})")
 
         # Position line (grey)
-        self.chronoPositionLabel.setText(f"Position: F {current_frame} ({format_chrono_time(total_ms)})")
+        self.chronoPositionLabel.setText(f"{tr('chrono_position')}: F {current_frame} ({format_chrono_time(total_ms)})")
 
         # Auto-resize after text is set
         self.chronometerOverlay.adjustSize()

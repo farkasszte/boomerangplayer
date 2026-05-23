@@ -286,6 +286,8 @@ class PlaybackMixin:
                     if loop_mode == 3:  # Ping-pong
                         self.isForward = False
                         self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
+                        self.mediaPlayer.pause()
+                        self.audioOutput.setMuted(True)
                     else:
                         self.current_cache_index = start_frame + (self.current_cache_index - end_frame - 1)
 
@@ -293,7 +295,7 @@ class PlaybackMixin:
                         self.mediaPlayer.setPosition(
                             int(self.current_cache_index * 1000 / self.fps)
                         )
-                        self.set_volume(self.audioOutput.volume() * 100)
+                        self.audioOutput.setVolume(self.audioOutput.volume())
                 else:
                     self.current_cache_index = end_frame
                     self.stop_playback()
@@ -303,11 +305,13 @@ class PlaybackMixin:
                 if loop_mode == 3:  # Ping-pong
                     self.isForward = True
                     self.current_cache_index = start_frame + (start_frame - self.current_cache_index)
-                    self.set_volume(self.audioOutput.volume() * 100)
+                    self.audioOutput.setVolume(self.audioOutput.volume())
                     if self.fps > 0:
                         self.mediaPlayer.setPosition(
                             int(self.current_cache_index * 1000 / self.fps)
                         )
+                        self.audioOutput.setMuted(self.userMutedIntent)
+                        self.mediaPlayer.play()
                 elif loop_mode == 2:  # Backward loop
                     self.current_cache_index = end_frame - (start_frame - self.current_cache_index - 1)
                 else:

@@ -107,6 +107,8 @@ TRANSLATIONS = {
         'tip_sync_frame': 'Force frame sync to other windows',
         'chronometer_title': 'Chronometer',
         'chronometer_overlay': 'Chronometer',
+        'chrono_section': 'Section',
+        'chrono_position': 'Position',
         'no_media': 'No media loaded',
         
         # Dialogs
@@ -278,6 +280,8 @@ TRANSLATIONS = {
         'tip_sync_frame': 'Képkocka szinkronizálása a többi ablakban',
         'chronometer_title': 'Időmérő',
         'chronometer_overlay': 'Időmérő',
+        'chrono_section': 'Szakasz',
+        'chrono_position': 'Pozíció',
         'no_media': 'Nincs betöltött média',
         
         # Dialogs

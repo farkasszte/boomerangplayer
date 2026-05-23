@@ -434,6 +434,8 @@ class GlobalSettingsMixin:
         self.loopLabel.setText(tr('loop'))
         self.globalLoopLabel.setText(tr('global_loop_mode'))
         self.navLabel.setText(tr('zoom_nav_bar'))
+        if hasattr(self, 'chronometerToggleLabel'):
+            self.chronometerToggleLabel.setText(tr('chronometer_overlay'))
         self.smartMarkButton.setText(tr('mark'))
         self.deleteMarkerButton.setText(tr('delete'))
         self.clearMarkersButton.setText(tr('reset'))

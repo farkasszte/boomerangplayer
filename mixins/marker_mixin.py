@@ -26,6 +26,7 @@ class MarkerMixin:
         self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
+        self.update_chronometer()
 
     def delete_nearest_marker(self):
         if not self.markers:
@@ -39,12 +40,14 @@ class MarkerMixin:
         self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
+        self.update_chronometer()
 
     def clear_loop_markers(self):
         self.markers = []
         self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
+        self.update_chronometer()
 
     # ------------------------------------------------------------------ #
     # Loop range calculation                                               #
