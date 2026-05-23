@@ -8,7 +8,7 @@ from utils import get_resource_path
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False):
         super().__init__(parent)
         self.video_path = video_path
         self.start_frame = start_frame
@@ -18,6 +18,7 @@ class FrameExtractionThread(QThread):
         self.temp_dir = temp_dir if temp_dir else tempfile.mkdtemp(prefix="boomerang_frames_")
         self.process = None
         self._is_cancelled = False
+        self.gpu_enabled = gpu_enabled
         
     def run(self):
         try:
@@ -27,18 +28,24 @@ class FrameExtractionThread(QThread):
             if not os.path.exists(ffmpeg_path):
                 ffmpeg_path = "ffmpeg"
                 
-            out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
+            if self.num_frames == 1:
+                out_pattern = os.path.join(self.temp_dir, f"frame_{self.start_frame:08d}_first.jpg")
+            else:
+                out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
+                
             start_time = self.start_frame / self.fps
             
-            cmd = [
-                ffmpeg_path, "-y",
+            cmd = [ffmpeg_path, "-y"]
+            if self.gpu_enabled:
+                cmd.extend(["-hwaccel", "auto"])
+            cmd.extend([
                 "-ss", str(start_time),
                 "-i", self.video_path,
                 "-vframes", str(self.num_frames),
                 "-start_number", str(self.start_frame),
                 "-q:v", "2", 
                 out_pattern
-            ]
+            ])
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -53,10 +60,15 @@ class FrameExtractionThread(QThread):
                 return
             
             frame_files = {}
-            for i in range(self.start_frame, self.start_frame + self.num_frames):
-                fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
+            if self.num_frames == 1:
+                fpath = os.path.join(self.temp_dir, f"frame_{self.start_frame:08d}_first.jpg")
                 if os.path.exists(fpath):
-                    frame_files[i] = fpath
+                    frame_files[self.start_frame] = fpath
+            else:
+                for i in range(self.start_frame, self.start_frame + self.num_frames):
+                    fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
+                    if os.path.exists(fpath):
+                        frame_files[i] = fpath
                     
             if not frame_files and self.temp_dir_owned:
                 import shutil

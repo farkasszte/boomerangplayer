@@ -57,13 +57,15 @@ class CacheMixin:
             self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
 
         from mixins.threads import FrameExtractionThread
+        gpu_enabled = self.config.get('gpu_acceleration', False)
         self.extraction_thread = FrameExtractionThread(
             self.currentFilePath,
             start_frame,
             num_frames,
             self.fps,
             self.current_temp_dir,
-            self
+            self,
+            gpu_enabled=gpu_enabled
         )
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
@@ -78,7 +80,54 @@ class CacheMixin:
         data = self.playlistData.get(self.currentFilePath, {})
         start_pos = data.get('startFrame', 0)
         self.current_cache_index = start_pos
-        self.request_frame_extraction(start_pos)
+        
+        # Two-stage extraction: extract exactly 1 frame instantly
+        if not self.current_temp_dir:
+            self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+            
+        from mixins.threads import FrameExtractionThread
+        gpu_enabled = self.config.get('gpu_acceleration', False)
+        self.extraction_thread = FrameExtractionThread(
+            self.currentFilePath,
+            start_pos,
+            1,  # Only 1 frame!
+            self.fps,
+            self.current_temp_dir,
+            self,
+            gpu_enabled=gpu_enabled
+        )
+        self.extraction_thread.finished_extraction.connect(self.on_first_frame_extracted)
+        self.extraction_thread.start()
+
+    def on_first_frame_extracted(self, frame_dict, temp_dir, start_frame, num_frames):
+        if not self.currentFilePath or not self.extraction_thread:
+            self.loadingOverlay.hide()
+            return
+
+        if frame_dict:
+            self.cached_frame_dict = {**self.cached_frame_dict, **frame_dict}
+            self.cached_file_path = self.currentFilePath
+            self.update_pixmap_from_cache()
+
+            fit_needed = not hasattr(self, 'initial_fit_done')
+            if fit_needed:
+                self.initial_fit_done = True
+                self.apply_transformations(fit=True)
+                if hasattr(self, '_apply_file_saved_zoom'):
+                    self._apply_file_saved_zoom()
+
+            self.sync_progress_bar()
+
+        self.loadingOverlay.hide()
+        
+        # Safely wait for the first-stage thread to completely exit so that isRunning() returns False
+        if self.extraction_thread:
+            self.extraction_thread.wait(500)
+            self.extraction_thread = None
+            
+        # Silently trigger the background sliding window cache extraction
+        self.last_extracted_center = -1
+        self.request_frame_extraction(start_frame, force=True)
 
     def check_sliding_window(self):
         if self.last_extracted_center == -1:
@@ -96,6 +145,9 @@ class CacheMixin:
     def on_extraction_finished(self, frame_dict, temp_dir, start_frame, num_frames):
         if not frame_dict:
             self.loadingOverlay.hide()
+            if self.extraction_thread:
+                self.extraction_thread.wait(500)
+                self.extraction_thread = None
             return
 
         # Atomic swap: build the new dict, prune, then assign in one shot
@@ -134,6 +186,11 @@ class CacheMixin:
                 self._apply_file_saved_zoom()
 
         self.sync_progress_bar()
+
+        # Safely wait for the thread to completely exit and clear reference
+        if self.extraction_thread:
+            self.extraction_thread.wait(500)
+            self.extraction_thread = None
 
         if getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False
