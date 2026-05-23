@@ -11,7 +11,7 @@ from qfluentwidgets import MessageBox
 from mixins.threads import ThumbnailThread
 from styles import MENU_STYLE
 from translations import tr
-from utils import get_resource_path, VERSION
+from utils import get_resource_path, VERSION, send_to_recycle_bin
 import subprocess
 
 
@@ -169,6 +169,7 @@ class PlaylistMixin:
         menu.addAction(tr('rename'), lambda: self.rename_playlist_item(item))
         menu.addAction(tr('open_in_new_window'), lambda: self.open_in_new_window(item))
         menu.addAction(tr('remove_selected'), self.remove_from_playlist)
+        menu.addAction(tr('delete_file'), lambda: self.delete_playlist_item(item))
         menu.exec(pos)
 
     def open_in_new_window(self, item):
@@ -261,6 +262,103 @@ class PlaylistMixin:
                     parent=self
                 )
                 print(f"Error renaming file: {e}")
+
+    def delete_playlist_item(self, item):
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if not path or not os.path.exists(path):
+            return
+
+        from qfluentwidgets import MessageBox
+        box = MessageBox(
+            tr('delete_file_confirm_title'),
+            tr('delete_file_confirm_msg').format(os.path.basename(path)),
+            self
+        )
+        box.yesButton.setText(tr('delete'))
+        box.cancelButton.setText(tr('cancel'))
+        
+        if not box.exec():
+            return
+
+        try:
+            is_current = (self.currentFilePath == path)
+            if is_current:
+                # 1. Stop playback
+                self.stop_playback()
+                
+                # 2. Clear media player source to release file lock on Windows
+                from PyQt6.QtCore import QUrl
+                self.mediaPlayer.setSource(QUrl())
+                
+                # 3. Stop extraction if running
+                if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
+                    self.extraction_thread.cancel()
+
+                # 4. Stop any thumbnail generation for this file
+                if path in self.thumb_queue:
+                    self.thumb_queue.remove(path)
+
+                for t in getattr(self, 'thumb_threads', []):
+                    if t.filePath == path:
+                        t.cancel()
+                
+                # 5. Cleanup cache
+                self.cleanup_cache()
+                
+                # 6. Reset UI details
+                if hasattr(self, 'pixmapItem') and self.pixmapItem:
+                    self.pixmapItem.setPixmap(QPixmap())
+                self.progressBar.setRange(0, 0)
+                self.progressBar.setValue(0)
+                self.frameLabel.setText(" [F: 0]")
+                self.currentTimeLabel.setText("00:00")
+                self.totalTimeLabel.setText("00:00")
+                self.currentFilePath = None
+                self.setWindowTitle(f"Boomerang Player v{VERSION}")
+
+            success = send_to_recycle_bin(path)
+            
+            if success:
+                # Remove from playlist view
+                row = self.playlistList.row(item)
+                if row >= 0:
+                    self.playlistList.takeItem(row)
+                
+                # Remove from playlistData (markers)
+                if path in self.playlistData:
+                    del self.playlistData[path]
+                
+                # Show success message
+                from qfluentwidgets import InfoBar, InfoBarPosition
+                InfoBar.success(
+                    title=tr('delete_file_confirm_title'),
+                    content=tr('delete_success'),
+                    orient=Qt.Orientation.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+            else:
+                raise Exception("Failed to move file to Recycle Bin. The file might be in use or access was denied.")
+
+        except Exception as e:
+            # If error occurred and it was the current file, restore player source
+            if is_current:
+                from PyQt6.QtCore import QUrl
+                self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
+            
+            from qfluentwidgets import InfoBar, InfoBarPosition
+            InfoBar.error(
+                title=tr('delete_file_confirm_title'),
+                content=f"Error: {e}",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=5000,
+                parent=self
+            )
+            print(f"Error deleting file: {e}")
 
     # ------------------------------------------------------------------ #
     # Sorting                                                              #

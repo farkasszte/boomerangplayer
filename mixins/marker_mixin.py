@@ -8,6 +8,7 @@ import bisect
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtGui import QImage
 from translations import tr
+from utils import get_resource_path
 
 
 class MarkerMixin:
@@ -218,8 +219,7 @@ class MarkerMixin:
 
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Loop", "", "Video Files (*.mp4 *.mkv)")
         if fileName:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            ffmpeg_path = os.path.join(base_dir, "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
+            ffmpeg_path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
 
             if not os.path.exists(ffmpeg_path):
                 ffmpeg_path = "ffmpeg"

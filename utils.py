@@ -158,3 +158,63 @@ def cleanup_nvidia_dxcache():
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
 
+
+def send_to_recycle_bin(path):
+    """ Moves the specified file to the Windows Recycle Bin (Lomtár) using ctypes SHFileOperationW.
+    Returns True if successful, False otherwise.
+    """
+    if os.name != 'nt':
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                return True
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+            return False
+        return False
+
+    import ctypes
+    from ctypes import wintypes
+
+    class SHFILEOPSTRUCTW(ctypes.Structure):
+        _pack_ = 1 if ctypes.sizeof(ctypes.c_void_p) == 4 else 8
+        _fields_ = [
+            ("hwnd", wintypes.HWND),
+            ("wFunc", wintypes.UINT),
+            ("pFrom", wintypes.LPCWSTR),
+            ("pTo", wintypes.LPCWSTR),
+            ("fFlags", ctypes.c_ushort),
+            ("fAnyOperationsAborted", wintypes.BOOL),
+            ("hNameMappings", wintypes.LPVOID),
+            ("lpszProgressTitle", wintypes.LPCWSTR)
+        ]
+
+    FO_DELETE = 3
+    FOF_ALLOWUNDO = 0x0040
+    FOF_NOCONFIRMATION = 0x0010
+
+    if not os.path.exists(path):
+        return False
+
+    try:
+        abs_path = os.path.abspath(path)
+        p_from = abs_path + "\0\0"
+
+        fileop = SHFILEOPSTRUCTW()
+        fileop.hwnd = None
+        fileop.wFunc = FO_DELETE
+        fileop.pFrom = p_from
+        fileop.pTo = None
+        fileop.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION
+        fileop.fAnyOperationsAborted = False
+        fileop.hNameMappings = None
+        fileop.lpszProgressTitle = None
+
+        shell32 = ctypes.windll.shell32
+        result = shell32.SHFileOperationW(ctypes.byref(fileop))
+        return result == 0 and not fileop.fAnyOperationsAborted
+    except Exception as e:
+        print(f"Error in send_to_recycle_bin: {e}")
+        return False
+
+

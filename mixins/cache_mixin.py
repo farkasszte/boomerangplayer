@@ -16,6 +16,10 @@ class CacheMixin:
     # ------------------------------------------------------------------ #
 
     def cleanup_cache(self):
+        if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
+            self.extraction_thread.cancel()
+            self.extraction_thread.wait()
+
         if self.current_temp_dir and os.path.exists(self.current_temp_dir):
             try:
                 shutil.rmtree(self.current_temp_dir, ignore_errors=True)

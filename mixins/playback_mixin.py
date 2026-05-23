@@ -117,6 +117,16 @@ class PlaybackMixin:
 
         except Exception as e:
             print(f"Error opening file: {e}")
+            from qfluentwidgets import InfoBar, InfoBarPosition
+            InfoBar.error(
+                title=tr('file_info_title'),
+                content=f"Error opening file: {e}",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=5000,
+                parent=self
+            )
         finally:
             # For images, _apply_file_saved_zoom clears this flag via QTimer.
             # For videos, it's cleared in _execute_file_saved_zoom.

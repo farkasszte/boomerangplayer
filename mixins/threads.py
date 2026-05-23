@@ -14,6 +14,7 @@ class FrameExtractionThread(QThread):
         self.start_frame = start_frame
         self.num_frames = num_frames
         self.fps = fps if fps > 0 else 30.0
+        self.temp_dir_owned = (temp_dir is None)
         self.temp_dir = temp_dir if temp_dir else tempfile.mkdtemp(prefix="boomerang_frames_")
         self.process = None
         self._is_cancelled = False
@@ -44,6 +45,10 @@ class FrameExtractionThread(QThread):
             self.process.wait()
             
             if self._is_cancelled:
+                if self.temp_dir_owned:
+                    import shutil
+                    try: shutil.rmtree(self.temp_dir, ignore_errors=True)
+                    except OSError: pass
                 self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
                 return
             
@@ -53,9 +58,18 @@ class FrameExtractionThread(QThread):
                 if os.path.exists(fpath):
                     frame_files[i] = fpath
                     
+            if not frame_files and self.temp_dir_owned:
+                import shutil
+                try: shutil.rmtree(self.temp_dir, ignore_errors=True)
+                except OSError: pass
+
             self.finished_extraction.emit(frame_files, self.temp_dir, self.start_frame, self.num_frames)
         except Exception as e:
             print(f"Extraction error: {e}")
+            if self.temp_dir_owned:
+                import shutil
+                try: shutil.rmtree(self.temp_dir, ignore_errors=True)
+                except OSError: pass
             self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
 
     def cancel(self):
@@ -120,7 +134,13 @@ class ThumbnailThread(QThread):
             try:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                self.process.kill()
+                if self.process:
+                    try: self.process.kill()
+                    except OSError: pass
+                try: os.remove(thumb_path)
+                except OSError: pass
+                if not self._is_cancelled:
+                    self.finished.emit(self.filePath, QPixmap())
                 return
 
             if self._is_cancelled:
@@ -128,13 +148,18 @@ class ThumbnailThread(QThread):
                 except OSError: pass
                 return
 
+            thumbnail_emitted = False
             if os.path.exists(thumb_path):
                 pixmap = QPixmap(thumb_path)
                 if not pixmap.isNull():
                     if not self._is_cancelled:
                         self.finished.emit(self.filePath, pixmap)
+                        thumbnail_emitted = True
                 try: os.remove(thumb_path)
                 except OSError: pass
+
+            if not thumbnail_emitted and not self._is_cancelled:
+                self.finished.emit(self.filePath, QPixmap())
         except Exception as e:
             print(f"Thumbnail error for {self.filePath}: {e}")
             if not self._is_cancelled:
