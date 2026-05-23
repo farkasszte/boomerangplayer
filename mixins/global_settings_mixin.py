@@ -526,6 +526,9 @@ class GlobalSettingsMixin:
         self.playButton.setToolTip(tr('tip_play_pause'))
         self.stepForwardButton.setToolTip(tr('tip_next_frame'))
         self.volumeButton.setToolTip(tr('tip_mute'))
+        self.fullScreenButton.setToolTip(tr('tip_full_screen'))
+        self.lockSyncButton.setToolTip(tr('tip_sync_lock'))
+        self.syncFrameButton.setToolTip(tr('tip_sync_frame'))
 
         self.loopToggle.blockSignals(True)
         self.loopToggle.setChecked(self.loopCombo.currentIndex() != 0)

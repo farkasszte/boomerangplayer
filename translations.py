@@ -103,6 +103,8 @@ TRANSLATIONS = {
         'tip_playlist': 'Toggle playlist',
         'tip_drawing': 'Toggle drawing panel',
         'tip_full_screen': 'Toggle full screen (F)',
+        'tip_sync_lock': 'Toggle network sync lock',
+        'tip_sync_frame': 'Force frame sync to other windows',
         
         # Dialogs
         'add_files_title': 'Add files / playlist',
@@ -269,6 +271,8 @@ TRANSLATIONS = {
         'tip_playlist': 'Lista ki/be',
         'tip_drawing': 'Rajz panel ki/be',
         'tip_full_screen': 'Teljes képernyő (F)',
+        'tip_sync_lock': 'Hálózati szinkronizáció zárolása ki/be',
+        'tip_sync_frame': 'Képkocka szinkronizálása a többi ablakban',
         
         # Dialogs
         'add_files_title': 'Fájlok / lista hozzáadása',

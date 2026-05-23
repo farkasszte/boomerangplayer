@@ -114,6 +114,10 @@ class TransformMixin:
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        
+        if hasattr(self, 'loadingOverlay') and self.loadingOverlay:
+            self.loadingOverlay.setGeometry(0, 0, self.view.width(), self.view.height())
+
         if (hasattr(self, 'pixmapItem') and self.view
                 and getattr(self, 'zoomLevel', 1.0) == 1.0):
             self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)

@@ -3,14 +3,14 @@ UIMixin — top-level init_ui orchestrator, playlist sidebar, drawing sidebar,
           controls bar, keyboard events.
 """
 
-from PyQt6.QtCore import Qt, QSize, QPoint
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame,
                               QSplitter, QLabel, QGridLayout,
-                              QGraphicsScene, QGraphicsPixmapItem, QGraphicsView,
+                              QGraphicsScene, QGraphicsView,
                               QAbstractItemView)
-from qfluentwidgets import (FluentIcon, ToolButton, CardWidget, CaptionLabel,
-                             SwitchButton, PushButton, ComboBox)
+from qfluentwidgets import (FluentIcon, ToolButton, CaptionLabel,
+                             SwitchButton, PushButton)
 from components import DropListWidget, MarkerSlider, ZoomView, GPUPixmapItem
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE,
@@ -20,8 +20,6 @@ from PyQt6.QtWidgets import QMenu, QButtonGroup, QSlider
 from PyQt6.QtMultimedia import QMediaDevices
 import qfluentwidgets
 import ctypes
-from ctypes import wintypes
-
 
 class UIMixin:
 
@@ -256,6 +254,9 @@ class UIMixin:
             self.settingsScrollWidget.setStyleSheet("background: transparent;")
         if hasattr(self, 'gsScrollWidget'):
             self.gsScrollWidget.setStyleSheet("background: transparent;")
+
+        if hasattr(self, 'update_sync_lock_button_style'):
+            self.update_sync_lock_button_style()
 
     # ------------------------------------------------------------------ #
     # Playlist sidebar                                                     #
@@ -617,6 +618,43 @@ class UIMixin:
         buttonsLayout.addLayout(playbackButtonsLayout)
         buttonsLayout.addStretch(1)
 
+        self.lockSyncButton = ToolButton(FluentIcon.SYNC)
+        self.lockSyncButton.setFixedSize(38, 32)
+        self.lockSyncButton.setToolTip(tr('tip_sync_lock'))
+        self.lockSyncButton.clicked.connect(self.toggle_sync_lock)
+        self.lockSyncButton.setEnabled(True)
+        buttonsLayout.addWidget(self.lockSyncButton)
+
+        self.syncFrameButton = ToolButton()
+        self.syncFrameButton.setText("][")
+        self.syncFrameButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.syncFrameButton.setFixedSize(38, 32)
+        self.syncFrameButton.setStyleSheet("""
+            ToolButton {
+                background: rgba(255, 255, 255, 0.0605);
+                border: 1px solid rgba(255, 255, 255, 0.053);
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 5px;
+                color: white;
+                font-size: 15px;
+                font-weight: bold;
+                padding: 0px;
+                outline: none;
+            }
+            ToolButton:hover {
+                background: rgba(255, 255, 255, 0.0837);
+            }
+            ToolButton:pressed {
+                color: rgba(255, 255, 255, 0.786);
+                background: rgba(255, 255, 255, 0.0326);
+                border-top: 1px solid rgba(255, 255, 255, 0.053);
+            }
+        """)
+        self.syncFrameButton.setToolTip(tr('tip_sync_frame'))
+        self.syncFrameButton.clicked.connect(self.force_frame_sync_broadcast)
+        self.syncFrameButton.setEnabled(True)
+        buttonsLayout.addWidget(self.syncFrameButton)
+
         self.fullScreenButton = ToolButton(FluentIcon.FULL_SCREEN)
         self.fullScreenButton.setToolTip(tr('tip_full_screen'))
         self.fullScreenButton.clicked.connect(self.toggle_full_screen)
@@ -805,3 +843,39 @@ class UIMixin:
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
+
+    def toggle_sync_lock(self):
+        self.isSyncLocked = not self.isSyncLocked
+        self.sync_offset = None
+        self.update_sync_lock_button_style()
+        if self.isSyncLocked:
+            self.broadcast_sync_event("sync_state", self.current_cache_index)
+
+    def update_sync_lock_button_style(self):
+        from PyQt6.QtGui import QColor
+        accent_color = self.config.get('accent_color', '#00f2ff')
+        
+        # Use the exact same standard stylesheet for both active and inactive states
+        self.lockSyncButton.setStyleSheet("""
+            ToolButton {
+                background: rgba(255, 255, 255, 0.0605);
+                border: 1px solid rgba(255, 255, 255, 0.053);
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 5px;
+                padding: 5px 9px 6px 8px;
+                outline: none;
+            }
+            ToolButton:hover {
+                background: rgba(255, 255, 255, 0.0837);
+            }
+            ToolButton:pressed {
+                color: rgba(255, 255, 255, 0.786);
+                background: rgba(255, 255, 255, 0.0326);
+                border-top: 1px solid rgba(255, 255, 255, 0.053);
+            }
+        """)
+        
+        if self.isSyncLocked:
+            self.lockSyncButton.setIcon(FluentIcon.SYNC.icon(color=QColor(accent_color)))
+        else:
+            self.lockSyncButton.setIcon(FluentIcon.SYNC.icon())

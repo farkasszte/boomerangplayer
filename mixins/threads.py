@@ -8,7 +8,7 @@ from utils import get_resource_path
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1):
         super().__init__(parent)
         self.video_path = video_path
         self.start_frame = start_frame
@@ -19,6 +19,7 @@ class FrameExtractionThread(QThread):
         self.process = None
         self._is_cancelled = False
         self.gpu_enabled = gpu_enabled
+        self.player_idx = player_idx
         
     def run(self):
         try:

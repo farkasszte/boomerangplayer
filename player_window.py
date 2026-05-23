@@ -37,6 +37,7 @@ from mixins.playlist_mixin import PlaylistMixin
 from mixins.drawing_mixin import DrawingMixin
 from mixins.settings_mixin import SettingsMixin
 from mixins.global_settings_mixin import GlobalSettingsMixin
+from mixins.ipc_sync_mixin import IPCSyncMixin
 from mixins.ui_mixin import UIMixin
 
 qInstallMessageHandler(qt_message_handler)
@@ -45,7 +46,7 @@ qInstallMessageHandler(qt_message_handler)
 class PlayerWindow(
     CacheMixin, PlaybackMixin, TransformMixin, VolumeMixin,
     MarkerMixin, PlaylistMixin, DrawingMixin,
-    SettingsMixin, GlobalSettingsMixin, UIMixin,
+    SettingsMixin, GlobalSettingsMixin, IPCSyncMixin, UIMixin,
     FluentWindow
 ):
     def __init__(self):
@@ -97,6 +98,7 @@ class PlayerWindow(
         self.rotationAngle = 0
         self.last_transform_state = None
         self.is_loading_video = False
+        self.isSyncLocked = True
 
         # ---- Media player ---------------------------------------------
         self.mediaPlayer = QMediaPlayer()
@@ -209,4 +211,7 @@ class PlayerWindow(
         self.playbackTimer.timeout.connect(self.advance_frame)
         self.elapsedTimer = QElapsedTimer()
         self.last_advance_ms = 0
+
+        # ---- UDP Multi-Instance Sync ----------------------------------
+        self.init_ipc_sync()
 

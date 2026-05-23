@@ -1,5 +1,5 @@
 """
-PlaybackMixin — play/pause, frame advance, seeking, file loading, media events.
+PlaybackMixin — play/pause, frame advance, seeking, file loading, media events with Multi-Instance UDP Sync hooks.
 """
 
 import os
@@ -128,14 +128,10 @@ class PlaybackMixin:
                 parent=self
             )
         finally:
-            # For images, _apply_file_saved_zoom clears this flag via QTimer.
-            # For videos, it's cleared in _execute_file_saved_zoom.
-            # But if load_video itself fails, we must always clear it here.
             if not self.currentFilePath or filePath.lower().endswith(
                 ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
             ):
                 pass  # Image path: flag cleared by _apply_file_saved_zoom timer
-            # On exception the flag would never clear, so ensure it:
             if not hasattr(self, '_apply_file_saved_zoom'):
                 self.is_loading_video = False
 
@@ -165,7 +161,7 @@ class PlaybackMixin:
             stream = data['streams'][0]
             fmt = data.get('format', {})
             
-            # 1. Get FPS (Prefer r_frame_rate for playback timing)
+            # 1. Get FPS
             fps_str = stream.get('r_frame_rate', stream.get('avg_frame_rate', '30/1'))
             if '/' in fps_str:
                 num, den = map(int, fps_str.split('/'))
@@ -173,7 +169,7 @@ class PlaybackMixin:
             else:
                 fps = float(fps_str)
                 
-            # 2. Get Duration (Stream duration is for video, format is for file)
+            # 2. Get Duration
             s_dur = stream.get('duration')
             f_dur = fmt.get('duration')
             duration = float(s_dur if s_dur is not None else (f_dur if f_dur is not None else 0))
@@ -231,11 +227,17 @@ class PlaybackMixin:
             self.mediaPlayer.pause()
             self.audioOutput.setMuted(True)
 
+        if not getattr(self, '_block_broadcast', False):
+            self.broadcast_sync_event("play", {"isForward": self.isForward, "speed": self.speedSlider.value()})
+
     def stop_playback(self):
         self.is_playing = False
         self.playbackTimer.stop()
         self.mediaPlayer.pause()
         self.update_play_icons()
+
+        if not getattr(self, '_block_broadcast', False):
+            self.broadcast_sync_event("pause", None)
 
     # ------------------------------------------------------------------ #
     # Frame advance (timer callback)                                       #
@@ -345,6 +347,9 @@ class PlaybackMixin:
             ms = int((index * 1000) / self.fps)
             self.currentTimeLabel.setText(format_time(ms))
 
+        if not getattr(self, '_block_broadcast', False):
+            self.broadcast_sync_event("seek", index)
+
     def on_slider_pressed(self):
         self.is_scrubbing = True
 
@@ -367,6 +372,9 @@ class PlaybackMixin:
 
         self.update_pixmap_from_cache()
         self.check_sliding_window()
+
+        if not getattr(self, '_block_broadcast', False):
+            self.broadcast_sync_event("step", direction)
 
     # ------------------------------------------------------------------ #
     # Media player signal handlers                                        #
@@ -395,7 +403,6 @@ class PlaybackMixin:
         # Use ffprobe nb_frames if available to prevent drift/over-estimation
         if hasattr(self, 'ffprobe_nb_frames') and self.ffprobe_nb_frames > 0:
             self.total_frames = self.ffprobe_nb_frames
-            # Sync displayed duration with actual frames
             if self.fps > 0:
                 duration = (self.total_frames * 1000.0) / self.fps
         elif self.fps > 0:
@@ -418,9 +425,6 @@ class PlaybackMixin:
                     self._apply_file_saved_zoom()
 
     def handle_metadata_change(self):
-        """Intentionally empty. We trust ffprobe over QMediaPlayer for FPS/frame-count
-        accuracy, so QMediaPlayer's metaDataChanged signal is ignored. This stub
-        exists to document the architectural decision and prevent accidental reconnection."""
         pass
 
     def on_speed_slider_changed(self, value):
@@ -431,6 +435,9 @@ class PlaybackMixin:
         rate = snapped / 100.0
         self.mediaPlayer.setPlaybackRate(rate)
         self.speedValueLabel.setText(f"{snapped}%")
+
+        if not getattr(self, '_block_broadcast', False):
+            self.broadcast_sync_event("speed", snapped)
 
     # ------------------------------------------------------------------ #
     # Window close                                                         #
@@ -466,7 +473,7 @@ class PlaybackMixin:
             self.is_loading_video = False
             return
             
-        val = int(zoom * 100) if zoom < 10 else int(zoom) # Support both ratio and percentage formats
+        val = int(zoom * 100) if zoom < 10 else int(zoom)
         self.update_zoom(val)
         
         if hasattr(self, 'view') and self.view:
@@ -478,9 +485,6 @@ class PlaybackMixin:
         self.is_loading_video = False
 
     def on_user_zoom_changed(self, zoom_level):
-        """Called when the user zooms via mouse wheel in ZoomView.
-        Only syncs the sidebar slider — zoom persistence is centralized
-        in save_current_markers()."""
         if self.is_loading_video:
             return
         self.sync_zoom_ui(zoom_level)

@@ -63,8 +63,6 @@ class DrawingMixin:
             if 0 <= active_idx < len(palette):
                 palette[active_idx] = color.name().upper()
                 self.config['palette'] = palette
-                # from utils import save_config
-                # save_config(self.config)
             
             self.update_palette_ui()
             self.update_pen_preview()
@@ -77,8 +75,6 @@ class DrawingMixin:
         if 0 <= idx < len(palette):
             self.config['active_color_index'] = idx
             self.view.pen_color = QColor(palette[idx])
-            # from utils import save_config
-            # save_config(self.config)
             self.update_palette_ui()
             self.update_pen_preview()
             self.set_active_tool(self.view.drawing_tool)

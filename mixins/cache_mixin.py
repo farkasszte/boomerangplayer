@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import numpy as np
 from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtCore import Qt
 from translations import tr
 
 
@@ -151,7 +152,6 @@ class CacheMixin:
             return
 
         # Atomic swap: build the new dict, prune, then assign in one shot
-        # to avoid race conditions with advance_frame reading mid-mutation
         new_dict = {**self.cached_frame_dict, **frame_dict}
         self.cached_file_path = self.currentFilePath
 
@@ -241,11 +241,10 @@ class CacheMixin:
         # Create LUT: 0-255 mapping
         x = np.arange(256, dtype=np.float32)
         
-        # Apply Contrast and Brightness: f(x) = x * c + b
-        # In OpenCV: dst = src * alpha + beta
+        # Apply Contrast and Brightness
         lut = x * c + b
         
-        # Apply Gamma: f(x) = 255 * (x / 255) ^ (1/g)
+        # Apply Gamma
         if g != 1.0:
             lut = np.clip(lut, 0, 255)
             lut = 255.0 * np.power(lut / 255.0, 1.0 / g)
@@ -277,24 +276,17 @@ class CacheMixin:
                 ptr.setsize(img.sizeInBytes())
                 arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
-                # 1. Apply Brightness, Contrast, Gamma via LUT (much faster)
                 if b != 0 or c != 1.0 or g != 1.0:
                     lut = self._get_adj_lut(b, c, g)
-                    # arr[:, :, :3] is RGB (actually BGR in ARGB32 but order doesn't matter for LUT)
                     arr[:, :, :3] = lut[arr[:, :, :3]]
 
-                # 2. Apply Saturation (requires weighted sum)
                 if s != 1.0:
-                    # Optimized saturation: color = gray + s * (color - gray)
-                    # weights: 0.299 R, 0.587 G, 0.114 B (for ARGB32 it's BGRA, so 0:B, 1:G, 2:R)
-                    # arr is (H, W, 4), and ARGB32 is BGRA in little-endian
                     b_chan = arr[:, :, 0].astype(np.float32)
                     g_chan = arr[:, :, 1].astype(np.float32)
                     r_chan = arr[:, :, 2].astype(np.float32)
                     
                     gray = (0.299 * r_chan + 0.587 * g_chan + 0.114 * b_chan)
                     
-                    # result = gray + s * (chan - gray)
                     arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
                     arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
                     arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
