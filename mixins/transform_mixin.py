@@ -57,7 +57,15 @@ class TransformMixin:
         self.save_current_markers()
 
     def rotate_video(self):
+        self.rotate_video_right()
+
+    def rotate_video_right(self):
         self.rotationAngle = (self.rotationAngle + 90) % 360
+        self.apply_transformations(fit=True)
+        self.save_current_markers()
+
+    def rotate_video_left(self):
+        self.rotationAngle = (self.rotationAngle - 90) % 360
         self.apply_transformations(fit=True)
         self.save_current_markers()
 

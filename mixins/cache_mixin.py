@@ -228,9 +228,17 @@ class CacheMixin:
         self.contrastSlider.setValue(100)
         self.gammaSlider.setValue(100)
         self.saturationSlider.setValue(100)
+        
+        self.isMirrored = False
+        self.isMirroredVertical = False
+        self.rotationAngle = 0
+        
         if hasattr(self, '_last_adj_params'):
             delattr(self, '_last_adj_params')
         self.update_pixmap_from_cache()
+        self.apply_transformations(fit=True)
+        if not getattr(self, 'is_loading_video', False):
+            self.save_current_markers()
 
     def _get_adj_lut(self, b, c, g):
         # Cache the LUT to avoid re-calculation for every frame

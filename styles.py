@@ -144,6 +144,53 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
     styles['TITLE_STYLE'] = "font-size: 16px; font-weight: bold; color: white; background: transparent;"
     styles['CAPTION_STYLE'] = "font-weight: bold; color: #aaaaaa; background: transparent;"
     
+    # Borderless/Accent colored menu popup style
+    styles['MENU_POPUP_STYLE'] = f"""
+        QMenu {{
+            background-color: {bg_color};
+            border: none;
+            padding: 4px 0px;
+        }}
+        QMenu::item {{
+            padding: 8px 25px;
+            color: white;
+            background-color: transparent;
+        }}
+        QMenu::item:selected {{
+            background-color: rgba(255,255,255,0.1);
+        }}
+        QMenu::item:checked {{
+            color: {accent_color};
+            font-weight: bold;
+        }}
+        QMenu::indicator {{
+            width: 0px;
+        }}
+    """
+
+    # Chronometer Overlay dark translucent card style
+    styles['CHRONO_OVERLAY_STYLE'] = """
+        QFrame {
+            background-color: rgba(15, 15, 15, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+        }
+        QLabel {
+            color: #e3e3e3;
+            background: transparent;
+            border: none;
+        }
+    """
+
+    # Caching / Loading mask overlay style
+    styles['LOADING_OVERLAY_STYLE'] = """
+        background: rgba(0,0,0,180);
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        border-radius: 10px;
+    """
+    
     return styles
 
 def _hex_to_rgb(hex_color):

@@ -5,10 +5,255 @@ MarkerMixin — loop markers, loop range, loop mode, save/load frame & segment.
 import os
 import subprocess
 import bisect
-from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtWidgets import QFileDialog, QDialog, QListWidget, QListWidgetItem, QHBoxLayout, QVBoxLayout, QLabel, QWidget
 from PyQt6.QtGui import QImage
-from translations import tr
+from PyQt6.QtCore import Qt, QSize
+from qfluentwidgets import ToolButton, FluentIcon, PushButton, LineEdit, CaptionLabel
+from translations import tr, get_lang
 from utils import get_resource_path
+
+
+class MarkerRowWidget(QWidget):
+    def __init__(self, frame, name, parent_dialog, parent_player):
+        super().__init__()
+        self.frame = frame
+        self.parent_dialog = parent_dialog
+        self.parent_player = parent_player
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(5, 2, 5, 2)
+        layout.setSpacing(8)
+
+        # Convert frame to timestamp
+        fps = getattr(self.parent_player, 'fps', 30.0)
+        if fps <= 0:
+            fps = 30.0
+        seconds = frame / fps
+        from utils import format_time
+        time_str = format_time(int(seconds * 1000))
+
+        # Time label
+        self.label = QLabel(f"<b>{time_str}</b>")
+        self.label.setStyleSheet("color: white; font-size: 12px; background: transparent; border: none;")
+        layout.addWidget(self.label)
+
+        # Frame LineEdit
+        from PyQt6.QtGui import QIntValidator
+        self.frameEdit = LineEdit()
+        self.frameEdit.setFixedWidth(65)
+        self.frameEdit.setText(str(frame))
+        total_f = int(getattr(self.parent_player, 'total_frames', 999999))
+        self.frameEdit.setValidator(QIntValidator(0, total_f))
+        self.frameEdit.setStyleSheet("""
+            LineEdit {
+                color: #aaa; 
+                background: rgba(255,255,255,0.06); 
+                border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 4px;
+                font-size: 12px;
+                height: 24px;
+                text-align: center;
+            }
+        """)
+        self.frameEdit.returnPressed.connect(self.on_save_clicked)
+        layout.addWidget(self.frameEdit)
+
+        # LineEdit for name
+        self.nameEdit = LineEdit()
+        self.nameEdit.setText(name)
+        self.nameEdit.setPlaceholderText(tr('marker_name'))
+        self.nameEdit.setStyleSheet("""
+            LineEdit {
+                color: white; 
+                background: rgba(255,255,255,0.06); 
+                border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 4px;
+                font-size: 12px;
+                height: 24px;
+            }
+        """)
+        self.nameEdit.returnPressed.connect(self.on_save_clicked)
+        layout.addWidget(self.nameEdit)
+
+        # Save Button
+        self.saveBtn = ToolButton(FluentIcon.SAVE)
+        self.saveBtn.setFixedSize(28, 28)
+        self.saveBtn.clicked.connect(self.on_save_clicked)
+        layout.addWidget(self.saveBtn)
+
+        # Jump Button
+        self.jumpBtn = ToolButton(FluentIcon.PLAY)
+        self.jumpBtn.setFixedSize(28, 28)
+        self.jumpBtn.clicked.connect(self.on_jump_clicked)
+        layout.addWidget(self.jumpBtn)
+
+        # Delete Button
+        self.deleteBtn = ToolButton(FluentIcon.DELETE)
+        self.deleteBtn.setFixedSize(28, 28)
+        self.deleteBtn.clicked.connect(self.on_delete_clicked)
+        layout.addWidget(self.deleteBtn)
+
+    def on_save_clicked(self):
+        try:
+            new_frame = int(self.frameEdit.text())
+        except ValueError:
+            return
+        new_name = self.nameEdit.text()
+        self.parent_dialog.save_marker_changes(self.frame, new_frame, new_name)
+
+    def on_jump_clicked(self):
+        self.parent_player.set_position(self.frame)
+
+    def on_delete_clicked(self):
+        self.parent_dialog.delete_marker(self.frame)
+
+
+class MarkersDialog(QDialog):
+    def __init__(self, parent_player):
+        super().__init__(parent_player)
+        self.parent_player = parent_player
+        self.setWindowTitle(tr('markers_title'))
+        self.setMinimumSize(420, 450)
+        self.setStyleSheet("background: #202020; color: white;")
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(15, 15, 15, 15)
+        self.layout.setSpacing(10)
+
+        # List Widget
+        self.listWidget = QListWidget()
+        self.listWidget.setStyleSheet("""
+            QListWidget {
+                background: rgba(255,255,255,0.03);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 6px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                background: transparent;
+                border-bottom: 1px solid rgba(255,255,255,0.04);
+                padding: 4px;
+            }
+            QListWidget::item:selected {
+                background: rgba(255,255,255,0.06);
+            }
+        """)
+        self.listWidget.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.layout.addWidget(self.listWidget)
+
+        # Bottom Buttons
+        self.closeBtn = PushButton(tr('close'))
+        self.closeBtn.clicked.connect(self.close)
+        self.closeBtn.setFixedWidth(100)
+        
+        self.addMarkerBtn = PushButton("+ " + tr('add_marker'))
+        self.addMarkerBtn.clicked.connect(self.on_add_marker_clicked)
+        
+        btnLayout = QHBoxLayout()
+        btnLayout.addWidget(self.addMarkerBtn)
+        btnLayout.addStretch(1)
+        btnLayout.addWidget(self.closeBtn)
+        self.layout.addLayout(btnLayout)
+
+        self.load_markers()
+
+    def load_markers(self):
+        self.listWidget.clear()
+        
+        markers = self.parent_player.markers
+        playlistData = self.parent_player.playlistData
+        curr_path = self.parent_player.currentFilePath
+        
+        marker_names = {}
+        if curr_path in playlistData:
+            marker_names = playlistData[curr_path].get('marker_names', {})
+
+        # Sort markers with 0 forced to the very end of the list for better UX
+        sorted_markers = sorted(markers, key=lambda x: float('inf') if x == 0 else x)
+        for f in sorted_markers:
+            name = marker_names.get(str(f), f"{tr('mark')} {f}")
+            
+            item = QListWidgetItem(self.listWidget)
+            item.setSizeHint(QSize(0, 48))
+            self.listWidget.addItem(item)
+            
+            row = MarkerRowWidget(f, name, self, self.parent_player)
+            self.listWidget.setItemWidget(item, row)
+
+    def save_all_rows_in_place(self):
+        rows_data = []
+        for i in range(self.listWidget.count()):
+            item = self.listWidget.item(i)
+            if not item:
+                continue
+            widget = self.listWidget.itemWidget(item)
+            if isinstance(widget, MarkerRowWidget):
+                try:
+                    frame_val = int(widget.frameEdit.text())
+                    name_val = widget.nameEdit.text()
+                    rows_data.append((widget.frame, frame_val, name_val))
+                except ValueError:
+                    rows_data.append((widget.frame, widget.frame, widget.nameEdit.text()))
+
+        playlistData = self.parent_player.playlistData
+        curr_path = self.parent_player.currentFilePath
+        
+        if curr_path:
+            if curr_path not in playlistData:
+                playlistData[curr_path] = {}
+            if 'marker_names' not in playlistData[curr_path]:
+                playlistData[curr_path]['marker_names'] = {}
+            names = playlistData[curr_path]['marker_names']
+            
+            new_markers = []
+            new_names = {}
+            for old_frame, new_frame, new_name in rows_data:
+                if new_frame not in new_markers:
+                    new_markers.append(new_frame)
+                new_names[str(new_frame)] = new_name
+                
+            new_markers.sort()
+            self.parent_player.markers = new_markers
+            playlistData[curr_path]['marker_names'] = new_names
+            
+            self.parent_player.needs_range_update = True
+            self.parent_player.progressBar.update_markers(self.parent_player.markers)
+            self.parent_player.update_loop_frames_label()
+            self.parent_player.save_current_markers()
+            self.parent_player.update_chronometer()
+
+    def closeEvent(self, event):
+        self.save_all_rows_in_place()
+        super().closeEvent(event)
+
+    def on_add_marker_clicked(self):
+        self.save_all_rows_in_place()
+        self.parent_player.add_smart_marker(force_new=True)
+        self.load_markers()
+
+    def save_marker_changes(self, old_frame, new_frame, new_name):
+        self.save_all_rows_in_place()
+        self.load_markers()
+
+    def delete_marker(self, frame):
+        self.save_all_rows_in_place()
+        
+        if frame in self.parent_player.markers:
+            self.parent_player.markers.remove(frame)
+            
+        playlistData = self.parent_player.playlistData
+        curr_path = self.parent_player.currentFilePath
+        if curr_path in playlistData and 'marker_names' in playlistData[curr_path]:
+            if str(frame) in playlistData[curr_path]['marker_names']:
+                del playlistData[curr_path]['marker_names'][str(frame)]
+                
+        self.parent_player.needs_range_update = True
+        self.parent_player.progressBar.update_markers(self.parent_player.markers)
+        self.parent_player.update_loop_frames_label()
+        self.parent_player.save_current_markers()
+        self.parent_player.update_chronometer()
+        
+        self.load_markers()
 
 
 class MarkerMixin:
@@ -16,8 +261,12 @@ class MarkerMixin:
     # Marker CRUD                                                          #
     # ------------------------------------------------------------------ #
 
-    def add_smart_marker(self):
+    def add_smart_marker(self, force_new=False):
         f = self.current_cache_index
+        if force_new:
+            while f in self.markers:
+                f += 1
+        
         if f not in self.markers:
             self.markers.append(f)
             self.markers.sort()
@@ -82,8 +331,15 @@ class MarkerMixin:
     def update_loop_frames_label(self):
         if not self.currentFilePath:
             return
-        start_f, end_f = self.get_active_loop_range()
-        self.loopFramesLabel.setText(f"[F: {start_f} - {end_f}]")
+        if hasattr(self, 'manageMarkersButton') and self.manageMarkersButton:
+            count = len(self.markers)
+            self.manageMarkersButton.setText(f"{tr('manage_markers')} ({count})")
+
+    def show_markers_dialog(self):
+        if not self.currentFilePath:
+            return
+        dialog = MarkersDialog(self)
+        dialog.exec()
 
     # ------------------------------------------------------------------ #
     # Loop mode changes                                                    #
@@ -96,28 +352,18 @@ class MarkerMixin:
         else:
             self.isForward = True
 
-        if hasattr(self, 'loopToggle'):
-            self.loopToggle.blockSignals(True)
-            self.loopToggle.setChecked(index != 0)
-            self.loopToggle.blockSignals(False)
-
         if self.currentFilePath:
             if self.currentFilePath not in self.playlistData:
                 self.playlistData[self.currentFilePath] = {'markers': [], 'loopMode': 0}
             self.playlistData[self.currentFilePath]['loopMode'] = index
-
-    def on_loop_switch_toggled(self, checked):
-        if checked:
-            if self.loopCombo.currentIndex() == 0:
-                self.loopCombo.setCurrentIndex(1)
-        else:
-            self.loopCombo.setCurrentIndex(0)
 
     # ------------------------------------------------------------------ #
     # Playlist marker persistence                                          #
     # ------------------------------------------------------------------ #
 
     def save_current_markers(self):
+        if getattr(self, 'is_loading_video', False):
+            return
         if self.currentFilePath:
             if self.currentFilePath not in self.playlistData:
                 self.playlistData[self.currentFilePath] = {}
@@ -183,8 +429,6 @@ class MarkerMixin:
             self.markers = []
             self.progressBar.update_markers(self.markers)
             self.needs_range_update = True
-            if not self.globalLoopToggle.isChecked():
-                self.loopCombo.setCurrentIndex(0)
             self.speedSlider.setValue(100)
             
             # Reset transform state so previous video's flips/rotation don't carry over

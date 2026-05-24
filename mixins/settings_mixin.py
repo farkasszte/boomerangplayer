@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
                               QGridLayout, QWidget, QComboBox)
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
-                             SingleDirectionScrollArea)
+                             SingleDirectionScrollArea, ToolButton, FluentIcon)
 from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE)
 from translations import tr
 
@@ -43,11 +43,18 @@ class SettingsMixin:
         self.scrollArea.setWidget(self.settingsScrollWidget)
         self.settingsLayout.addWidget(self.scrollArea)
 
+        # Playback Section Header
+        self.playbackLabel = CaptionLabel(tr('playback'))
+        self.playbackLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.settingsInnerLayout.addWidget(self.playbackLabel)
+
         self._build_speed_section()
         self._build_zoom_section()
         self._build_cache_section()
         self._build_image_adj_section()
         self._build_loop_section()
+        self._build_markers_section()
+        self._build_sync_section()
 
         self.settingsInnerLayout.addStretch(1)
         self.settingsContainer.hide()
@@ -69,6 +76,7 @@ class SettingsMixin:
         self.speedSlider.setRange(10, 500)
         self.speedSlider.setValue(100)
         self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.speedSlider.setToolTip(tr('tip_playback_speed'))
         self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
         self.settingsInnerLayout.addLayout(speedHeader)
         self.settingsInnerLayout.addWidget(self.speedSlider)
@@ -89,14 +97,11 @@ class SettingsMixin:
         self.zoomSlider.setRange(100, 1000)
         self.zoomSlider.setValue(100)
         self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.zoomSlider.setToolTip(tr('tip_zoom'))
         self.zoomSlider.valueChanged.connect(self.update_zoom)
         zoomGroup.addWidget(self.zoomSlider)
 
         self.settingsInnerLayout.addLayout(zoomGroup)
-        hline1 = QFrame()
-        hline1.setFrameShape(QFrame.Shape.HLine)
-        hline1.setFrameShadow(QFrame.Shadow.Sunken)
-        self.settingsInnerLayout.addWidget(hline1)
 
     def _build_cache_section(self):
         cacheGroup = QVBoxLayout()
@@ -116,6 +121,7 @@ class SettingsMixin:
         self.cacheSlider.setPageStep(50)
         self.cacheSlider.setValue(self.cache_window_half)
         self.cacheSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.cacheSlider.setToolTip(tr('tip_cache_window'))
 
         def update_cache_size(val):
             rounded_val = (val // 10) * 10
@@ -136,10 +142,10 @@ class SettingsMixin:
 
     def _build_image_adj_section(self):
         self.adjLabel = CaptionLabel(tr('image_adjustments'))
-        self.adjLabel.setStyleSheet("font-weight: bold; margin-top: 5px;")
+        self.adjLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
         self.settingsInnerLayout.addWidget(self.adjLabel)
 
-        def create_adj_slider(label_text, min_val, max_val, default):
+        def create_adj_slider(label_text, min_val, max_val, default, tip_key):
             layout = QVBoxLayout()
             header = QHBoxLayout()
             lbl = CaptionLabel(label_text)
@@ -152,6 +158,7 @@ class SettingsMixin:
             slider.setRange(min_val, max_val)
             slider.setValue(default)
             slider.setStyleSheet(FLUENT_SLIDER_STYLE)
+            slider.setToolTip(tr(tip_key))
             slider.valueChanged.connect(
                 lambda v: (val_lbl.setText(str(v)), self.update_pixmap_from_cache())
             )
@@ -159,25 +166,59 @@ class SettingsMixin:
             layout.addWidget(slider)
             return slider, lbl, layout
 
-        self.brightnessSlider, self.brightnessLabel, l1 = create_adj_slider(tr('brightness'), -100, 100, 0)
-        self.contrastSlider,   self.contrastLabel,   l2 = create_adj_slider(tr('contrast'),     0, 200, 100)
-        self.gammaSlider,      self.gammaLabel,      l3 = create_adj_slider(tr('gamma'),        10, 300, 100)
-        self.saturationSlider, self.saturationLabel, l4 = create_adj_slider(tr('saturation'),    0, 200, 100)
+        self.brightnessSlider, self.brightnessLabel, l1 = create_adj_slider(tr('brightness'), -100, 100, 0, 'tip_brightness')
+        self.contrastSlider,   self.contrastLabel,   l2 = create_adj_slider(tr('contrast'),     0, 200, 100, 'tip_contrast')
+        self.gammaSlider,      self.gammaLabel,      l3 = create_adj_slider(tr('gamma'),        10, 300, 100, 'tip_gamma')
+        self.saturationSlider, self.saturationLabel, l4 = create_adj_slider(tr('saturation'),    0, 200, 100, 'tip_saturation')
 
         for l in [l1, l2, l3, l4]:
             self.settingsInnerLayout.addLayout(l)
 
+        # Mirror and Rotate buttons (placed BEFORE the Alaphelyzet button)
+        self.mirrorButton = PushButton(tr('mirror_h'))
+        self.mirrorButton.setToolTip(tr('tip_mirror_h'))
+        self.mirrorButton.clicked.connect(self.toggle_mirror)
+        self.mirrorVerticalButton = PushButton(tr('mirror_v'))
+        self.mirrorVerticalButton.setToolTip(tr('tip_mirror_v'))
+        self.mirrorVerticalButton.clicked.connect(self.toggle_vertical_mirror)
+        
+        self.rotateLeftButton = PushButton(tr('rotate_left'))
+        self.rotateLeftButton.setToolTip(tr('tip_rotate_left'))
+        self.rotateLeftButton.clicked.connect(self.rotate_video_left)
+        self.rotateRightButton = PushButton(tr('rotate_right'))
+        self.rotateRightButton.setToolTip(tr('tip_rotate_right'))
+        self.rotateRightButton.clicked.connect(self.rotate_video_right)
+
+        for btn in [self.mirrorButton, self.mirrorVerticalButton, self.rotateLeftButton, self.rotateRightButton]:
+            btn.setStyleSheet(ACTION_BTN_STYLE)
+
+        mirrorRow = QHBoxLayout()
+        mirrorRow.setSpacing(6)
+        mirrorRow.addWidget(self.mirrorButton)
+        mirrorRow.addWidget(self.mirrorVerticalButton)
+        self.settingsInnerLayout.addLayout(mirrorRow)
+
+        rotateRow = QHBoxLayout()
+        rotateRow.setSpacing(6)
+        rotateRow.addWidget(self.rotateLeftButton)
+        rotateRow.addWidget(self.rotateRightButton)
+        self.settingsInnerLayout.addLayout(rotateRow)
+
+        # Footer row with Alaphelyzet (Reset Image) and Fájl infó (File Info)
         footerLayout = QHBoxLayout()
         footerLayout.setSpacing(6)
         self.resetAdjButton = PushButton(tr('reset_image'))
+        self.resetAdjButton.setToolTip(tr('tip_reset_image'))
         self.resetAdjButton.clicked.connect(self.reset_adjustments)
         self.infoButton = PushButton(tr('file_info'))
+        self.infoButton.setToolTip(tr('tip_file_info'))
         self.infoButton.clicked.connect(self.show_file_info)
         for btn in [self.resetAdjButton, self.infoButton]:
             btn.setStyleSheet(ACTION_BTN_STYLE)
         footerLayout.addWidget(self.resetAdjButton)
         footerLayout.addWidget(self.infoButton)
         self.settingsInnerLayout.addLayout(footerLayout)
+
         hline3 = QFrame()
         hline3.setFrameShape(QFrame.Shape.HLine)
         hline3.setFrameShadow(QFrame.Shadow.Sunken)
@@ -187,42 +228,19 @@ class SettingsMixin:
         loopGroup = QVBoxLayout()
         loopGroup.setSpacing(10)
 
-        self.loopCombo = QComboBox()
-        self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
-        self.loopCombo.setCurrentIndex(3)
-        self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
-        # Style will be set in refresh_custom_styles
-
-        loopHeader = QHBoxLayout()
+        # Loop mode header label
         self.loopLabel = CaptionLabel(tr('loop'))
-        self.loopToggle = SwitchButton()
-        self.loopToggle.setChecked(self.loopCombo.currentIndex() != 0)
-        self.loopToggle.setOnText(tr('on'))
-        self.loopToggle.setOffText(tr('off'))
-        self.loopToggle.checkedChanged.connect(self.on_loop_switch_toggled)
-        loopHeader.addWidget(self.loopLabel)
-        loopHeader.addStretch(1)
-        loopHeader.addWidget(self.loopToggle)
-        loopGroup.addLayout(loopHeader)
+        self.loopLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        loopGroup.addWidget(self.loopLabel)
 
-        globalLoopHeader = QHBoxLayout()
-        self.globalLoopLabel = CaptionLabel(tr('global_loop_mode'))
-        self.globalLoopToggle = SwitchButton()
-        self.globalLoopToggle.setChecked(True)
-        self.globalLoopToggle.setOnText(tr('on'))
-        self.globalLoopToggle.setOffText(tr('off'))
-        self.globalLoopToggle.setToolTip("Apply loop mode to all videos")
-        globalLoopHeader.addWidget(self.globalLoopLabel)
-        globalLoopHeader.addStretch(1)
-        globalLoopHeader.addWidget(self.globalLoopToggle)
-        loopGroup.addLayout(globalLoopHeader)
-
+        # Zoom navigation bar toggle
         navGroup = QHBoxLayout()
         self.navLabel = CaptionLabel(tr('zoom_nav_bar'))
         self.navToggle = SwitchButton()
         self.navToggle.setChecked(False)
         self.navToggle.setOnText(tr('on'))
         self.navToggle.setOffText(tr('off'))
+        self.navToggle.setToolTip(tr('tip_zoom_nav_bar'))
 
         def toggle_nav_mode(checked):
             self.is_zoomed_nav = checked
@@ -233,56 +251,123 @@ class SettingsMixin:
         navGroup.addStretch(1)
         navGroup.addWidget(self.navToggle)
         loopGroup.addLayout(navGroup)
+
+        # The loop mode dropdown combo box
+        self.loopCombo = QComboBox()
+        self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
+        self.loopCombo.setCurrentIndex(3)
+        self.loopCombo.setToolTip(tr('tip_loop_mode'))
+        self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
         loopGroup.addWidget(self.loopCombo)
 
-        markerLayout = QHBoxLayout()
-        markerLayout.setSpacing(6)
-        self.smartMarkButton = PushButton(tr('mark'))
-        self.smartMarkButton.setStyleSheet(TOOL_BTN_STYLE)
-        self.smartMarkButton.clicked.connect(self.add_smart_marker)
-        self.deleteMarkerButton = PushButton(tr('delete'))
-        self.deleteMarkerButton.setStyleSheet(TOOL_BTN_STYLE)
-        self.deleteMarkerButton.clicked.connect(self.delete_nearest_marker)
-        self.clearMarkersButton = PushButton(tr('reset'))
-        self.clearMarkersButton.setStyleSheet(TOOL_BTN_STYLE)
-        self.clearMarkersButton.clicked.connect(self.clear_loop_markers)
-        markerLayout.addWidget(self.smartMarkButton)
-        markerLayout.addWidget(self.deleteMarkerButton)
-        markerLayout.addWidget(self.clearMarkersButton)
-        loopGroup.addLayout(markerLayout)
-
-        self.loopFramesLabel = CaptionLabel("[F: 0 - End]")
-        self.loopFramesLabel.setStyleSheet("color: #aaa; font-size: 11px; margin-top: 2px;")
-        loopGroup.addWidget(self.loopFramesLabel)
-
-        self.actionsGrid = QGridLayout()
-        self.actionsGrid.setSpacing(6)
+        # Save loop and Save frame buttons inside the Hurok section
         self.saveLoopButton = PushButton(tr('save_loop'))
+        self.saveLoopButton.setToolTip(tr('tip_save_loop'))
         self.saveLoopButton.clicked.connect(self.save_loop_segment)
         self.saveFrameButton = PushButton(tr('save_frame'))
+        self.saveFrameButton.setToolTip(tr('tip_save_frame'))
         self.saveFrameButton.clicked.connect(self.save_current_frame)
-        self.mirrorButton = PushButton(tr('mirror_h'))
-        self.mirrorButton.clicked.connect(self.toggle_mirror)
-        self.mirrorVerticalButton = PushButton(tr('mirror_v'))
-        self.mirrorVerticalButton.clicked.connect(self.toggle_vertical_mirror)
-        self.rotateButton = PushButton(tr('rotate'))
-        self.rotateButton.clicked.connect(self.rotate_video)
 
-        for btn in [self.saveLoopButton, self.saveFrameButton,
-                    self.mirrorButton, self.mirrorVerticalButton, self.rotateButton]:
+        for btn in [self.saveLoopButton, self.saveFrameButton]:
             btn.setStyleSheet(ACTION_BTN_STYLE)
 
-        self.actionsGrid.addWidget(self.saveLoopButton,       0, 0)
-        self.actionsGrid.addWidget(self.saveFrameButton,      0, 1)
-        self.actionsGrid.addWidget(self.mirrorButton,         1, 0)
-        self.actionsGrid.addWidget(self.mirrorVerticalButton, 1, 1)
-        self.actionsGrid.addWidget(self.rotateButton,         2, 0, 1, 2)
-        loopGroup.addLayout(self.actionsGrid)
+        loopSaveLayout = QHBoxLayout()
+        loopSaveLayout.setSpacing(6)
+        loopSaveLayout.addWidget(self.saveLoopButton)
+        loopSaveLayout.addWidget(self.saveFrameButton)
+        loopGroup.addLayout(loopSaveLayout)
 
         self.settingsInnerLayout.addLayout(loopGroup)
+
         hline4 = QFrame()
         hline4.setFrameShape(QFrame.Shape.HLine)
         hline4.setFrameShadow(QFrame.Shadow.Sunken)
         self.settingsInnerLayout.addWidget(hline4)
+
+    def _build_markers_section(self):
+        markersGroup = QVBoxLayout()
+        markersGroup.setSpacing(10)
+
+        # Markers section header
+        self.markersTitleLabel = CaptionLabel(tr('markers_title'))
+        self.markersTitleLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        markersGroup.addWidget(self.markersTitleLabel)
+
+        # Set up buttons with ACTION_BTN_STYLE
+        self.smartMarkButton = PushButton(tr('mark'))
+        self.smartMarkButton.setToolTip(tr('tip_mark'))
+        self.manageMarkersButton = PushButton(tr('manage_markers'))
+        self.manageMarkersButton.setToolTip(tr('tip_manage_markers'))
+        self.deleteMarkerButton = PushButton(tr('delete'))
+        self.deleteMarkerButton.setToolTip(tr('tip_delete_marker'))
+        self.clearMarkersButton = PushButton(tr('reset'))
+        self.clearMarkersButton.setToolTip(tr('tip_reset_markers'))
+
+        for btn in [self.smartMarkButton, self.manageMarkersButton, self.deleteMarkerButton, self.clearMarkersButton]:
+            btn.setStyleSheet(ACTION_BTN_STYLE)
+            btn.clicked.connect(self.add_smart_marker if btn == self.smartMarkButton else
+                                self.show_markers_dialog if btn == self.manageMarkersButton else
+                                self.delete_nearest_marker if btn == self.deleteMarkerButton else
+                                self.clear_loop_markers)
+
+        # Mark and Manage Markers in row 1
+        row1 = QHBoxLayout()
+        row1.setSpacing(6)
+        row1.addWidget(self.smartMarkButton)
+        row1.addWidget(self.manageMarkersButton)
+        markersGroup.addLayout(row1)
+
+        # Delete and Reset in row 2 below row 1
+        row2 = QHBoxLayout()
+        row2.setSpacing(6)
+        row2.addWidget(self.deleteMarkerButton)
+        row2.addWidget(self.clearMarkersButton)
+        markersGroup.addLayout(row2)
+
+        self.settingsInnerLayout.addLayout(markersGroup)
+
+        hline_m = QFrame()
+        hline_m.setFrameShape(QFrame.Shape.HLine)
+        hline_m.setFrameShadow(QFrame.Shadow.Sunken)
+        self.settingsInnerLayout.addWidget(hline_m)
+
+    def _build_sync_section(self):
+        syncGroup = QVBoxLayout()
+        syncGroup.setSpacing(10)
+
+        syncHeader = QHBoxLayout()
+        self.syncLabel = CaptionLabel(tr('sync_title'))
+        self.syncLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        syncHeader.addWidget(self.syncLabel)
+        syncGroup.addLayout(syncHeader)
+
+        # Sync lock toggle row
+        syncLockRow = QHBoxLayout()
+        self.syncLockLabel = CaptionLabel(tr('sync_lock'))
+        self.lockSyncToggle = SwitchButton()
+        self.lockSyncToggle.setChecked(self.isSyncLocked)
+        self.lockSyncToggle.setOnText(tr('on'))
+        self.lockSyncToggle.setOffText(tr('off'))
+        self.lockSyncToggle.setToolTip(tr('tip_sync_lock'))
+        self.lockSyncToggle.checkedChanged.connect(self.toggle_sync_lock)
+        syncLockRow.addWidget(self.syncLockLabel)
+        syncLockRow.addStretch(1)
+        syncLockRow.addWidget(self.lockSyncToggle)
+        syncGroup.addLayout(syncLockRow)
+
+        # Force sync frame button
+        self.syncFrameButton = PushButton(tr('sync_frame'))
+        self.syncFrameButton.setToolTip(tr('tip_sync_frame'))
+        self.syncFrameButton.clicked.connect(self.force_frame_sync_broadcast)
+        self.syncFrameButton.setEnabled(True)
+        self.syncFrameButton.setStyleSheet(ACTION_BTN_STYLE)
+        syncGroup.addWidget(self.syncFrameButton)
+
+        self.settingsInnerLayout.addLayout(syncGroup)
+
+        hline_sync = QFrame()
+        hline_sync.setFrameShape(QFrame.Shape.HLine)
+        hline_sync.setFrameShadow(QFrame.Shadow.Sunken)
+        self.settingsInnerLayout.addWidget(hline_sync)
 
 

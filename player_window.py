@@ -26,7 +26,7 @@ finally:
     sys.stdout = _temp_stdout
 
 from PyQt6.QtCore import qInstallMessageHandler
-from utils import get_resource_path, qt_message_handler, load_config, load_markers, VERSION
+from utils import get_resource_path, qt_message_handler, load_markers, VERSION
 from translations import set_lang
 from mixins.cache_mixin import CacheMixin
 from mixins.playback_mixin import PlaybackMixin
@@ -51,7 +51,8 @@ class PlayerWindow(
 ):
     def __init__(self):
         # Load config & language
-        self.config = load_config()
+        from config import Configuration
+        self.config = Configuration()
         set_lang(self.config.get('language', 'en'))
 
         # Attributes that must exist before super().__init__() (triggers resize)
@@ -98,7 +99,7 @@ class PlayerWindow(
         self.rotationAngle = 0
         self.last_transform_state = None
         self.is_loading_video = False
-        self.isSyncLocked = True
+        self.isSyncLocked = False
 
         # ---- Media player ---------------------------------------------
         self.mediaPlayer = QMediaPlayer()
@@ -214,4 +215,19 @@ class PlayerWindow(
 
         # ---- UDP Multi-Instance Sync ----------------------------------
         self.init_ipc_sync()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Fix the title bar position and size when navigationInterface is hidden
+        if hasattr(self, 'titleBar') and not getattr(self, 'is_full_screen', False):
+            self.titleBar.move(0, 0)
+            self.titleBar.resize(self.width(), self.titleBar.height())
+
+        if getattr(self, 'is_full_screen', False) and hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
+            h = max(80, self.controlsCard.sizeHint().height())
+            self.controlsCard.setGeometry(0, self.height() - h, self.width(), h)
+        if hasattr(self, 'update_sidebar_fullscreen_state'):
+            self.update_sidebar_fullscreen_state()
+        if hasattr(self, 'update_sidebar_margins'):
+            self.update_sidebar_margins()
 

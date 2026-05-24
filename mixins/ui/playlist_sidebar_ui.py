@@ -1,0 +1,79 @@
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QGridLayout, QMenu, QAbstractItemView
+from qfluentwidgets import CaptionLabel, PushButton
+from components import DropListWidget
+from styles import MENU_STYLE
+from translations import tr
+
+class PlaylistSidebarUIMixin:
+    def _init_playlist_sidebar(self):
+        self.playlistContainer = QFrame()
+        self.playlistContainer.setMinimumWidth(250)
+        self.playlistContainer.setStyleSheet("background: #202020; border: none;")
+        self.playlistLayout = QVBoxLayout(self.playlistContainer)
+        self.playlistLayout.setContentsMargins(5, 5, 5, 5)
+
+        self.playlistLabel = CaptionLabel(tr('playlist'))
+        self.playlistLabel.setStyleSheet("font-size: 16px; font-weight: bold; color: white; background: transparent;")
+        self.playlistLayout.addWidget(self.playlistLabel)
+
+        self.playlistList = DropListWidget()
+        self.playlistList.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.playlistList.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.playlistList.setStyleSheet(
+            "QListWidget { border: none; background: transparent; } "
+            "QScrollBar:vertical { width: 0px; }"
+        )
+        self.playlistList.setIconSize(QSize(120, 120))
+        self.playlistList.itemDoubleClicked.connect(self.on_playlist_item_clicked)
+        self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
+        self.playlistList.filesDropped.connect(self.add_files_to_playlist)
+        self.playlistLayout.addWidget(self.playlistList)
+
+        self.thumb_threads = []
+        self.thumb_queue = []
+        self.MAX_THUMB_THREADS = 2
+
+        self.playlistButtonsGrid = QGridLayout()
+        self.playlistButtonsGrid.setSpacing(8)
+
+        self.btn_add = PushButton(tr('add'))
+        self.btn_add.setToolTip(tr('tip_add'))
+        self.addMenu = QMenu(self)
+        self.addMenu.setStyleSheet(MENU_STYLE)
+        self.addMenu.addAction(tr('add_media'), self.open_file)
+        self.addMenu.addAction(tr('add_video_folder'), lambda: self.add_folder_contents(type="video"))
+        self.addMenu.addAction(tr('add_image_folder'), lambda: self.add_folder_contents(type="image"))
+        self.btn_add.clicked.connect(self.show_add_menu)
+
+        self.btn_sort = PushButton(tr('sort'))
+        self.btn_sort.setToolTip(tr('tip_sort'))
+        self.sortMenu = QMenu(self)
+        self.sortMenu.setStyleSheet(MENU_STYLE)
+        self.sortMenu.addAction(tr('sort_name_asc'),    lambda: self.sort_playlist_by("name_asc"))
+        self.sortMenu.addAction(tr('sort_name_desc'),   lambda: self.sort_playlist_by("name_desc"))
+        self.sortMenu.addAction(tr('sort_date_newest'), lambda: self.sort_playlist_by("date_newest"))
+        self.sortMenu.addAction(tr('sort_date_oldest'), lambda: self.sort_playlist_by("date_oldest"))
+        self.btn_sort.clicked.connect(self.show_sort_menu)
+
+        self.btn_save = PushButton(tr('save'))
+        self.btn_save.setToolTip(tr('tip_save'))
+        self.btn_save.clicked.connect(self.save_playlist_to_file)
+
+        self.btn_clear = PushButton(tr('clear'))
+        self.btn_clear.setToolTip(tr('tip_clear'))
+        self.removeMenu = QMenu(self)
+        self.removeMenu.setStyleSheet(MENU_STYLE)
+        self.removeMenu.addAction(tr('remove_selected'), self.remove_from_playlist)
+        self.removeMenu.addAction(tr('clear_all'),       self.clear_playlist)
+        self.btn_clear.clicked.connect(self.show_clear_menu)
+
+        self.playlistButtonsGrid.addWidget(self.btn_add,   0, 0)
+        self.playlistButtonsGrid.addWidget(self.btn_sort,  0, 1)
+        self.playlistButtonsGrid.addWidget(self.btn_save,  1, 0)
+        self.playlistButtonsGrid.addWidget(self.btn_clear, 1, 1)
+        self.playlistLayout.addLayout(self.playlistButtonsGrid)
+        self.playlistLayout.setContentsMargins(10, 10, 4, 10)
+        self.update_playlist_layout(force_reload_thumbs=self.thumbToggle.isChecked())

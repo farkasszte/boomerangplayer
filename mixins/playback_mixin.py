@@ -21,7 +21,7 @@ class PlaybackMixin:
         from PyQt6.QtWidgets import QFileDialog
         fileNames, _ = QFileDialog.getOpenFileNames(
             self, tr('add_files_title'), "",
-            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff *.json)"
+            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff);;{tr('json_files')} (*.json)"
         )
         if fileNames:
             json_files = [f for f in fileNames if f.lower().endswith('.json')]
