@@ -36,6 +36,7 @@ ENV/
 *.avi
 *.mov
 *.json
+*.html
 !ffmpeg.exe
 !ffprobe.exe
 temp_frames/
