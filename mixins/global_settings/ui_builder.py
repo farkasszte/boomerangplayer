@@ -125,6 +125,8 @@ class GlobalSettingsUiBuilderMixin:
 
         self.update_thumb_size_btn_text()
 
+        # (Reset defaults button moved to bottom next to save button)
+
         hline2 = QFrame()
         hline2.setFrameShape(QFrame.Shape.HLine)
         hline2.setFrameShadow(QFrame.Shadow.Sunken)
@@ -134,11 +136,11 @@ class GlobalSettingsUiBuilderMixin:
         self.gsShortcutsLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
         self.gsInnerLayout.addWidget(self.gsShortcutsLabel)
 
-        shortGrid = QGridLayout()
-        shortGrid.setContentsMargins(0, 0, 0, 0)
-        shortGrid.setSpacing(6)
-        shortGrid.setColumnStretch(0, 1)
-        shortGrid.setColumnStretch(1, 0)
+        self.shortcutGrid = QGridLayout()
+        self.shortcutGrid.setContentsMargins(0, 0, 0, 0)
+        self.shortcutGrid.setSpacing(6)
+        self.shortcutGrid.setColumnStretch(0, 1)
+        self.shortcutGrid.setColumnStretch(1, 0)
         self.shortcutLabels = []
 
         actions = [
@@ -156,23 +158,34 @@ class GlobalSettingsUiBuilderMixin:
             lbl.setWordWrap(True)
             lbl._label_key = label_key
             self.shortcutLabels.append(lbl)
-            shortGrid.addWidget(lbl, i, 0)
+            self.shortcutGrid.addWidget(lbl, i, 0)
             btn = ShortcutButton(self.config['shortcuts'].get(act, 0))
             btn.setFixedWidth(80)
             btn.keyChanged.connect(lambda k, a=act: self.update_shortcut_sidebar(a, k))
-            shortGrid.addWidget(btn, i, 1)
+            self.shortcutGrid.addWidget(btn, i, 1)
 
-        self.gsInnerLayout.addLayout(shortGrid)
+        self.gsInnerLayout.addLayout(self.shortcutGrid)
         self.gsInnerLayout.addStretch(1)
 
         self.gsScrollArea.setWidget(self.gsScrollWidget)
         self.globalSettingsLayout.addWidget(self.gsScrollArea)
 
-        # Save button at the bottom
-        self.gsSaveBtn = PushButton(tr('save_settings'))
+        # Bottom buttons row (Default and Save side-by-side)
+        bottomButtonsLayout = QHBoxLayout()
+        bottomButtonsLayout.setContentsMargins(0, 0, 0, 0)
+        bottomButtonsLayout.setSpacing(8)
+
+        self.gsResetDefaultsBtn = PushButton(tr('default'))
+        self.gsResetDefaultsBtn.clicked.connect(self.reset_all_defaults)
+        self.gsResetDefaultsBtn.setStyleSheet(ACTION_BTN_STYLE)
+
+        self.gsSaveBtn = PushButton(tr('save'))
         self.gsSaveBtn.clicked.connect(self.save_global_settings)
         self.gsSaveBtn.setStyleSheet(ACTION_BTN_STYLE)
-        self.globalSettingsLayout.addWidget(self.gsSaveBtn)
+
+        bottomButtonsLayout.addWidget(self.gsResetDefaultsBtn)
+        bottomButtonsLayout.addWidget(self.gsSaveBtn)
+        self.globalSettingsLayout.addLayout(bottomButtonsLayout)
 
         self.globalSettingsContainer.hide()
 
@@ -201,6 +214,110 @@ class GlobalSettingsUiBuilderMixin:
                         break
 
             self.update_ui_texts()
+
+    def reset_all_defaults(self):
+        """Reset all settings to factory defaults: HW, GPU, accents, palette, shortcuts, playlist."""
+        from utils import DEFAULT_CONFIG
+
+        # Factory default values
+        factories = {
+            'language': DEFAULT_CONFIG['language'],
+            'audio_device': DEFAULT_CONFIG['audio_device'],
+            'panel_opacity': DEFAULT_CONFIG['panel_opacity'],
+            'shortcuts': dict(DEFAULT_CONFIG['shortcuts']),
+            'palette': list(DEFAULT_CONFIG['palette']),
+            'active_color_index': DEFAULT_CONFIG['active_color_index'],
+            'gpu_acceleration': False,
+            'accent_color': '#00f2ff',
+            'bg_color': '#202020',
+            'show_thumbnails': True,
+            'show_filenames': True,
+            'thumbnail_size_index': 1,
+        }
+
+        for key, val in factories.items():
+            self.config[key] = val
+
+        self.pending_accent_color = factories['accent_color']
+        self.pending_bg_color = factories['bg_color']
+        self.pending_panel_opacity = factories['panel_opacity']
+
+        # ---- Update UI widgets ----
+        if hasattr(self, 'gsLangBtn'):
+            self.gsLangBtn.setText(tr('lang_en'))
+        if hasattr(self, 'gsAudioBtn'):
+            self.gsAudioBtn.setText(tr('default'))
+        if hasattr(self, 'gsAccentBtn'):
+            self.apply_accent_color(factories['accent_color'])
+        if hasattr(self, 'opacitySlider'):
+            self.opacitySlider.blockSignals(True)
+            self.opacitySlider.setValue(factories['panel_opacity'])
+            self.opacitySlider.blockSignals(False)
+        if hasattr(self, 'opacityValueLabel'):
+            self.opacityValueLabel.setText(f"{factories['panel_opacity']}%")
+        if hasattr(self, 'gsGPUToggle'):
+            self.gsGPUToggle.blockSignals(True)
+            self.gsGPUToggle.setChecked(False)
+            self.gsGPUToggle.blockSignals(False)
+
+        # Playlist
+        if hasattr(self, 'thumbToggle'):
+            self.thumbToggle.blockSignals(True)
+            self.thumbToggle.setChecked(True)
+            self.thumbToggle.blockSignals(False)
+        if hasattr(self, 'fileNameToggle'):
+            self.fileNameToggle.blockSignals(True)
+            self.fileNameToggle.setChecked(True)
+            self.fileNameToggle.blockSignals(False)
+        self.update_thumb_size_btn_text()
+        if hasattr(self, 'update_playlist_layout'):
+            self.update_playlist_layout(force_reload_thumbs=True)
+        if hasattr(self, '_update_playlist_list_stylesheet'):
+            self._update_playlist_list_stylesheet()
+
+        # ---- Reset shortcut buttons ----
+        from components import ShortcutButton
+        for i, (act, _) in enumerate([
+            ('play_pause',     'act_play_pause'),
+            ('smart_mark',     'act_smart_mark'),
+            ('toggle_loop',    'act_toggle_loop'),
+            ('next_frame',     'act_next_frame'),
+            ('prev_frame',     'act_prev_frame'),
+            ('toggle_mute',    'act_toggle_mute'),
+            ('act_full_screen','act_full_screen'),
+        ]):
+            default_key = DEFAULT_CONFIG['shortcuts'].get(act, 0)
+            self.config['shortcuts'][act] = default_key
+            grid_item = self.shortcutGrid.itemAtPosition(i, 1)
+            if grid_item:
+                btn = grid_item.widget()
+                if isinstance(btn, ShortcutButton):
+                    btn.key_code = default_key
+                    btn.update_text()
+        if hasattr(self, 'setup_shortcuts'):
+            self.setup_shortcuts()
+
+        # ---- Refresh styles, palette, UI texts ----
+        if hasattr(self, 'refresh_custom_styles'):
+            self.refresh_custom_styles(
+                accent_color=factories['accent_color'],
+                bg_color=factories['bg_color']
+            )
+        if hasattr(self, 'update_palette_ui'):
+            self.update_palette_ui()
+        if hasattr(self, 'update_ui_texts'):
+            self.update_ui_texts()
+
+        from qfluentwidgets import InfoBar, InfoBarPosition
+        InfoBar.success(
+            title=tr('settings'),
+            content=tr('reset_defaults_done'),
+            orient=Qt.Orientation.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self
+        )
 
     def toggle_settings(self):
         is_visible = self.settingsContainer.isVisible()

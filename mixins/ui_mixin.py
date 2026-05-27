@@ -188,14 +188,7 @@ class UIMixin(
            or not hasattr(self, 'drawingSidebarLayout') or not hasattr(self, 'playlistLayout'):
             return
 
-        is_fs = getattr(self, 'is_full_screen', False)
-        is_ctrl_visible = hasattr(self, 'controlsCard') and self.controlsCard.isVisible()
-        
-        if is_fs and is_ctrl_visible:
-            h = self.controlsCard.height()
-            bottom_margin = h + 10 if h > 0 else 90
-        else:
-            bottom_margin = 10
+        bottom_margin = 10
             
         if hasattr(self, 'globalSettingsLayout'):
             self.globalSettingsLayout.setContentsMargins(10, 10, 4, bottom_margin)

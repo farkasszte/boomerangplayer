@@ -68,6 +68,8 @@ TRANSLATIONS = {
         'sort_date_oldest': 'Date (Oldest)',
         'remove_selected': 'Remove selected',
         'clear_all': 'Clear all',
+        'reset_defaults': 'Reset defaults',
+        'reset_defaults_done': 'All settings restored to factory defaults.',
         
         # Tools
         'pen': 'Pen',
@@ -203,7 +205,10 @@ TRANSLATIONS = {
         'delete_file_confirm_title': 'Delete File',
         'delete_file_confirm_msg': 'Are you sure you want to move this file to the Recycle Bin?\n\n{}',
         'delete_success': 'Successfully moved to Recycle Bin.',
+        'delete_multiple_confirm_msg': 'Are you sure you want to move these {count} files to the Recycle Bin?\n\n{file_list}',
+        'delete_multiple_success': 'Successfully moved {count} files to Recycle Bin.',
         'save_settings': 'Save settings',
+        'default': 'Default',
         'accent_color': 'Accent color',
         'bg_color': 'Background color',
         'choose_bg_color': 'Choose background color',
@@ -280,6 +285,8 @@ TRANSLATIONS = {
         'sort_date_oldest': 'Dátum (Legrégebbi)',
         'remove_selected': 'Kijelöltek eltávolítása',
         'clear_all': 'Összes eltávolítása',
+        'reset_defaults': 'Alapértelmezett visszaállítás',
+        'reset_defaults_done': 'Az összes beállítás visszaállítva gyári alapértékre.',
         
         # Tools
         'pen': 'Toll',
@@ -415,7 +422,10 @@ TRANSLATIONS = {
         'delete_file_confirm_title': 'Fájl törlése',
         'delete_file_confirm_msg': 'Biztosan a Lomtárba szeretné helyezni ezt a fájlt?\n\n{}',
         'delete_success': 'Sikeresen áthelyezve a Lomtárba.',
+        'delete_multiple_confirm_msg': 'Biztosan a Lomtárba szeretné helyezni ezt a(z) {count} fájlt?\n\n{file_list}',
+        'delete_multiple_success': 'Sikeresen áthelyezve {count} fájl a Lomtárba.',
         'save_settings': 'Beállítások mentése',
+        'default': 'Alapértelmezett',
         'accent_color': 'Kiemelő szín',
         'bg_color': 'Háttérszín',
         'choose_bg_color': 'Válassz háttérszínt',

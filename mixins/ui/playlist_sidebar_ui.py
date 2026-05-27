@@ -1,11 +1,46 @@
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QGridLayout, QMenu, QAbstractItemView
+from PyQt6.QtWidgets import (
+    QFrame, QVBoxLayout, QGridLayout, QMenu, QAbstractItemView,
+    QStyledItemDelegate, QStyleOptionViewItem, QStyle
+)
+from PyQt6.QtGui import QIcon
 from qfluentwidgets import CaptionLabel, PushButton
 from components import DropListWidget
-from styles import MENU_STYLE
+from styles import MENU_STYLE, _hex_to_rgb
 from translations import tr
 
+class PlaylistDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        # 1. Let C++ draw the entire item normally (maintaining perfect bounds, padding, and layout)
+        super().paint(painter, option, index)
+        
+        # 2. Overlay the clean, untinted icon in Normal mode exactly on top of the decoration rect
+        icon = index.data(Qt.ItemDataRole.DecorationRole)
+        if isinstance(icon, QIcon) and not icon.isNull():
+            opts = QStyleOptionViewItem(option)
+            self.initStyleOption(opts, index)
+            style = opts.widget.style() if opts.widget else painter.device()
+            rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemDecoration, opts, opts.widget)
+            icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter, QIcon.Mode.Normal, QIcon.State.Off)
+
 class PlaylistSidebarUIMixin:
+    def _update_playlist_list_stylesheet(self):
+        """Update the playlist list stylesheet using the current accent color."""
+        accent = self.config.get('accent_color', '#00f2ff')
+        self.playlistList.setStyleSheet(
+            "QListWidget { border: none; background: transparent; outline: none; } "
+            "QListWidget::item { border: none; outline: none; } "
+            "QScrollBar:vertical { width: 0px; } "
+            f"QListWidget::item:selected {{ background: rgba({_hex_to_rgb(accent)}, 0.3); border: none; outline: none; }} "
+            f"QListWidget::item:selected:focus {{ background: rgba({_hex_to_rgb(accent)}, 0.4); border: none; outline: none; }}"
+        )
+        
+        # Set QListWidget palette Highlight to the accent color so standard selected icon tinting matches the accent color (not green)
+        from PyQt6.QtGui import QPalette, QColor
+        palette = self.playlistList.palette()
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(accent))
+        self.playlistList.setPalette(palette)
+
     def _init_playlist_sidebar(self):
         self.playlistContainer = QFrame()
         self.playlistContainer.setMinimumWidth(250)
@@ -22,10 +57,8 @@ class PlaylistSidebarUIMixin:
         self.playlistList.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.playlistList.setStyleSheet(
-            "QListWidget { border: none; background: transparent; } "
-            "QScrollBar:vertical { width: 0px; }"
-        )
+        self._update_playlist_list_stylesheet()
+        self.playlistList.setItemDelegate(PlaylistDelegate(self))
         self.playlistList.setIconSize(QSize(120, 120))
         self.playlistList.itemDoubleClicked.connect(self.on_playlist_item_clicked)
         self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
