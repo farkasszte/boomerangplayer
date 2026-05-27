@@ -27,7 +27,7 @@ class StyleUIMixin:
                 btn.setStyleSheet(s['TOOL_BTN_STYLE'])
         
         # Action buttons
-        action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn', 'thumbSizeBtn',
+        action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn', 'gsResetDefaultsBtn', 'thumbSizeBtn',
                        'syncFrameButton', 'saveLoopButton', 'saveFrameButton', 'mirrorButton', 
                        'mirrorVerticalButton', 'rotateLeftButton', 'rotateRightButton', 'resetAdjButton', 'infoButton',
                        'smartMarkButton', 'manageMarkersButton', 'deleteMarkerButton', 'clearMarkersButton']
@@ -73,7 +73,7 @@ class StyleUIMixin:
                 sw.setStyleSheet(s['SWITCH_STYLE'])
 
         # Update Global Settings Trigger buttons
-        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn']
+        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn']
         for btn_name in gs_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -159,6 +159,10 @@ class StyleUIMixin:
             self.settingsScrollWidget.setStyleSheet("background: transparent;")
         if hasattr(self, 'gsScrollWidget'):
             self.gsScrollWidget.setStyleSheet("background: transparent;")
+
+        # Playlist list selection style
+        if hasattr(self, '_update_playlist_list_stylesheet'):
+            self._update_playlist_list_stylesheet()
 
         if hasattr(self, 'update_sync_lock_button_style'):
             self.update_sync_lock_button_style()

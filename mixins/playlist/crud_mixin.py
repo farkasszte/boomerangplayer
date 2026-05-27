@@ -183,6 +183,144 @@ class PlaylistCrudMixin:
             )
             print(f"Error deleting file: {e}")
 
+    def delete_selected_playlist_items(self):
+        """Delete multiple selected playlist items (move to Recycle Bin)."""
+        selected_items = self.playlistList.selectedItems()
+        if not selected_items:
+            # Try current item
+            curr = self.playlistList.currentItem()
+            if curr:
+                selected_items = [curr]
+            else:
+                return
+
+        # Filter to only valid/existing files
+        valid_items = []
+        for item in selected_items:
+            path = item.data(Qt.ItemDataRole.UserRole)
+            if path and os.path.exists(path):
+                valid_items.append((item, path))
+
+        if not valid_items:
+            return
+
+        count = len(valid_items)
+
+        if count == 1:
+            # Use the single-item delete flow
+            self.delete_playlist_item(valid_items[0][0])
+            return
+
+        # Build confirmation message with file list
+        file_names = "\n".join(f"• {os.path.basename(path)}" for _, path in valid_items)
+        msg = tr('delete_multiple_confirm_msg').format(count=count, file_list=file_names)
+
+        box = MessageBox(
+            tr('delete_file_confirm_title'),
+            msg,
+            self
+        )
+        box.yesButton.setText(tr('delete'))
+        box.cancelButton.setText(tr('cancel'))
+
+        if not box.exec():
+            return
+
+        # Track which file is currently playing to handle cleanup
+        current_was_deleted = False
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for item, path in valid_items:
+            try:
+                is_current = (self.currentFilePath == path)
+                if is_current:
+                    current_was_deleted = True
+                    # 1. Stop playback
+                    self.stop_playback()
+                    
+                    # 2. Clear media player source to release file lock
+                    self.mediaPlayer.setSource(QUrl())
+                    
+                    # 3. Stop extraction if running
+                    if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
+                        self.extraction_thread.cancel()
+
+                    # 4. Stop any thumbnail generation for this file
+                    if path in self.thumb_queue:
+                        self.thumb_queue.remove(path)
+
+                    for t in getattr(self, 'thumb_threads', []):
+                        if t.filePath == path:
+                            t.cancel()
+                    
+                    # 5. Cleanup cache
+                    self.cleanup_cache()
+                    
+                    # 6. Reset UI details
+                    if hasattr(self, 'pixmapItem') and self.pixmapItem:
+                        self.pixmapItem.setPixmap(QPixmap())
+                    self.progressBar.setRange(0, 0)
+                    self.progressBar.setValue(0)
+                    self.frameLabel.setText(" [F: 0]")
+                    self.currentTimeLabel.setText("00:00")
+                    self.totalTimeLabel.setText("00:00")
+                    self.currentFilePath = None
+                    self.setWindowTitle(f"Boomerang Player v{VERSION}")
+
+                success = send_to_recycle_bin(path)
+                if success:
+                    # Remove from playlistData (markers)
+                    if path in self.playlistData:
+                        del self.playlistData[path]
+                    success_count += 1
+                else:
+                    error_count += 1
+                    errors.append(os.path.basename(path))
+                    if is_current:
+                        current_was_deleted = False
+
+            except Exception as e:
+                error_count += 1
+                errors.append(f"{os.path.basename(path)} ({e})")
+                print(f"Error deleting {path}: {e}")
+                if current_was_deleted and is_current:
+                    current_was_deleted = False
+
+        # Remove items from playlist view in reverse order to maintain valid row indices
+        rows_to_remove = []
+        for item, _ in valid_items:
+            row = self.playlistList.row(item)
+            if row >= 0:
+                rows_to_remove.append(row)
+
+        for row in sorted(rows_to_remove, reverse=True):
+            self.playlistList.takeItem(row)
+
+        # Show result
+        if success_count > 0:
+            InfoBar.success(
+                title=tr('delete_file_confirm_title'),
+                content=tr('delete_multiple_success').format(count=success_count),
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+        if error_count > 0:
+            error_msg = "; ".join(errors)
+            InfoBar.error(
+                title=tr('delete_file_confirm_title'),
+                content=f"Failed to delete {error_count} file(s): {error_msg}",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=5000,
+                parent=self
+            )
+
     def remove_from_playlist(self):
         selected_items = self.playlistList.selectedItems()
         if not selected_items:

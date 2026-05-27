@@ -188,6 +188,19 @@ class ControlsCardUIMixin:
         if not self.controlsCard.isVisible():
             self.controlsCard.show()
             
+        # Restore any sidebars that were hidden by the controls auto-hide in fullscreen
+        hidden_sidebars = getattr(self, 'sidebars_hidden_by_controls', None)
+        if hidden_sidebars:
+            if hidden_sidebars.get('playlist') and hasattr(self, 'playlistContainer'):
+                self.playlistContainer.show()
+            if hidden_sidebars.get('drawing') and hasattr(self, 'drawingContainer'):
+                self.drawingContainer.show()
+            if hidden_sidebars.get('settings') and hasattr(self, 'settingsContainer'):
+                self.settingsContainer.show()
+            if hidden_sidebars.get('global_settings') and hasattr(self, 'globalSettingsContainer'):
+                self.globalSettingsContainer.show()
+            self.sidebars_hidden_by_controls = None
+            
         if hasattr(self, 'controls_timer'):
             self.controls_timer.start()
 
@@ -196,6 +209,8 @@ class ControlsCardUIMixin:
             self.setCursor(Qt.CursorShape.ArrowCursor)
             self.view.setCursor(Qt.CursorShape.ArrowCursor)
             
+        if hasattr(self, 'update_sidebar_fullscreen_state'):
+            self.update_sidebar_fullscreen_state()
         if hasattr(self, 'update_sidebar_margins'):
             self.update_sidebar_margins()
 
@@ -206,7 +221,25 @@ class ControlsCardUIMixin:
                 if hasattr(self, 'controls_timer'):
                     self.controls_timer.start()
                 return
+                
+            # Save currently visible sidebars to restore them when controls show up again
+            self.sidebars_hidden_by_controls = {
+                'playlist': hasattr(self, 'playlistContainer') and self.playlistContainer.isVisible(),
+                'drawing': hasattr(self, 'drawingContainer') and self.drawingContainer.isVisible(),
+                'settings': hasattr(self, 'settingsContainer') and self.settingsContainer.isVisible(),
+                'global_settings': hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible()
+            }
+            
+            # Hide the controlsCard and all sidebars in fullscreen
             self.controlsCard.hide()
+            if hasattr(self, 'playlistContainer'):
+                self.playlistContainer.hide()
+            if hasattr(self, 'drawingContainer'):
+                self.drawingContainer.hide()
+            if hasattr(self, 'settingsContainer'):
+                self.settingsContainer.hide()
+            if hasattr(self, 'globalSettingsContainer'):
+                self.globalSettingsContainer.hide()
             
             # Hide mouse cursor in fullscreen after 3s of inactivity
             if hasattr(self, 'view') and not getattr(self.view, 'drawing_mode', False):

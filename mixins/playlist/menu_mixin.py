@@ -27,15 +27,26 @@ class PlaylistMenuMixin:
         self.show_clear_menu()
 
     def show_playlist_context_menu(self, item, pos):
+        # Don't auto-select single item when multi-select is already in effect
         if not item.isSelected():
             self.playlistList.clearSelection()
             item.setSelected(True)
             self.playlistList.setCurrentItem(item)
 
+        selected_count = len(self.playlistList.selectedItems())
+
         menu = QMenu(self)
         menu.setStyleSheet(MENU_STYLE)
-        menu.addAction(tr('rename'), lambda: self.rename_playlist_item(item))
-        menu.addAction(tr('open_in_new_window'), lambda: self.open_in_new_window(item))
-        menu.addAction(tr('remove_selected'), self.remove_from_playlist)
-        menu.addAction(tr('delete_file'), lambda: self.delete_playlist_item(item))
+
+        if selected_count > 1:
+            # Multi-selection: only offer batch operations
+            menu.addAction(f"{tr('delete_file')} ({selected_count})", self.delete_selected_playlist_items)
+            menu.addAction(f"{tr('remove_selected')} ({selected_count})", self.remove_from_playlist)
+        else:
+            # Single item: full context menu
+            menu.addAction(tr('rename'), lambda: self.rename_playlist_item(item))
+            menu.addAction(tr('open_in_new_window'), lambda: self.open_in_new_window(item))
+            menu.addAction(tr('remove_selected'), self.remove_from_playlist)
+            menu.addAction(tr('delete_file'), lambda: self.delete_playlist_item(item))
+
         menu.exec(pos)

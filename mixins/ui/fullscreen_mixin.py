@@ -18,6 +18,7 @@ class FullscreenUIMixin:
                 'settings': self.settingsContainer.isVisible(),
                 'global_settings': self.globalSettingsContainer.isVisible()
             }
+            self.sidebars_hidden_by_controls = self.sidebar_states_before_fs.copy()
             
             # Hide everything extra
             self.playlistContainer.hide()
@@ -117,15 +118,27 @@ class FullscreenUIMixin:
             if hasattr(self, 'widgetLayout'):
                 self.widgetLayout.setContentsMargins(0, 32, 0, 0)
                 
-            # Restore sidebars
-            if self.sidebar_states_before_fs.get('playlist'):
+            # Restore sidebars based on what was visible in fullscreen before they auto-hid, or what was visible before entering fullscreen
+            if getattr(self, 'sidebars_hidden_by_controls', None) is not None:
+                restore_states = self.sidebars_hidden_by_controls
+            else:
+                restore_states = {
+                    'playlist': self.playlistContainer.isVisible(),
+                    'drawing': self.drawingContainer.isVisible(),
+                    'settings': self.settingsContainer.isVisible(),
+                    'global_settings': self.globalSettingsContainer.isVisible()
+                }
+
+            if restore_states.get('playlist'):
                 self.playlistContainer.show()
-            if self.sidebar_states_before_fs.get('drawing'):
+            if restore_states.get('drawing'):
                 self.drawingContainer.show()
-            if self.sidebar_states_before_fs.get('settings'):
+            if restore_states.get('settings'):
                 self.settingsContainer.show()
-            if self.sidebar_states_before_fs.get('global_settings'):
+            if restore_states.get('global_settings'):
                 self.globalSettingsContainer.show()
+
+            self.sidebars_hidden_by_controls = None
 
             # Ensure controls are shown and timer is stopped when exiting fullscreen
             if hasattr(self, 'controls_timer'):
