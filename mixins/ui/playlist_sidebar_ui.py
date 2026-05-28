@@ -10,6 +10,10 @@ from styles import MENU_STYLE, _hex_to_rgb
 from translations import tr
 
 class PlaylistDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_win = parent
+
     def paint(self, painter, option, index):
         # 1. Let C++ draw the entire item normally (maintaining perfect bounds, padding, and layout)
         super().paint(painter, option, index)
@@ -22,6 +26,27 @@ class PlaylistDelegate(QStyledItemDelegate):
             style = opts.widget.style() if opts.widget else painter.device()
             rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemDecoration, opts, opts.widget)
             icon.paint(painter, rect, Qt.AlignmentFlag.AlignCenter, QIcon.Mode.Normal, QIcon.State.Off)
+            
+            # 3. If selected and thumbnail is on while filename is off, draw a beautiful accent border/frame around the thumbnail
+            if self.parent_win and hasattr(self.parent_win, 'config'):
+                config = self.parent_win.config
+                show_thumbs = config.get('show_thumbnails', True)
+                show_names = config.get('show_filenames', True)
+                if show_thumbs and not show_names and (option.state & QStyle.StateFlag.State_Selected):
+                    accent = config.get('accent_color', '#00f2ff')
+                    from PyQt6.QtGui import QPen, QColor
+                    painter.save()
+                    pen_width = 2
+                    pen = QPen(QColor(accent), pen_width)
+                    painter.setPen(pen)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    # Using QRectF (floating-point precision) with a symmetrical 0.5px offset on all sides
+                    # places the center of our 2px pen exactly where it needs to be to align perfectly
+                    # with the thumbnail's boundary, with zero gaps on any side.
+                    from PyQt6.QtCore import QRectF
+                    border_rect = QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5)
+                    painter.drawRect(border_rect)
+                    painter.restore()
 
 class PlaylistSidebarUIMixin:
     def _update_playlist_list_stylesheet(self):
@@ -59,6 +84,8 @@ class PlaylistSidebarUIMixin:
         self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._update_playlist_list_stylesheet()
         self.playlistList.setItemDelegate(PlaylistDelegate(self))
+        # Force a full viewport repaint on selection change to instantly clean up any sub-pixel border trails
+        self.playlistList.itemSelectionChanged.connect(self.playlistList.viewport().update)
         self.playlistList.setIconSize(QSize(120, 120))
         self.playlistList.itemDoubleClicked.connect(self.on_playlist_item_clicked)
         self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
