@@ -77,10 +77,12 @@ class PlayerWindow(
         self.setContentsMargins(0, 0, 0, 0)
         self.widgetLayout.setContentsMargins(0, 32, 0, 0)
 
-        # Centre title in FluentTitleBar
-        self.titleBar.hBoxLayout.insertStretch(1, 1)
-        self.titleBar.hBoxLayout.insertStretch(3, 1)
-        self.titleBar.titleLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Add a left margin to the logo by inserting spacing at the beginning of the layout (prevents squeezing)
+        self.titleBar.hBoxLayout.insertSpacing(0, 12)
+
+        # Remove titleLabel from the layout so we can position it manually and center it perfectly relative to the window width
+        if hasattr(self.titleBar, 'titleLabel') and self.titleBar.titleLabel:
+            self.titleBar.hBoxLayout.removeWidget(self.titleBar.titleLabel)
 
         # ---- Application state ----------------------------------------
         self.currentFilePath = None
@@ -222,6 +224,14 @@ class PlayerWindow(
         if hasattr(self, 'titleBar') and not getattr(self, 'is_full_screen', False):
             self.titleBar.move(0, 0)
             self.titleBar.resize(self.width(), self.titleBar.height())
+            
+            # Manually center titleLabel strictly relative to the window width (ignoring logo & buttons spacing)
+            if hasattr(self.titleBar, 'titleLabel') and self.titleBar.titleLabel:
+                title = self.titleBar.titleLabel
+                title.adjustSize()
+                x = (self.titleBar.width() - title.width()) // 2
+                y = (self.titleBar.height() - title.height()) // 2
+                title.move(x, y)
 
         if getattr(self, 'is_full_screen', False) and hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
             h = max(80, self.controlsCard.sizeHint().height())
