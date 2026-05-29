@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
-VERSION = "2.0.2"
+VERSION = "2.1"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
