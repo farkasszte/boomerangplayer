@@ -21,14 +21,14 @@ class PlaybackMixin:
         from PyQt6.QtWidgets import QFileDialog
         fileNames, _ = QFileDialog.getOpenFileNames(
             self, tr('add_files_title'), "",
-            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff);;{tr('json_files')} (*.json)"
+            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff);;{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl)"
         )
         if fileNames:
-            json_files = [f for f in fileNames if f.lower().endswith('.json')]
-            media_files = [f for f in fileNames if not f.lower().endswith('.json')]
+            playlist_files = [f for f in fileNames if f.lower().endswith(('.json', '.bpl'))]
+            media_files = [f for f in fileNames if not f.lower().endswith(('.json', '.bpl'))]
             
-            if json_files:
-                self.load_playlist_by_path(json_files[0])
+            if playlist_files:
+                self.load_playlist_by_path(playlist_files[0])
                 if media_files:
                     self.add_files_to_playlist(media_files)
             else:
@@ -59,6 +59,7 @@ class PlaybackMixin:
                 self.load_video(files[0])
 
     def load_video(self, filePath):
+        self.cleanup_cache()
         self.save_current_markers()
 
         try:
@@ -73,7 +74,6 @@ class PlaybackMixin:
             )
 
             if is_image:
-                self.cleanup_cache()
                 self.cached_frame_dict = {0: filePath}
                 self.cached_file_path = filePath
                 self.current_cache_index = 0
@@ -145,7 +145,7 @@ class PlaybackMixin:
             cmd = [
                 ffprobe_path, "-v", "error",
                 "-select_streams", "v:0",
-                "-show_entries", "stream=avg_frame_rate,duration,nb_frames",
+                "-show_entries", "stream=codec_name,avg_frame_rate,duration,nb_frames:format=duration",
                 "-of", "json", file_path
             ]
 
@@ -179,6 +179,7 @@ class PlaybackMixin:
             if nb_frames == 0 and duration > 0:
                 nb_frames = int(duration * fps)
             
+            print(f"[get_video_info] {os.path.basename(file_path)}: codec={stream.get('codec_name', 'unknown')}, fps={fps}, duration={duration}s, nb_frames={nb_frames}")
             return fps, duration * 1000, nb_frames
         except Exception as e:
             print(f"ffprobe error: {e}")

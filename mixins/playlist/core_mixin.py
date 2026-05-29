@@ -23,7 +23,7 @@ class PlaylistCoreMixin:
     # Adding files                                                         #
     # ------------------------------------------------------------------ #
 
-    def add_files_to_playlist(self, file_paths):
+    def add_files_to_playlist(self, file_paths, cached_thumbnails=None):
         show_thumbs = self.thumbToggle.isChecked()
         show_names = self.fileNameToggle.isChecked()
         
@@ -53,18 +53,41 @@ class PlaylistCoreMixin:
                 item = QListWidgetItem(baseName)
                 item.setData(Qt.ItemDataRole.UserRole, filePath)
                 
+                # Check for cached thumbnail
+                has_cached_thumb = False
+                pixmap = None
+                if cached_thumbnails and filePath in cached_thumbnails:
+                    thumb_data = cached_thumbnails[filePath]
+                    if isinstance(thumb_data, str) and thumb_data:
+                        try:
+                            from PyQt6.QtCore import QByteArray
+                            from PyQt6.QtGui import QImage
+                            ba = QByteArray.fromBase64(thumb_data.encode('utf-8'))
+                            img = QImage.fromData(ba)
+                            if not img.isNull():
+                                pixmap = QPixmap.fromImage(img)
+                                has_cached_thumb = True
+                        except Exception as e:
+                            print(f"Error decoding cached thumbnail: {e}")
+                
                 if show_thumbs and not show_names:
                     item.setSizeHint(thumb_size)
                     item.setText("")
-                    placeholder = QPixmap(thumb_size)
-                    placeholder.fill(QColor(60, 60, 60))
-                    item.setIcon(QIcon(placeholder))
+                    if has_cached_thumb:
+                        item.setIcon(QIcon(pixmap))
+                    else:
+                        placeholder = QPixmap(thumb_size)
+                        placeholder.fill(QColor(60, 60, 60))
+                        item.setIcon(QIcon(placeholder))
                 elif show_thumbs and show_names:
                     item.setSizeHint(item_size)
                     item.setText(baseName)
-                    placeholder = QPixmap(thumb_size)
-                    placeholder.fill(QColor(60, 60, 60))
-                    item.setIcon(QIcon(placeholder))
+                    if has_cached_thumb:
+                        item.setIcon(QIcon(pixmap))
+                    else:
+                        placeholder = QPixmap(thumb_size)
+                        placeholder.fill(QColor(60, 60, 60))
+                        item.setIcon(QIcon(placeholder))
                 else:
                     item.setSizeHint(QSize(0, 28))
                     item.setText(baseName)
@@ -72,7 +95,7 @@ class PlaylistCoreMixin:
                 
                 self.playlistList.addItem(item)
                 
-                if show_thumbs:
+                if show_thumbs and not has_cached_thumb:
                     self.thumb_queue.append(filePath)
                 
                 existing_paths.add(abs_path.lower())

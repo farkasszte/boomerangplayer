@@ -41,6 +41,7 @@ class CacheMixin:
             return
 
         if self.extraction_thread and self.extraction_thread.isRunning():
+            print(f"[request_frame_extraction] Aborted: extraction thread is already running.")
             return  # Already extracting
 
         start_frame = max(0, center_frame - self.cache_window_half)
@@ -50,6 +51,7 @@ class CacheMixin:
         threshold = self.cache_window_half // 2
         if (not force and self.last_extracted_center != -1
                 and abs(self.last_extracted_center - center_frame) < threshold):
+            print(f"[request_frame_extraction] Aborted: optimization threshold met (last={self.last_extracted_center}, current={center_frame}).")
             return
 
         self.last_extracted_center = center_frame
@@ -59,6 +61,7 @@ class CacheMixin:
 
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
+        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={self.currentFilePath}, start={start_frame}, num={num_frames}, temp_dir={self.current_temp_dir}")
         self.extraction_thread = FrameExtractionThread(
             self.currentFilePath,
             start_frame,
@@ -101,7 +104,9 @@ class CacheMixin:
         self.extraction_thread.start()
 
     def on_first_frame_extracted(self, frame_dict, temp_dir, start_frame, num_frames):
-        if not self.currentFilePath or not self.extraction_thread:
+        print(f"[on_first_frame_extracted] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={self.currentFilePath}")
+        if not self.currentFilePath or not self.extraction_thread or temp_dir != self.current_temp_dir:
+            print("[on_first_frame_extracted] Early abort: invalid file path, missing thread, or temp_dir mismatch.")
             self.loadingOverlay.hide()
             return
 
@@ -123,11 +128,12 @@ class CacheMixin:
         
         # Safely wait for the first-stage thread to completely exit so that isRunning() returns False
         if self.extraction_thread:
-            self.extraction_thread.wait(500)
+            self.extraction_thread.wait()
             self.extraction_thread = None
             
         # Silently trigger the background sliding window cache extraction
         self.last_extracted_center = -1
+        print(f"[on_first_frame_extracted] Triggering request_frame_extraction for start_frame={start_frame}")
         self.request_frame_extraction(start_frame, force=True)
 
     def check_sliding_window(self):
@@ -144,10 +150,16 @@ class CacheMixin:
     # ------------------------------------------------------------------ #
 
     def on_extraction_finished(self, frame_dict, temp_dir, start_frame, num_frames):
+        print(f"[on_extraction_finished] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={self.currentFilePath}")
+        if temp_dir != self.current_temp_dir:
+            print(f"[on_extraction_finished] Stale callback ignored. temp_dir={temp_dir}, current_temp_dir={self.current_temp_dir}")
+            return
+
         if not frame_dict:
+            print("[on_extraction_finished] Frame dict is empty.")
             self.loadingOverlay.hide()
             if self.extraction_thread:
-                self.extraction_thread.wait(500)
+                self.extraction_thread.wait()
                 self.extraction_thread = None
             return
 
@@ -189,7 +201,7 @@ class CacheMixin:
 
         # Safely wait for the thread to completely exit and clear reference
         if self.extraction_thread:
-            self.extraction_thread.wait(500)
+            self.extraction_thread.wait()
             self.extraction_thread = None
 
         if getattr(self, 'was_playing_before_cache_miss', False):

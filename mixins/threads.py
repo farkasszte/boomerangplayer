@@ -21,6 +21,27 @@ class FrameExtractionThread(QThread):
         self.gpu_enabled = gpu_enabled
         self.player_idx = player_idx
         
+    def _cleanup_temp_if_owned(self):
+        if self.temp_dir_owned:
+            import shutil
+            try:
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
+            except OSError:
+                pass
+
+    def _collect_frame_files(self):
+        frame_files = {}
+        if self.num_frames == 1:
+            fpath = os.path.join(self.temp_dir, f"frame_{self.start_frame:08d}_first.jpg")
+            if os.path.exists(fpath):
+                frame_files[self.start_frame] = fpath
+        else:
+            for i in range(self.start_frame, self.start_frame + self.num_frames):
+                fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
+                if os.path.exists(fpath):
+                    frame_files[i] = fpath
+        return frame_files
+
     def run(self):
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,12 +56,15 @@ class FrameExtractionThread(QThread):
                 out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
                 
             start_time = self.start_frame / self.fps
+            creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             
+            # Layer 1: Requested configuration (GPU if enabled, Input seeking if start_frame > 0)
             cmd = [ffmpeg_path, "-y"]
             if self.gpu_enabled:
                 cmd.extend(["-hwaccel", "auto"])
+            if self.start_frame > 0:
+                cmd.extend(["-ss", str(start_time)])
             cmd.extend([
-                "-ss", str(start_time),
                 "-i", self.video_path,
                 "-vframes", str(self.num_frames),
                 "-start_number", str(self.start_frame),
@@ -48,41 +72,68 @@ class FrameExtractionThread(QThread):
                 out_pattern
             ])
             
-            creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.process.wait()
             
             if self._is_cancelled:
-                if self.temp_dir_owned:
-                    import shutil
-                    try: shutil.rmtree(self.temp_dir, ignore_errors=True)
-                    except OSError: pass
+                self._cleanup_temp_if_owned()
                 self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
                 return
             
-            frame_files = {}
-            if self.num_frames == 1:
-                fpath = os.path.join(self.temp_dir, f"frame_{self.start_frame:08d}_first.jpg")
-                if os.path.exists(fpath):
-                    frame_files[self.start_frame] = fpath
-            else:
-                for i in range(self.start_frame, self.start_frame + self.num_frames):
-                    fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
-                    if os.path.exists(fpath):
-                        frame_files[i] = fpath
-                    
-            if not frame_files and self.temp_dir_owned:
-                import shutil
-                try: shutil.rmtree(self.temp_dir, ignore_errors=True)
-                except OSError: pass
+            frame_files = self._collect_frame_files()
+            
+            # Layer 2 Fallback: If GPU-accelerated extraction failed to yield files, fallback to software decoding
+            if not frame_files and self.gpu_enabled and not self._is_cancelled:
+                print(f"[FrameExtractionThread] GPU-accelerated extraction failed for {self.video_path}. Retrying in software mode.")
+                cmd = [ffmpeg_path, "-y"]
+                if self.start_frame > 0:
+                    cmd.extend(["-ss", str(start_time)])
+                cmd.extend([
+                    "-i", self.video_path,
+                    "-vframes", str(self.num_frames),
+                    "-start_number", str(self.start_frame),
+                    "-q:v", "2", 
+                    out_pattern
+                ])
+                
+                self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self.process.wait()
+                
+                if self._is_cancelled:
+                    self._cleanup_temp_if_owned()
+                    self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
+                    return
+                frame_files = self._collect_frame_files()
+                
+            # Layer 3 Fallback: If input seeking failed and start_frame > 0, fallback to highly robust software output seeking
+            if not frame_files and self.start_frame > 0 and not self._is_cancelled:
+                print(f"[FrameExtractionThread] Input seeking failed for {self.video_path}. Retrying with software output seeking.")
+                cmd = [ffmpeg_path, "-y", "-i", self.video_path]
+                cmd.extend([
+                    "-ss", str(start_time),
+                    "-vframes", str(self.num_frames),
+                    "-start_number", str(self.start_frame),
+                    "-q:v", "2", 
+                    out_pattern
+                ])
+                
+                self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self.process.wait()
+                
+                if self._is_cancelled:
+                    self._cleanup_temp_if_owned()
+                    self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
+                    return
+                frame_files = self._collect_frame_files()
+
+            if not frame_files:
+                print(f"[FrameExtractionThread] Warning: All frame extraction layers failed for {self.video_path}")
+                self._cleanup_temp_if_owned()
 
             self.finished_extraction.emit(frame_files, self.temp_dir, self.start_frame, self.num_frames)
         except Exception as e:
             print(f"Extraction error: {e}")
-            if self.temp_dir_owned:
-                import shutil
-                try: shutil.rmtree(self.temp_dir, ignore_errors=True)
-                except OSError: pass
+            self._cleanup_temp_if_owned()
             self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
 
     def cancel(self):
