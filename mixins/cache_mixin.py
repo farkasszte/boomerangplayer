@@ -16,17 +16,29 @@ class CacheMixin:
     # Cache housekeeping                                                   #
     # ------------------------------------------------------------------ #
 
-    def cleanup_cache(self):
+    def cleanup_cache(self, keep_extracted_video=False):
         if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
             self.extraction_thread.cancel()
             self.extraction_thread.wait()
 
         if self.current_temp_dir and os.path.exists(self.current_temp_dir):
-            try:
-                shutil.rmtree(self.current_temp_dir, ignore_errors=True)
-            except OSError:
-                pass
-        self.current_temp_dir = None
+            if keep_extracted_video:
+                for f in os.listdir(self.current_temp_dir):
+                    if f != "extracted_video.mp4":
+                        try:
+                            fpath = os.path.join(self.current_temp_dir, f)
+                            if os.path.isdir(fpath):
+                                shutil.rmtree(fpath, ignore_errors=True)
+                            else:
+                                os.remove(fpath)
+                        except OSError:
+                            pass
+            else:
+                try:
+                    shutil.rmtree(self.current_temp_dir, ignore_errors=True)
+                except OSError:
+                    pass
+                self.current_temp_dir = None
         self.cached_frame_dict = {}
         self.last_extracted_center = -1
         if hasattr(self, 'pixmapItem'):
@@ -57,13 +69,16 @@ class CacheMixin:
         self.last_extracted_center = center_frame
 
         if not self.current_temp_dir:
+            import tempfile
             self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+
+        video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
-        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={self.currentFilePath}, start={start_frame}, num={num_frames}, temp_dir={self.current_temp_dir}")
+        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={start_frame}, num={num_frames}, temp_dir={self.current_temp_dir}")
         self.extraction_thread = FrameExtractionThread(
-            self.currentFilePath,
+            video_path,
             start_frame,
             num_frames,
             self.fps,
@@ -78,7 +93,7 @@ class CacheMixin:
         if not self.currentFilePath:
             return
 
-        self.cleanup_cache()
+        self.cleanup_cache(keep_extracted_video=True)
         self.loadingOverlay.show()
 
         data = self.playlistData.get(self.currentFilePath, {})
@@ -87,12 +102,15 @@ class CacheMixin:
         
         # Two-stage extraction: extract exactly 1 frame instantly
         if not self.current_temp_dir:
+            import tempfile
             self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
             
+        video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
+
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         self.extraction_thread = FrameExtractionThread(
-            self.currentFilePath,
+            video_path,
             start_pos,
             1,  # Only 1 frame!
             self.fps,

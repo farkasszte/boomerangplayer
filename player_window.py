@@ -86,6 +86,7 @@ class PlayerWindow(
 
         # ---- Application state ----------------------------------------
         self.currentFilePath = None
+        self.currentVideoPath = None
         self.playlistData = load_markers()
         self.isPingPong = True
         self.isForward = True

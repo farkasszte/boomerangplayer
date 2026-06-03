@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
-VERSION = "2.1"
+VERSION = "2.2"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -228,5 +228,31 @@ def send_to_recycle_bin(path):
     except Exception as e:
         print(f"Error in send_to_recycle_bin: {e}")
         return False
+
+
+def get_embedded_video_offset(file_path):
+    """
+    Checks if a JPG/JPEG file has an appended/embedded MP4 video.
+    Returns the offset of the video file start if found, otherwise None.
+    """
+    if not file_path.lower().endswith(('.jpg', '.jpeg')):
+        return None
+    try:
+        if not os.path.exists(file_path):
+            return None
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        
+        idx = data.find(b'ftyp')
+        if idx != -1:
+            box_start = idx - 4
+            if box_start >= 0:
+                box_size = int.from_bytes(data[box_start:idx], 'big')
+                if 8 <= box_size <= 1024:
+                    return box_start
+    except Exception as e:
+        print(f"Error checking embedded video: {e}")
+    return None
+
 
 

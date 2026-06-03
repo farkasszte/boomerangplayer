@@ -35,8 +35,8 @@ ENV/
 *.mkv
 *.avi
 *.mov
-!ffmpeg.exe
-!ffprobe.exe
+ffmpeg.exe
+ffprobe.exe
 temp_frames/
 playlist.json
 settings.json

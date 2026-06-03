@@ -21,7 +21,7 @@ class PlaylistInfoMixin:
                 ffprobe_path, "-v", "error",
                 "-show_entries", "stream=codec_type,codec_name,width,height,avg_frame_rate,pix_fmt,channels,sample_rate,bit_rate",
                 "-show_entries", "format=size,duration,format_name",
-                "-of", "json", self.currentFilePath
+                "-of", "json", getattr(self, 'currentVideoPath', self.currentFilePath)
             ]
 
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0

@@ -8,7 +8,7 @@ import json
 from PyQt6.QtCore import Qt, QUrl, QTimer, QElapsedTimer, QPointF
 from PyQt6.QtMultimedia import QMediaPlayer
 from qfluentwidgets import FluentIcon
-from utils import get_resource_path, format_time, VERSION
+from utils import get_resource_path, format_time, VERSION, get_embedded_video_offset
 from translations import tr
 
 
@@ -59,12 +59,14 @@ class PlaybackMixin:
                 self.load_video(files[0])
 
     def load_video(self, filePath):
+        self.mediaPlayer.setSource(QUrl())
         self.cleanup_cache()
         self.save_current_markers()
 
         try:
             self.is_loading_video = True
             self.currentFilePath = filePath
+            self.currentVideoPath = filePath
             self.last_transform_state = None
             if hasattr(self, 'initial_fit_done'):
                 delattr(self, 'initial_fit_done')
@@ -72,6 +74,31 @@ class PlaybackMixin:
             is_image = filePath.lower().endswith(
                 ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
             )
+
+            # Check if it has an embedded MP4 video
+            embedded_offset = None
+            if is_image and filePath.lower().endswith(('.jpg', '.jpeg')):
+                embedded_offset = get_embedded_video_offset(filePath)
+
+            if embedded_offset is not None:
+                # Create a temporary directory if it doesn't exist
+                if not self.current_temp_dir:
+                    import tempfile
+                    self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+                
+                # Extract the video portion
+                temp_video_path = os.path.join(self.current_temp_dir, "extracted_video.mp4")
+                try:
+                    with open(filePath, 'rb') as f:
+                        f.seek(embedded_offset)
+                        video_data = f.read()
+                    with open(temp_video_path, 'wb') as f:
+                        f.write(video_data)
+                    self.currentVideoPath = temp_video_path
+                    is_image = False  # Treat as video now!
+                    print(f"Extracted motion photo video to {temp_video_path} (offset: {embedded_offset})")
+                except Exception as ex:
+                    print(f"Error extracting motion photo video: {ex}")
 
             if is_image:
                 self.cached_frame_dict = {0: filePath}
@@ -87,7 +114,7 @@ class PlaybackMixin:
                 self.mediaPlayer.stop()
                 self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
             else:
-                fps, duration_ms, total_frames = self.get_video_info(filePath)
+                fps, duration_ms, total_frames = self.get_video_info(self.currentVideoPath)
                 if fps > 0:
                     self.fps = fps
                     print(f"ffprobe detected FPS: {self.fps}")
@@ -95,8 +122,11 @@ class PlaybackMixin:
                 self.current_cache_index = 0
                 self.update_pixmap_from_cache()
 
-                self.mediaPlayer.setSource(QUrl.fromLocalFile(filePath))
-                self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
+                self.mediaPlayer.setSource(QUrl.fromLocalFile(self.currentVideoPath))
+                if embedded_offset is not None:
+                    self.setWindowTitle(f"Boomerang Player v{VERSION} - [Motion Photo] {os.path.basename(filePath)}")
+                else:
+                    self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
 
                 # Store ffprobe results for frame-accurate timing
                 self.ffprobe_fps = fps
@@ -128,9 +158,7 @@ class PlaybackMixin:
                 parent=self
             )
         finally:
-            if not self.currentFilePath or filePath.lower().endswith(
-                ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
-            ):
+            if not self.currentFilePath or is_image:
                 pass  # Image path: flag cleared by _apply_file_saved_zoom timer
             if not hasattr(self, '_apply_file_saved_zoom'):
                 self.is_loading_video = False
