@@ -8,7 +8,7 @@ from utils import get_resource_path
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None):
         super().__init__(parent)
         self.video_path = video_path
         self.start_frame = start_frame
@@ -20,6 +20,7 @@ class FrameExtractionThread(QThread):
         self._is_cancelled = False
         self.gpu_enabled = gpu_enabled
         self.player_idx = player_idx
+        self.start_number = start_number if start_number is not None else start_frame
         
     def _cleanup_temp_if_owned(self):
         if self.temp_dir_owned:
@@ -32,11 +33,11 @@ class FrameExtractionThread(QThread):
     def _collect_frame_files(self):
         frame_files = {}
         if self.num_frames == 1:
-            fpath = os.path.join(self.temp_dir, f"frame_{self.start_frame:08d}_first.jpg")
+            fpath = os.path.join(self.temp_dir, f"frame_{self.start_number:08d}_first.jpg")
             if os.path.exists(fpath):
-                frame_files[self.start_frame] = fpath
+                frame_files[self.start_number] = fpath
         else:
-            for i in range(self.start_frame, self.start_frame + self.num_frames):
+            for i in range(self.start_number, self.start_number + self.num_frames):
                 fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
                 if os.path.exists(fpath):
                     frame_files[i] = fpath
@@ -51,7 +52,7 @@ class FrameExtractionThread(QThread):
                 ffmpeg_path = "ffmpeg"
                 
             if self.num_frames == 1:
-                out_pattern = os.path.join(self.temp_dir, f"frame_{self.start_frame:08d}_first.jpg")
+                out_pattern = os.path.join(self.temp_dir, f"frame_{self.start_number:08d}_first.jpg")
             else:
                 out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
                 
@@ -67,7 +68,7 @@ class FrameExtractionThread(QThread):
             cmd.extend([
                 "-i", self.video_path,
                 "-vframes", str(self.num_frames),
-                "-start_number", str(self.start_frame),
+                "-start_number", str(self.start_number),
                 "-q:v", "2", 
                 out_pattern
             ])
@@ -91,7 +92,7 @@ class FrameExtractionThread(QThread):
                 cmd.extend([
                     "-i", self.video_path,
                     "-vframes", str(self.num_frames),
-                    "-start_number", str(self.start_frame),
+                    "-start_number", str(self.start_number),
                     "-q:v", "2", 
                     out_pattern
                 ])
@@ -112,7 +113,7 @@ class FrameExtractionThread(QThread):
                 cmd.extend([
                     "-ss", str(start_time),
                     "-vframes", str(self.num_frames),
-                    "-start_number", str(self.start_frame),
+                    "-start_number", str(self.start_number),
                     "-q:v", "2", 
                     out_pattern
                 ])

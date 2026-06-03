@@ -68,6 +68,8 @@ class PlaybackMixin:
             self.currentFilePath = filePath
             self.currentVideoPath = filePath
             self.last_transform_state = None
+            self.is_motion_photo = False
+            self.motion_photo_original_path = None
             if hasattr(self, 'initial_fit_done'):
                 delattr(self, 'initial_fit_done')
 
@@ -81,6 +83,8 @@ class PlaybackMixin:
                 embedded_offset = get_embedded_video_offset(filePath)
 
             if embedded_offset is not None:
+                self.is_motion_photo = True
+                self.motion_photo_original_path = filePath
                 # Create a temporary directory if it doesn't exist
                 if not self.current_temp_dir:
                     import tempfile
@@ -115,15 +119,23 @@ class PlaybackMixin:
                 self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
             else:
                 fps, duration_ms, total_frames = self.get_video_info(self.currentVideoPath)
+                if self.is_motion_photo:
+                    total_frames += 1
+
                 if fps > 0:
                     self.fps = fps
                     print(f"ffprobe detected FPS: {self.fps}")
+
+                if self.is_motion_photo:
+                    self.cached_frame_dict = {0: filePath}
+                else:
+                    self.cached_frame_dict = {}
 
                 self.current_cache_index = 0
                 self.update_pixmap_from_cache()
 
                 self.mediaPlayer.setSource(QUrl.fromLocalFile(self.currentVideoPath))
-                if embedded_offset is not None:
+                if self.is_motion_photo:
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - [Motion Photo] {os.path.basename(filePath)}")
                 else:
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")

@@ -74,17 +74,32 @@ class CacheMixin:
 
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
+        # If it's a motion photo, player frame 0 is the original photo (already cached).
+        # We only extract player frames >= 1 from the video.
+        actual_start_frame = start_frame
+        actual_num_frames = num_frames
+        start_number = None
+        if getattr(self, 'is_motion_photo', False):
+            actual_start_player = max(1, start_frame)
+            actual_end_player = start_frame + num_frames - 1
+            if actual_start_player > actual_end_player:
+                return  # Nothing to extract from the video
+            actual_start_frame = actual_start_player - 1
+            actual_num_frames = actual_end_player - actual_start_player + 1
+            start_number = actual_start_player
+
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
-        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={start_frame}, num={num_frames}, temp_dir={self.current_temp_dir}")
+        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, temp_dir={self.current_temp_dir}")
         self.extraction_thread = FrameExtractionThread(
             video_path,
-            start_frame,
-            num_frames,
+            actual_start_frame,
+            actual_num_frames,
             self.fps,
             self.current_temp_dir,
             self,
-            gpu_enabled=gpu_enabled
+            gpu_enabled=gpu_enabled,
+            start_number=start_number
         )
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
@@ -100,6 +115,20 @@ class CacheMixin:
         start_pos = data.get('startFrame', 0)
         self.current_cache_index = start_pos
         
+        # If it's a motion photo, cache frame 0 as the high-res photo path
+        if getattr(self, 'is_motion_photo', False):
+            self.cached_frame_dict[0] = self.motion_photo_original_path
+
+        if start_pos in self.cached_frame_dict:
+            # We already have this frame in cache (e.g. frame 0 of motion photo)
+            self.update_pixmap_from_cache()
+            self.loadingOverlay.hide()
+            
+            # Silently trigger background sliding window extraction starting from start_pos
+            self.last_extracted_center = -1
+            self.request_frame_extraction(start_pos, force=True)
+            return
+
         # Two-stage extraction: extract exactly 1 frame instantly
         if not self.current_temp_dir:
             import tempfile
@@ -107,16 +136,24 @@ class CacheMixin:
             
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
+        # Map start_pos to the correct video frame and player index if motion photo
+        actual_start_frame = start_pos
+        start_number = None
+        if getattr(self, 'is_motion_photo', False) and start_pos >= 1:
+            actual_start_frame = start_pos - 1
+            start_number = start_pos
+
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         self.extraction_thread = FrameExtractionThread(
             video_path,
-            start_pos,
+            actual_start_frame,
             1,  # Only 1 frame!
             self.fps,
             self.current_temp_dir,
             self,
-            gpu_enabled=gpu_enabled
+            gpu_enabled=gpu_enabled,
+            start_number=start_number
         )
         self.extraction_thread.finished_extraction.connect(self.on_first_frame_extracted)
         self.extraction_thread.start()
@@ -151,8 +188,8 @@ class CacheMixin:
             
         # Silently trigger the background sliding window cache extraction
         self.last_extracted_center = -1
-        print(f"[on_first_frame_extracted] Triggering request_frame_extraction for start_frame={start_frame}")
-        self.request_frame_extraction(start_frame, force=True)
+        print(f"[on_first_frame_extracted] Triggering request_frame_extraction for current_cache_index={self.current_cache_index}")
+        self.request_frame_extraction(self.current_cache_index, force=True)
 
     def check_sliding_window(self):
         if self.last_extracted_center == -1:
@@ -188,7 +225,7 @@ class CacheMixin:
         # Prune old frames to save disk/RAM
         center = self.last_extracted_center
         prune_threshold = self.cache_window_half * 1.5
-        keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold]
+        keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold and (not getattr(self, 'is_motion_photo', False) or k != 0)]
 
         for k in keys_to_delete:
             try:
@@ -333,7 +370,16 @@ class CacheMixin:
 
             if self.pixmapItem:
                 self.pixmapItem.setPixmap(pixmap)
-                self.apply_transformations(fit=False)
+                
+                # Only auto-fit when transitioning to/from the static JPEG (frame 0) of a motion photo
+                fit_val = False
+                if getattr(self, 'is_motion_photo', False):
+                    last_idx = getattr(self, '_last_rendered_index', -1)
+                    if self.current_cache_index == 0 or last_idx == 0:
+                        fit_val = True
+                
+                self.apply_transformations(fit=fit_val)
+                self._last_rendered_index = self.current_cache_index
 
             if hasattr(self, 'frameLabel'):
                 self.frameLabel.setText(
