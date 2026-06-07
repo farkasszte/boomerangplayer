@@ -221,7 +221,10 @@ TRANSLATIONS = {
         'bg_color': 'Background color',
         'choose_bg_color': 'Choose background color',
         'panel_opacity': 'Panel opacity',
-        'tip_panel_opacity': 'Adjust background opacity of side and bottom panels'
+        'tip_panel_opacity': 'Adjust background opacity of side and bottom panels',
+        'select_audio_track': 'Select audio track',
+        'active': 'Active',
+        'track': 'Track'
     },
     'hu': {
         # Navigation/UI
@@ -446,7 +449,10 @@ TRANSLATIONS = {
         'bg_color': 'Háttérszín',
         'choose_bg_color': 'Válassz háttérszínt',
         'panel_opacity': 'Panelek átlátszatlansága',
-        'tip_panel_opacity': 'Az oldalsó és alsó panelek háttér-átlátszóságának beállítása'
+        'tip_panel_opacity': 'Az oldalsó és alsó panelek háttér-átlátszóságának beállítása',
+        'select_audio_track': 'Audió sáv kiválasztása',
+        'active': 'Aktív',
+        'track': 'Sáv'
     }
 }
 
