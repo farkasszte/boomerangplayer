@@ -74,6 +74,7 @@ class CacheMixin:
                 self.extraction_thread = None
             else:
                 print(f"[request_frame_extraction] Aborted: extraction thread is already running.")
+                self.last_extracted_center = center_frame
                 return  # Already extracting
 
         start_frame = max(0, center_frame - self.cache_window_half)
@@ -247,6 +248,86 @@ class CacheMixin:
         threshold = self.cache_window_half // 2
         if dist > threshold:
             self.request_frame_extraction(self.current_cache_index)
+        else:
+            self.check_proactive_cache()
+
+    def check_proactive_cache(self):
+        if not self.currentFilePath:
+            return
+
+        if self.extraction_thread and self.extraction_thread.isRunning():
+            return
+
+
+        max_cache_ahead = self.cache_window_half * 2
+        target_end = min(self.total_frames - 1, self.current_cache_index + max_cache_ahead)
+
+        first_missing = -1
+        for i in range(self.current_cache_index, target_end + 1):
+            if i not in self.cached_frame_dict:
+                first_missing = i
+                break
+
+        if first_missing == -1:
+            return
+
+        chunk_size = self.cache_window_half
+        start_frame = first_missing
+        end_frame = min(self.total_frames - 1, start_frame + chunk_size - 1)
+        num_frames = end_frame - start_frame + 1
+
+        if num_frames <= 0:
+            return
+
+        player_range_start = start_frame
+        player_range_end = end_frame
+
+        missing = [i for i in range(start_frame, start_frame + num_frames)
+                   if i not in self.cached_frame_dict]
+        if not missing:
+            return
+
+        start_frame = missing[0]
+        num_frames = missing[-1] - missing[0] + 1
+
+        if not self.current_temp_dir:
+            import uuid
+            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
+
+        video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
+
+        actual_start_frame = start_frame
+        actual_num_frames = num_frames
+        start_number = None
+        if getattr(self, 'is_motion_photo', False):
+            actual_start_player = max(1, start_frame)
+            actual_end_player = start_frame + num_frames - 1
+            if actual_start_player > actual_end_player:
+                return
+            actual_start_frame = actual_start_player - 1
+            actual_num_frames = actual_end_player - actual_start_player + 1
+            start_number = actual_start_player
+
+        from mixins.threads import FrameExtractionThread
+        gpu_enabled = self.config.get('gpu_acceleration', False)
+        print(f"[check_proactive_cache] Starting proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_end={target_end}")
+        
+        self.last_extracted_center = start_frame + num_frames // 2
+
+        self.extraction_thread = FrameExtractionThread(
+            video_path,
+            actual_start_frame,
+            actual_num_frames,
+            self.fps,
+            self.current_temp_dir,
+            self,
+            gpu_enabled=gpu_enabled,
+            start_number=start_number
+        )
+        self.extraction_thread.player_start = player_range_start
+        self.extraction_thread.player_end = player_range_end
+        self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
+        self.extraction_thread.start()
 
     # ------------------------------------------------------------------ #
     # Extraction callback                                                  #
@@ -270,11 +351,18 @@ class CacheMixin:
         new_dict = {**self.cached_frame_dict, **frame_dict}
         self.cached_file_path = self.currentFilePath
 
-        # Prune old frames to save disk/RAM (skip for short videos that fit entirely in cache)
+        # Prune old/future frames to save RAM (skip for short videos that fit entirely in cache)
         if self.total_frames > self.cache_window_half * 2:
-            center = self.last_extracted_center
-            prune_threshold = self.cache_window_half * 1.5
-            keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold and (not getattr(self, 'is_motion_photo', False) or k != 0)]
+            playhead = self.current_cache_index
+            prune_behind = self.cache_window_half
+            prune_ahead = int(self.cache_window_half * 2.5)
+
+            keys_to_delete = []
+            for k in new_dict:
+                if getattr(self, 'is_motion_photo', False) and k == 0:
+                    continue
+                if k < playhead - prune_behind or k > playhead + prune_ahead:
+                    keys_to_delete.append(k)
 
             for k in keys_to_delete:
                 val = new_dict[k]
@@ -309,6 +397,8 @@ class CacheMixin:
         if self.extraction_thread:
             self.extraction_thread.wait()
             self.extraction_thread = None
+
+        self.check_proactive_cache()
 
         if getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False
