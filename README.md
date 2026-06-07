@@ -3,7 +3,7 @@
 A high-performance, frame-accurate video player built for Windows 11. Designed for professional motion analysis, sports coaching, and frame-perfect annotation.
 
 <p align="center">
-  <img src="app_icon.png" width="128" height="128" alt="Boomerang Player Icon">
+  <img src="resources/app_icon.png" width="128" height="128" alt="Boomerang Player Icon">
 </p>
 
 ## 🌟 Premium Features

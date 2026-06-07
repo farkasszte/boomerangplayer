@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[('ffmpeg.exe', '.'), ('ffprobe.exe', '.')],
-    datas=[('app_icon.ico', '.')],
+    datas=[('resources', 'resources')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['app_icon.ico'],
+    icon=['resources/app_icon.ico'],
 )

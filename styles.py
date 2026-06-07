@@ -126,7 +126,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
     """
 
     styles['TOOL_BTN_STYLE'] = f"""
-        PushButton {{
+        PushButton, ToolButton {{
             font-size: 13px;
             font-weight: 500;
             padding: 6px;
@@ -134,15 +134,15 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 4px;
         }}
-        PushButton:hover {{
+        PushButton:hover, ToolButton:hover {{
             background: rgba(255, 255, 255, 0.1);
         }}
-        PushButton[checked=true] {{
+        PushButton[checked=true], ToolButton[checked=true] {{
             background: rgba({_hex_to_rgb(accent_color)}, 0.15);
             border: 1px solid {accent_color};
             color: {accent_color};
         }}
-        PushButton:checked {{
+        PushButton:checked, ToolButton:checked {{
             background: rgba({_hex_to_rgb(accent_color)}, 0.15);
             border: 1px solid {accent_color};
             color: {accent_color};

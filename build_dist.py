@@ -20,8 +20,8 @@ args = [
     '--onefile',           # Single EXE
     '--windowed',          # No console window
     f'--name={APP_NAME}',
-    '--icon=app_icon.ico',
-    '--add-data=app_icon.ico;.', # Add icon to data so QIcon can load it
+    '--icon=resources/app_icon.ico',
+    '--add-data=resources;resources', # Bundle resources folder including SVGs and window icon
     '--clean',
 ]
 

@@ -182,3 +182,6 @@ class StyleUIMixin:
 
         if hasattr(self, 'update_sync_lock_button_style'):
             self.update_sync_lock_button_style()
+
+        if hasattr(self, 'update_lock_icon'):
+            self.update_lock_icon()

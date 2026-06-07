@@ -450,8 +450,9 @@ class MarkerMixin(MarkerMixinBase):
             self.loopCombo.setCurrentIndex(loop_mode)
             self.isPingPong = (loop_mode == 3)
 
-            # pyrefly: ignore [missing-attribute]
-            self.speedSlider.setValue(data.get('speed', 100))
+            if not getattr(self, 'isSpeedLocked', False):
+                # pyrefly: ignore [missing-attribute]
+                self.speedSlider.setValue(data.get('speed', 100))
             self.isMirrored = data.get('isMirrored', False)
             self.isMirroredVertical = data.get('isMirroredVertical', False)
             self.rotationAngle = data.get('rotationAngle', 0)
@@ -496,8 +497,9 @@ class MarkerMixin(MarkerMixinBase):
             # pyrefly: ignore [missing-attribute]
             self.progressBar.update_markers(self.markers)
             self.needs_range_update = True
-            # pyrefly: ignore [missing-attribute]
-            self.speedSlider.setValue(100)
+            if not getattr(self, 'isSpeedLocked', False):
+                # pyrefly: ignore [missing-attribute]
+                self.speedSlider.setValue(100)
             
             # Reset transform state so previous video's flips/rotation don't carry over
             self.isMirrored = False

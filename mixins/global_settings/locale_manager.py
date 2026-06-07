@@ -207,6 +207,12 @@ class GlobalSettingsLocaleManagerMixin:
         self.penColorBtn.setToolTip(tr('tip_color'))
         # pyrefly: ignore [missing-attribute]
         self.speedSlider.setToolTip(tr('tip_playback_speed'))
+        if hasattr(self, 'speedLockBtn') and self.speedLockBtn:
+            # pyrefly: ignore [missing-attribute]
+            if getattr(self, 'isSpeedLocked', False):
+                self.speedLockBtn.setToolTip(tr('tip_speed_locked'))
+            else:
+                self.speedLockBtn.setToolTip(tr('tip_speed_unlocked'))
         # pyrefly: ignore [missing-attribute]
         self.zoomSlider.setToolTip(tr('tip_zoom'))
         # pyrefly: ignore [missing-attribute]

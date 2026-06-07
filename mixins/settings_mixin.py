@@ -7,9 +7,25 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
                               QGridLayout, QWidget, QComboBox, QSpinBox)
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
-                             SingleDirectionScrollArea, ToolButton, FluentIcon)
+                             SingleDirectionScrollArea, ToolButton, FluentIcon,
+                             FluentIconBase, Theme)
 from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE)
 from translations import tr
+import os
+
+
+class LocalIcon(FluentIconBase):
+    def __init__(self, filename):
+        self.filename = filename
+
+    def path(self, theme=Theme.AUTO):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_dir, 'resources', self.filename)
+
+
+LOCK_ICON = LocalIcon('lock.svg')
+UNLOCK_ICON = LocalIcon('unlock.svg')
+
 
 
 from typing import TYPE_CHECKING
@@ -33,6 +49,8 @@ class SettingsMixin(SettingsMixinBase):
         speedValueLabel: QSpinBox
         zoomSlider: QSlider
         zoomValueLabel: QSpinBox
+        isSpeedLocked: bool
+        speedLockBtn: ToolButton
         brightnessSlider: QSlider
         contrastSlider: QSlider
         gammaSlider: QSlider
@@ -101,8 +119,39 @@ class SettingsMixin(SettingsMixinBase):
         self.speedValueLabel.setSuffix("%")
         self.speedValueLabel.setFixedWidth(80)
         self.speedValueLabel.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        
+        # Speed lock state
+        self.isSpeedLocked = self.config.get('speed_locked', False)
+        self.speedLockBtn = ToolButton(UNLOCK_ICON, self.settingsContainer)
+        self.speedLockBtn.setCheckable(True)
+        self.speedLockBtn.setFixedWidth(32)
+        self.speedLockBtn.setFixedHeight(32)
+        self.speedLockBtn.setStyleSheet("""
+            ToolButton {
+                background: transparent;
+                border: none;
+                border-radius: 4px;
+            }
+            ToolButton:hover {
+                background: rgba(255, 255, 255, 0.08);
+            }
+            ToolButton:pressed {
+                background: rgba(255, 255, 255, 0.04);
+            }
+        """)
+        
+        def toggle_speed_lock():
+            self.isSpeedLocked = not self.isSpeedLocked
+            self.config['speed_locked'] = self.isSpeedLocked
+            self.config.save()
+            self.update_lock_icon()
+            
+        self.speedLockBtn.clicked.connect(toggle_speed_lock)
+        self.update_lock_icon()
+
         speedHeader.addWidget(self.speedLabel)
         speedHeader.addStretch(1)
+        speedHeader.addWidget(self.speedLockBtn)
         speedHeader.addWidget(self.speedValueLabel)
 
         self.speedSlider = QSlider(Qt.Orientation.Horizontal)
@@ -566,5 +615,20 @@ class SettingsMixin(SettingsMixinBase):
         hline_sync.setFrameShape(QFrame.Shape.HLine)
         hline_sync.setFrameShadow(QFrame.Shadow.Sunken)
         self.settingsInnerLayout.addWidget(hline_sync)
+
+    def update_lock_icon(self):
+        if not hasattr(self, 'speedLockBtn') or not self.speedLockBtn:
+            return
+        self.speedLockBtn.setChecked(self.isSpeedLocked)
+        if self.isSpeedLocked:
+            from qfluentwidgets import themeColor
+            # Render the SVG using the active theme accent color
+            self.speedLockBtn.setIcon(LOCK_ICON.icon(color=themeColor()))
+            self.speedLockBtn.setToolTip(tr('tip_speed_locked'))
+        else:
+            from PyQt6.QtGui import QColor
+            # Render the SVG using white color (#ffffff)
+            self.speedLockBtn.setIcon(UNLOCK_ICON.icon(color=QColor('#ffffff')))
+            self.speedLockBtn.setToolTip(tr('tip_speed_unlocked'))
 
 

@@ -69,7 +69,7 @@ class PlayerWindow(
         setThemeColor(QColor(accent_color))
 
         super().__init__()
-        self.setWindowIcon(QIcon(get_resource_path("app_icon.ico")))
+        self.setWindowIcon(QIcon(get_resource_path("resources/app_icon.ico")))
         self.setWindowTitle(f"Boomerang Player v{VERSION}")
         self.titleBar.setFixedHeight(32)
         

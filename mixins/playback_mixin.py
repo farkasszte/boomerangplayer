@@ -15,7 +15,7 @@ from translations import tr
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QMainWindow, QPushButton
+    from PyQt6.QtWidgets import QMainWindow, QPushButton, QSlider
     from PyQt6.QtMultimedia import QMediaPlayer
     from config import Configuration
     PlaybackMixinBase = QMainWindow
@@ -42,6 +42,7 @@ class PlaybackMixin(PlaybackMixinBase):
         total_frames: int
         playButton: QPushButton
         config: Configuration
+        speedSlider: QSlider
         
         # pyrefly: ignore [not-a-type]
         cleanup_cache: callable
@@ -326,6 +327,9 @@ class PlaybackMixin(PlaybackMixinBase):
             self.mediaPlayer.setPosition(audio_pos)
             # pyrefly: ignore [missing-attribute]
             self.audioOutput.setMuted(self.userMutedIntent)
+            # Ensure the playback rate is set before calling play
+            rate = self.speedSlider.value() / 100.0
+            self.mediaPlayer.setPlaybackRate(rate)
             self.mediaPlayer.play()
         else:
             self.mediaPlayer.pause()
@@ -433,6 +437,9 @@ class PlaybackMixin(PlaybackMixinBase):
                         )
                         # pyrefly: ignore [missing-attribute]
                         self.audioOutput.setMuted(self.userMutedIntent)
+                        # Ensure the playback rate is set before calling play
+                        rate = self.speedSlider.value() / 100.0
+                        self.mediaPlayer.setPlaybackRate(rate)
                         self.mediaPlayer.play()
                 elif loop_mode == 2:  # Backward loop
                     self.current_cache_index = end_frame - (start_frame - self.current_cache_index - 1)
@@ -572,6 +579,14 @@ class PlaybackMixin(PlaybackMixinBase):
             self.stepForwardButton.setEnabled(is_paused_or_stopped)
         self.update_play_icons()
 
+        # Re-apply locked speed when transitioning to playing state
+        if state == QMediaPlayer.PlaybackState.PlayingState:
+            is_speed_locked = getattr(self, 'isSpeedLocked', False)
+            speed_slider = getattr(self, 'speedSlider', None)
+            if speed_slider is not None and is_speed_locked:
+                speed_val = speed_slider.value()
+                self.mediaPlayer.setPlaybackRate(speed_val / 100.0)
+
     def update_duration(self, duration):
         # Use ffprobe nb_frames if available to prevent drift/over-estimation
         if hasattr(self, 'ffprobe_nb_frames') and self.ffprobe_nb_frames > 0:
@@ -593,8 +608,16 @@ class PlaybackMixin(PlaybackMixinBase):
         self.update_loop_frames_label()
 
     def handle_status_change(self, status):
-        if status == QMediaPlayer.MediaStatus.LoadedMedia:
-            self.handle_metadata_change()
+        if status in (QMediaPlayer.MediaStatus.LoadedMedia, QMediaPlayer.MediaStatus.BufferedMedia):
+            if status == QMediaPlayer.MediaStatus.LoadedMedia:
+                self.handle_metadata_change()
+            
+            # Apply current speed slider value to the media player
+            speed_slider = getattr(self, 'speedSlider', None)
+            if speed_slider is not None:
+                speed_val = speed_slider.value()
+                self.mediaPlayer.setPlaybackRate(speed_val / 100.0)
+
             # pyrefly: ignore [missing-attribute]
             if self.view and self.pixmapItem and self.last_transform_state is None:
                 self.apply_transformations(fit=True)

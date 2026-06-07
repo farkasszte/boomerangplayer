@@ -58,6 +58,7 @@ DEFAULT_CONFIG = {
     'language': 'en',
     'audio_device': '',
     'panel_opacity': 100,
+    'speed_locked': False,
     'shortcuts': {
         'play_pause': Qt.Key.Key_Space,
         'smart_mark': Qt.Key.Key_S,
@@ -152,11 +153,17 @@ def cleanup_nvidia_dxcache():
             
             # Step 1: Clean up files from previous sessions
             session_path = os.path.join(get_base_path(), "dxcache_session.json")
-            old_files = []
+            config = load_config()
+            old_files = config.get('dxcache_files', [])
+            
+            # Migrate old dxcache_session.json file if it exists and delete it
             if os.path.exists(session_path):
                 try:
                     with open(session_path, 'r') as f:
-                        old_files = json.load(f)
+                        migrated_files = json.load(f)
+                        if isinstance(migrated_files, list):
+                            old_files = list(set(old_files + migrated_files))
+                    os.remove(session_path)
                 except Exception:
                     pass
             
@@ -198,8 +205,9 @@ def cleanup_nvidia_dxcache():
             # Save our session files (merge with any remaining old locked files)
             combined_files = list(set(remaining_old_files + session_filepaths))
             try:
-                with open(session_path, 'w') as f:
-                    json.dump(combined_files, f)
+                config = load_config()
+                config['dxcache_files'] = combined_files
+                save_config(config)
             except Exception:
                 pass
                 
