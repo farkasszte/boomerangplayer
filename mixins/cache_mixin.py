@@ -151,7 +151,8 @@ class CacheMixin:
             return
 
         self.cleanup_cache(keep_extracted_video=True)
-        self.loadingOverlay.show()
+        if getattr(self, 'is_playing', False):
+            self.loadingOverlay.show()
 
         data = self.playlistData.get(self.currentFilePath, {})
         start_pos = data.get('startFrame', 0)

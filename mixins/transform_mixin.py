@@ -116,6 +116,35 @@ class TransformMixin:
                 self.view.zoomLevel = 1.0
                 self.sync_zoom_ui(1.0)
 
+            self.update_loading_overlay_geometry()
+
+    def update_loading_overlay_geometry(self):
+        if not hasattr(self, 'loadingOverlay') or not self.loadingOverlay:
+            return
+        if not self.loadingOverlay.isVisible():
+            return
+        if not hasattr(self, 'view') or not self.view:
+            return
+
+        from PyQt6.QtCore import QRect
+        geom = QRect(0, 0, self.view.width(), self.view.height())
+
+        if hasattr(self, 'pixmapItem') and self.pixmapItem:
+            pix = self.pixmapItem.pixmap()
+            if pix and not pix.isNull():
+                scene_rect = self.pixmapItem.sceneBoundingRect()
+                viewport_rect = self.view.mapFromScene(scene_rect).boundingRect()
+                if viewport_rect.isValid() and viewport_rect.width() > 0 and viewport_rect.height() > 0:
+                    geom = viewport_rect
+
+        self.loadingOverlay.setGeometry(geom)
+
+        text_len = max(len(self.loadingOverlay.text()), 1)
+        font = self.loadingOverlay.font()
+        font_size = min(24, max(12, int(geom.width() / (text_len * 0.6))))
+        font.setPixelSize(font_size)
+        self.loadingOverlay.setFont(font)
+
     # ------------------------------------------------------------------ #
     # Resize event                                                         #
     # ------------------------------------------------------------------ #
@@ -123,16 +152,8 @@ class TransformMixin:
     def resizeEvent(self, event):
         super().resizeEvent(event)
         
-        if hasattr(self, 'loadingOverlay') and self.loadingOverlay:
-            self.loadingOverlay.setGeometry(0, 0, self.view.width(), self.view.height())
-            text_len = max(len(self.loadingOverlay.text()), 1)
-            font = self.loadingOverlay.font()
-            # Calculate a font size that fits the view width (approx 0.6 factor for average character width)
-            # Minimum 12px, maximum 24px
-            font_size = min(24, max(12, int(self.view.width() / (text_len * 0.6))))
-            font.setPixelSize(font_size)
-            self.loadingOverlay.setFont(font)
-
         if (hasattr(self, 'pixmapItem') and self.view
                 and getattr(self, 'zoomLevel', 1.0) == 1.0):
             self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
+
+        self.update_loading_overlay_geometry()

@@ -87,6 +87,23 @@ class UIMixin(
         self.loadingOverlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loadingOverlay.hide()
 
+        # Dynamic show/setText overrides to keep overlay geometry and font synchronized with the video frame bounds
+        orig_show = self.loadingOverlay.show
+        orig_setText = self.loadingOverlay.setText
+        
+        def custom_show():
+            orig_show()
+            if hasattr(self, 'update_loading_overlay_geometry'):
+                self.update_loading_overlay_geometry()
+                
+        def custom_setText(text):
+            orig_setText(text)
+            if hasattr(self, 'update_loading_overlay_geometry'):
+                self.update_loading_overlay_geometry()
+                
+        self.loadingOverlay.show = custom_show
+        self.loadingOverlay.setText = custom_setText
+
         # Chronometer Overlay
         self.chronometerOverlay = QFrame(self.view)
         self.chronometerOverlay.setStyleSheet(default_styles['CHRONO_OVERLAY_STYLE'])
