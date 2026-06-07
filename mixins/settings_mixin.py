@@ -110,11 +110,27 @@ class SettingsMixin(SettingsMixinBase):
         self.speedSlider.setValue(100)
         self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         self.speedSlider.setToolTip(tr('tip_playback_speed'))
-        # pyrefly: ignore [missing-attribute]
-        self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
         
-        self.speedValueLabel.valueChanged.connect(self.speedSlider.setValue)
-        self.speedSlider.valueChanged.connect(self.speedValueLabel.setValue)
+        def update_speed(val):
+            rounded_val = round(val / 5) * 5
+            self.speedValueLabel.blockSignals(True)
+            self.speedValueLabel.setValue(rounded_val)
+            self.speedValueLabel.blockSignals(False)
+            if val != rounded_val:
+                self.speedSlider.blockSignals(True)
+                self.speedSlider.setValue(rounded_val)
+                self.speedSlider.blockSignals(False)
+            
+            # Apply playback speed change
+            rate = rounded_val / 100.0
+            if hasattr(self, 'mediaPlayer') and self.mediaPlayer is not None:
+                self.mediaPlayer.setPlaybackRate(rate)
+            if not getattr(self, '_block_broadcast', False) and hasattr(self, 'broadcast_sync_event'):
+                # pyrefly: ignore [missing-attribute]
+                self.broadcast_sync_event("speed", rounded_val)
+
+        self.speedSlider.valueChanged.connect(update_speed)
+        self.speedValueLabel.valueChanged.connect(update_speed)
         
         self.settingsInnerLayout.addLayout(speedHeader)
         self.settingsInnerLayout.addWidget(self.speedSlider)
@@ -140,10 +156,32 @@ class SettingsMixin(SettingsMixinBase):
         self.zoomSlider.setValue(100)
         self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         self.zoomSlider.setToolTip(tr('tip_zoom'))
-        self.zoomSlider.valueChanged.connect(self.update_zoom)
         
-        self.zoomValueLabel.valueChanged.connect(self.zoomSlider.setValue)
-        self.zoomSlider.valueChanged.connect(self.zoomValueLabel.setValue)
+        def update_zoom_val(val):
+            rounded_val = round(val / 20) * 20
+            if rounded_val < 100:
+                rounded_val = 100
+            
+            self.zoomValueLabel.blockSignals(True)
+            self.zoomValueLabel.setValue(rounded_val)
+            self.zoomValueLabel.blockSignals(False)
+            if val != rounded_val:
+                self.zoomSlider.blockSignals(True)
+                self.zoomSlider.setValue(rounded_val)
+                self.zoomSlider.blockSignals(False)
+            
+            # Apply zoom transform
+            self.zoomLevel = rounded_val / 100.0
+            if hasattr(self, 'view') and self.view is not None:
+                from PyQt6.QtWidgets import QGraphicsView
+                factor = self.zoomLevel / self.view.zoomLevel
+                self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+                self.view.scale(factor, factor)
+                self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+                self.view.zoomLevel = self.zoomLevel
+
+        self.zoomSlider.valueChanged.connect(update_zoom_val)
+        self.zoomValueLabel.valueChanged.connect(update_zoom_val)
         
         zoomGroup.addWidget(self.zoomSlider)
 
@@ -226,17 +264,19 @@ class SettingsMixin(SettingsMixinBase):
         self.qvSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         self.qvSlider.setToolTip(tr('tip_mjpeg_quality'))
         
-        self.qvValueSpinBox.valueChanged.connect(self.qvSlider.setValue)
-        
-        def update_qv_value(val):
+        def update_qv(val):
             self.config['qv_value'] = val
             self.config.save()
             
-            if self.qvValueSpinBox.value() != val:
-                self.qvValueSpinBox.blockSignals(True)
-                self.qvValueSpinBox.setValue(val)
-                self.qvValueSpinBox.blockSignals(False)
-                
+            self.qvValueSpinBox.blockSignals(True)
+            self.qvValueSpinBox.setValue(val)
+            self.qvValueSpinBox.blockSignals(False)
+            
+            self.qvSlider.blockSignals(True)
+            self.qvSlider.setValue(val)
+            self.qvSlider.blockSignals(False)
+            
+            # Debounce extraction
             if hasattr(self, '_qv_debounce_timer'):
                 self._qv_debounce_timer.stop()
             from PyQt6.QtCore import QTimer
@@ -249,7 +289,8 @@ class SettingsMixin(SettingsMixinBase):
             )
             self._qv_debounce_timer.start(300)
 
-        self.qvSlider.valueChanged.connect(update_qv_value)
+        self.qvSlider.valueChanged.connect(update_qv)
+        self.qvValueSpinBox.valueChanged.connect(update_qv)
         qvGroup.addWidget(self.qvSlider)
         cacheGroup.addLayout(qvGroup)
         

@@ -1,4 +1,4 @@
-import PyInstaller.__main__
+import PyInstaller.__main__  # type: ignore
 import os
 import shutil
 

@@ -10,7 +10,7 @@ from PyQt6.QtGui import QTransform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QMainWindow, QSlider, QLabel
+    from PyQt6.QtWidgets import QMainWindow, QSlider, QLabel, QSpinBox
     from components import ZoomView, GPUPixmapItem
     TransformMixinBase = QMainWindow
 else:
@@ -22,7 +22,7 @@ class TransformMixin(TransformMixinBase):
         zoomSlider: QSlider
         zoomLevel: float
         view: ZoomView
-        zoomValueLabel: QLabel
+        zoomValueLabel: QSpinBox
         pixmapItem: GPUPixmapItem | None
         isMirrored: bool
         isMirroredVertical: bool
@@ -50,12 +50,9 @@ class TransformMixin(TransformMixinBase):
 
         self.view.zoomLevel = self.zoomLevel
         if hasattr(self, 'zoomValueLabel') and self.zoomValueLabel:
-            if hasattr(self.zoomValueLabel, 'setValue'):
-                self.zoomValueLabel.blockSignals(True)
-                self.zoomValueLabel.setValue(snapped)
-                self.zoomValueLabel.blockSignals(False)
-            else:
-                self.zoomValueLabel.setText(f"{snapped}%")
+            self.zoomValueLabel.blockSignals(True)
+            self.zoomValueLabel.setValue(snapped)
+            self.zoomValueLabel.blockSignals(False)
 
     def sync_zoom_ui(self, zoom_level):
         self.zoomLevel = zoom_level
@@ -68,12 +65,9 @@ class TransformMixin(TransformMixinBase):
         self.zoomSlider.setSliderPosition(val)
         self.zoomSlider.blockSignals(False)
         if hasattr(self, 'zoomValueLabel') and self.zoomValueLabel:
-            if hasattr(self.zoomValueLabel, 'setValue'):
-                self.zoomValueLabel.blockSignals(True)
-                self.zoomValueLabel.setValue(val)
-                self.zoomValueLabel.blockSignals(False)
-            else:
-                self.zoomValueLabel.setText(f"{val}%")
+            self.zoomValueLabel.blockSignals(True)
+            self.zoomValueLabel.setValue(val)
+            self.zoomValueLabel.blockSignals(False)
         self.zoomSlider.update()
 
     # ------------------------------------------------------------------ #
