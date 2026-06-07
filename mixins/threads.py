@@ -14,34 +14,69 @@ class FrameExtractionThread(QThread):
         self.start_frame = start_frame
         self.num_frames = num_frames
         self.fps = fps if fps > 0 else 30.0
-        self.temp_dir_owned = (temp_dir is None)
-        self.temp_dir = temp_dir if temp_dir else tempfile.mkdtemp(prefix="boomerang_frames_")
         self.process = None
         self._is_cancelled = False
         self.gpu_enabled = gpu_enabled
         self.player_idx = player_idx
         self.start_number = start_number if start_number is not None else start_frame
-        
-    def _cleanup_temp_if_owned(self):
-        if self.temp_dir_owned:
-            import shutil
+        self.temp_dir = temp_dir
+
+    def _extract_from_pipe(self, cmd, creationflags):
+        if self._is_cancelled:
+            return {}
+
+        self.process = subprocess.Popen(
+            cmd,
+            creationflags=creationflags,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+
+        if self._is_cancelled:
             try:
-                shutil.rmtree(self.temp_dir, ignore_errors=True)
+                self.process.kill()
+            except OSError:
+                pass
+            self.process.wait()
+            return {}
+        
+        frame_bytes = {}
+        buffer = bytearray()
+        frame_idx = self.start_number
+        
+        while not self._is_cancelled:
+            chunk = self.process.stdout.read(65536)
+            if not chunk:
+                break
+            buffer.extend(chunk)
+            
+            while True:
+                start_idx = buffer.find(b'\xff\xd8')
+                if start_idx == -1:
+                    if len(buffer) > 0:
+                        buffer = buffer[-1:]
+                    break
+                
+                end_idx = buffer.find(b'\xff\xd9', start_idx)
+                if end_idx == -1:
+                    if start_idx > 0:
+                        buffer = buffer[start_idx:]
+                    break
+                
+                img_data = bytes(buffer[start_idx : end_idx + 2])
+                frame_bytes[frame_idx] = img_data
+                frame_idx += 1
+                
+                buffer = buffer[end_idx + 2:]
+                
+        if self._is_cancelled:
+            try:
+                self.process.kill()
             except OSError:
                 pass
 
-    def _collect_frame_files(self):
-        frame_files = {}
-        if self.num_frames == 1:
-            fpath = os.path.join(self.temp_dir, f"frame_{self.start_number:08d}_first.jpg")
-            if os.path.exists(fpath):
-                frame_files[self.start_number] = fpath
-        else:
-            for i in range(self.start_number, self.start_number + self.num_frames):
-                fpath = os.path.join(self.temp_dir, f"frame_{i:08d}.jpg")
-                if os.path.exists(fpath):
-                    frame_files[i] = fpath
-        return frame_files
+        self.process.wait()
+        return frame_bytes
 
     def run(self):
         try:
@@ -51,91 +86,65 @@ class FrameExtractionThread(QThread):
             if not os.path.exists(ffmpeg_path):
                 ffmpeg_path = "ffmpeg"
                 
-            if self.num_frames == 1:
-                out_pattern = os.path.join(self.temp_dir, f"frame_{self.start_number:08d}_first.jpg")
-            else:
-                out_pattern = os.path.join(self.temp_dir, "frame_%08d.jpg")
-                
             start_time = self.start_frame / self.fps
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             
-            # Layer 1: Requested configuration (GPU if enabled, Input seeking if start_frame > 0)
-            cmd = [ffmpeg_path, "-y"]
-            if self.gpu_enabled:
-                cmd.extend(["-hwaccel", "auto"])
-            if self.start_frame > 0:
-                cmd.extend(["-ss", str(start_time)])
-            cmd.extend([
-                "-i", self.video_path,
-                "-vframes", str(self.num_frames),
-                "-start_number", str(self.start_number),
-                "-q:v", "2", 
-                out_pattern
-            ])
+            # Calculate combined seek parameters (approximate fast input seek + exact output seek)
+            # We seek to 0.5 seconds before the target time, then decode and discard the remaining 0.5 seconds
+            # This is much faster for heavy codecs like AV1 than the previous 5.0s margin.
+            approx_time = max(0.0, start_time - 0.5)
+            exact_delta = start_time - approx_time
             
-            self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            self.process.wait()
-            
-            if self._is_cancelled:
-                self._cleanup_temp_if_owned()
-                self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
-                return
-            
-            frame_files = self._collect_frame_files()
-            
-            # Layer 2 Fallback: If GPU-accelerated extraction failed to yield files, fallback to software decoding
-            if not frame_files and self.gpu_enabled and not self._is_cancelled:
-                print(f"[FrameExtractionThread] GPU-accelerated extraction failed for {self.video_path}. Retrying in software mode.")
-                cmd = [ffmpeg_path, "-y"]
-                if self.start_frame > 0:
-                    cmd.extend(["-ss", str(start_time)])
-                cmd.extend([
-                    "-i", self.video_path,
+            def build_cmd(gpu=False, fallback_output_only=False):
+                c = [ffmpeg_path, "-y"]
+                if gpu:
+                    c.extend(["-hwaccel", "auto"])
+                
+                # Use all available CPU threads for decoding/encoding
+                c.extend(["-threads", "0"])
+                
+                if fallback_output_only:
+                    # Full output seeking (100% accurate, no input seeking)
+                    c.extend(["-i", self.video_path])
+                    if start_time > 0:
+                        c.extend(["-ss", f"{start_time:.6f}"])
+                else:
+                    # Combined seeking (fast input seek + accurate output seek)
+                    if approx_time > 0:
+                        c.extend(["-ss", f"{approx_time:.6f}"])
+                    c.extend(["-i", self.video_path])
+                    if exact_delta > 0:
+                        c.extend(["-ss", f"{exact_delta:.6f}"])
+                
+                c.extend([
                     "-vframes", str(self.num_frames),
-                    "-start_number", str(self.start_number),
+                    "-f", "image2pipe",
+                    "-vcodec", "mjpeg",
                     "-q:v", "2", 
-                    out_pattern
+                    "-"
                 ])
-                
-                self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                self.process.wait()
-                
-                if self._is_cancelled:
-                    self._cleanup_temp_if_owned()
-                    self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
-                    return
-                frame_files = self._collect_frame_files()
-                
-            # Layer 3 Fallback: If input seeking failed and start_frame > 0, fallback to highly robust software output seeking
-            if not frame_files and self.start_frame > 0 and not self._is_cancelled:
-                print(f"[FrameExtractionThread] Input seeking failed for {self.video_path}. Retrying with software output seeking.")
-                cmd = [ffmpeg_path, "-y", "-i", self.video_path]
-                cmd.extend([
-                    "-ss", str(start_time),
-                    "-vframes", str(self.num_frames),
-                    "-start_number", str(self.start_number),
-                    "-q:v", "2", 
-                    out_pattern
-                ])
-                
-                self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                self.process.wait()
-                
-                if self._is_cancelled:
-                    self._cleanup_temp_if_owned()
-                    self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
-                    return
-                frame_files = self._collect_frame_files()
+                return c
 
-            if not frame_files:
-                print(f"[FrameExtractionThread] Warning: All frame extraction layers failed for {self.video_path}")
-                self._cleanup_temp_if_owned()
+            # Layer 1: GPU enabled (if requested) + Combined seeking
+            cmd = build_cmd(gpu=self.gpu_enabled)
+            frame_bytes = self._extract_from_pipe(cmd, creationflags)
+            
+            # Layer 2 Fallback: If GPU failed, retry in software mode + Combined seeking
+            if not frame_bytes and self.gpu_enabled and not self._is_cancelled:
+                print(f"[FrameExtractionThread] GPU extraction failed. Retrying in software mode + combined seeking.")
+                cmd = build_cmd(gpu=False)
+                frame_bytes = self._extract_from_pipe(cmd, creationflags)
+                
+            # Layer 3 Fallback: If combined seeking failed, retry with full software output seeking
+            if not frame_bytes and self.start_frame > 0 and not self._is_cancelled:
+                print(f"[FrameExtractionThread] Combined seeking failed. Retrying with full software output seeking.")
+                cmd = build_cmd(gpu=False, fallback_output_only=True)
+                frame_bytes = self._extract_from_pipe(cmd, creationflags)
 
-            self.finished_extraction.emit(frame_files, self.temp_dir, self.start_frame, self.num_frames)
+            self.finished_extraction.emit(frame_bytes, self.temp_dir or "", self.start_frame, self.num_frames)
         except Exception as e:
             print(f"Extraction error: {e}")
-            self._cleanup_temp_if_owned()
-            self.finished_extraction.emit({}, self.temp_dir, self.start_frame, self.num_frames)
+            self.finished_extraction.emit({}, self.temp_dir or "", self.start_frame, self.num_frames)
 
     def cancel(self):
         self._is_cancelled = True

@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
-VERSION = "2.2"
+VERSION = "2.3"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -89,6 +89,10 @@ def load_config():
                 if 'shortcuts' in config:
                     merged['shortcuts'] = DEFAULT_CONFIG['shortcuts'].copy()
                     merged['shortcuts'].update(config['shortcuts'])
+                
+                # Force gpu_acceleration to True as we rely on the internal fallback now
+                merged['gpu_acceleration'] = True
+                
                 return merged
         except Exception as e:
             print(f"Error loading config: {e}")
@@ -126,11 +130,14 @@ def save_markers(markers_data):
         print(f"Error saving markers: {e}")
 
 def cleanup_nvidia_dxcache():
-    """ Garbage collect Nvidia DXCache (.nvph) files to prevent disk exhaustion.
-    Only files older than 15 minutes are targeted, and locked files are safely skipped.
-    Runs asynchronously in a background daemon thread to avoid blocking startup.
+    """ Garbage collect ONLY the Nvidia DXCache (.nvph) files created by our application.
+    Runs asynchronously in a background daemon thread.
+    - At startup: deletes files from the previous session (now unlocked) and records current files.
+    - After 5 seconds: scans again to detect which new files were created by this session.
     """
     import threading
+    import time
+    import json
     
     def worker():
         try:
@@ -142,31 +149,62 @@ def cleanup_nvidia_dxcache():
             if not os.path.exists(dxcache_dir) or not os.path.isdir(dxcache_dir):
                 return
             
-            import time
-            now = time.time()
-            deleted_count = 0
-            freed_bytes = 0
+            # Step 1: Clean up files from previous sessions
+            session_path = os.path.join(get_base_path(), "dxcache_session.json")
+            old_files = []
+            if os.path.exists(session_path):
+                try:
+                    with open(session_path, 'r') as f:
+                        old_files = json.load(f)
+                except Exception:
+                    pass
             
-            for filename in os.listdir(dxcache_dir):
-                if filename.lower().endswith('.nvph'):
-                    file_path = os.path.join(dxcache_dir, filename)
+            deleted_count = 0
+            remaining_old_files = []
+            for filepath in old_files:
+                if os.path.exists(filepath):
                     try:
-                        # Safety check: only delete files older than 15 minutes (900 seconds)
-                        mtime = os.path.getmtime(file_path)
-                        if now - mtime > 900:
-                            file_size = os.path.getsize(file_path)
-                            os.remove(file_path)
-                            deleted_count += 1
-                            freed_bytes += file_size
+                        os.remove(filepath)
+                        deleted_count += 1
                     except (PermissionError, OSError):
-                        # File is locked or in use, skip it
-                        continue
+                        # Still locked, keep in the list
+                        remaining_old_files.append(filepath)
             
             if deleted_count > 0:
-                print(f"[DXCache GC] Cleaned up {deleted_count} .nvph files, freeing {freed_bytes / (1024 * 1024):.2f} MB.")
+                print(f"[DXCache GC] Cleaned up {deleted_count} stale cache files from previous session.")
+            
+            # Step 2: Record current files to detect new ones
+            try:
+                initial_files = set(os.listdir(dxcache_dir))
+            except OSError:
+                return
+                
+            # Step 3: Wait for OpenGL / Shaders to compile and initialize (5 seconds)
+            time.sleep(5)
+            
+            # Step 4: Scan again to detect our session files
+            try:
+                current_files = set(os.listdir(dxcache_dir))
+            except OSError:
+                return
+                
+            new_files = current_files - initial_files
+            session_filepaths = []
+            for filename in new_files:
+                if filename.lower().endswith('.nvph'):
+                    session_filepaths.append(os.path.join(dxcache_dir, filename))
+            
+            # Save our session files (merge with any remaining old locked files)
+            combined_files = list(set(remaining_old_files + session_filepaths))
+            try:
+                with open(session_path, 'w') as f:
+                    json.dump(combined_files, f)
+            except Exception:
+                pass
+                
         except Exception as e:
-            print(f"[DXCache GC] Error running cache cleanup: {e}")
-
+            print(f"[DXCache GC] Error during cache tracking: {e}")
+            
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
 

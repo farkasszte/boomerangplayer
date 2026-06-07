@@ -422,6 +422,7 @@ class MarkerMixin:
             self.apply_transformations(fit=True)
             
             # Restore position
+            # Restore position
             last_pos = data.get('lastPosition', 0)
             if last_pos > 0:
                 self.set_position(last_pos)
@@ -457,7 +458,12 @@ class MarkerMixin:
 
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Frame", "", "PNG Image (*.png)")
         if fileName:
-            img = QImage(self.cached_frame_dict[self.current_cache_index])
+            data = self.cached_frame_dict[self.current_cache_index]
+            img = QImage()
+            if isinstance(data, bytes):
+                img.loadFromData(data)
+            elif isinstance(data, str):
+                img.load(data)
             img.save(fileName)
 
     def save_loop_segment(self):

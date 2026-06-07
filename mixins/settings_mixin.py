@@ -131,6 +131,22 @@ class SettingsMixin:
                 self.cacheSlider.blockSignals(True)
                 self.cacheSlider.setValue(rounded_val)
                 self.cacheSlider.blockSignals(False)
+            
+            # Save to config
+            self.config['cache_window'] = rounded_val
+            self.config.save()
+            
+            # Debounce: only trigger extraction 300ms after the last slider movement
+            if hasattr(self, '_cache_debounce_timer'):
+                self._cache_debounce_timer.stop()
+            from PyQt6.QtCore import QTimer
+            self._cache_debounce_timer = QTimer()
+            self._cache_debounce_timer.setSingleShot(True)
+            self._cache_debounce_timer.timeout.connect(
+                lambda: self.request_frame_extraction(self.current_cache_index, force=True)
+                        if getattr(self, 'currentFilePath', None) else None
+            )
+            self._cache_debounce_timer.start(300)
 
         self.cacheSlider.valueChanged.connect(update_cache_size)
         cacheGroup.addWidget(self.cacheSlider)

@@ -125,6 +125,13 @@ class TransformMixin:
         
         if hasattr(self, 'loadingOverlay') and self.loadingOverlay:
             self.loadingOverlay.setGeometry(0, 0, self.view.width(), self.view.height())
+            text_len = max(len(self.loadingOverlay.text()), 1)
+            font = self.loadingOverlay.font()
+            # Calculate a font size that fits the view width (approx 0.6 factor for average character width)
+            # Minimum 12px, maximum 24px
+            font_size = min(24, max(12, int(self.view.width() / (text_len * 0.6))))
+            font.setPixelSize(font_size)
+            self.loadingOverlay.setFont(font)
 
         if (hasattr(self, 'pixmapItem') and self.view
                 and getattr(self, 'zoomLevel', 1.0) == 1.0):

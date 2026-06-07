@@ -21,23 +21,26 @@ class CacheMixin:
             self.extraction_thread.cancel()
             self.extraction_thread.wait()
 
-        if self.current_temp_dir and os.path.exists(self.current_temp_dir):
-            if keep_extracted_video:
-                for f in os.listdir(self.current_temp_dir):
-                    if f != "extracted_video.mp4":
-                        try:
-                            fpath = os.path.join(self.current_temp_dir, f)
-                            if os.path.isdir(fpath):
-                                shutil.rmtree(fpath, ignore_errors=True)
-                            else:
-                                os.remove(fpath)
-                        except OSError:
-                            pass
+        if self.current_temp_dir:
+            if os.path.exists(self.current_temp_dir):
+                if keep_extracted_video:
+                    for f in os.listdir(self.current_temp_dir):
+                        if f != "extracted_video.mp4":
+                            try:
+                                fpath = os.path.join(self.current_temp_dir, f)
+                                if os.path.isdir(fpath):
+                                    shutil.rmtree(fpath, ignore_errors=True)
+                                else:
+                                    os.remove(fpath)
+                            except OSError:
+                                pass
+                else:
+                    try:
+                        shutil.rmtree(self.current_temp_dir, ignore_errors=True)
+                    except OSError:
+                        pass
+                    self.current_temp_dir = None
             else:
-                try:
-                    shutil.rmtree(self.current_temp_dir, ignore_errors=True)
-                except OSError:
-                    pass
                 self.current_temp_dir = None
         self.cached_frame_dict = {}
         self.last_extracted_center = -1
@@ -53,11 +56,31 @@ class CacheMixin:
             return
 
         if self.extraction_thread and self.extraction_thread.isRunning():
-            print(f"[request_frame_extraction] Aborted: extraction thread is already running.")
-            return  # Already extracting
+            t_start = getattr(self.extraction_thread, 'player_start', -1)
+            t_end = getattr(self.extraction_thread, 'player_end', -1)
+            if t_start <= center_frame <= t_end:
+                print(f"[request_frame_extraction] Running thread already covers center={center_frame} (range {t_start}-{t_end}). Letting it run.")
+                self.last_extracted_center = center_frame
+                return
+
+            if force:
+                print(f"[request_frame_extraction] Cancelling running extraction thread for force request (center={center_frame}, running range={t_start}-{t_end}).")
+                try:
+                    self.extraction_thread.finished_extraction.disconnect()
+                except TypeError:
+                    pass
+                self.extraction_thread.cancel()
+                self.extraction_thread.wait()
+                self.extraction_thread = None
+            else:
+                print(f"[request_frame_extraction] Aborted: extraction thread is already running.")
+                return  # Already extracting
 
         start_frame = max(0, center_frame - self.cache_window_half)
-        num_frames = self.cache_window_half * 2
+        end_frame = min(max(0, self.total_frames - 1), center_frame + self.cache_window_half)
+        num_frames = end_frame - start_frame + 1
+        if num_frames <= 0:
+            return
 
         # Don't extract if we already have this exact range (optimisation)
         threshold = self.cache_window_half // 2
@@ -66,11 +89,27 @@ class CacheMixin:
             print(f"[request_frame_extraction] Aborted: optimization threshold met (last={self.last_extracted_center}, current={center_frame}).")
             return
 
+        # Skip extraction for frames already in cache
+        missing = [i for i in range(start_frame, start_frame + num_frames)
+                   if i not in self.cached_frame_dict]
+        if not missing:
+            print(f"[request_frame_extraction] All {num_frames} frames already cached. Skipping.")
+            self.last_extracted_center = center_frame
+            return
+
+        # Store original player range before narrowing for the thread range check
+        player_range_start = start_frame
+        player_range_end = end_frame
+
+        # Narrow extraction to only missing frames
+        start_frame = missing[0]
+        num_frames = missing[-1] - missing[0] + 1
+
         self.last_extracted_center = center_frame
 
         if not self.current_temp_dir:
-            import tempfile
-            self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+            import uuid
+            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
 
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
@@ -101,6 +140,8 @@ class CacheMixin:
             gpu_enabled=gpu_enabled,
             start_number=start_number
         )
+        self.extraction_thread.player_start = player_range_start
+        self.extraction_thread.player_end = player_range_end
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
 
@@ -131,8 +172,8 @@ class CacheMixin:
 
         # Two-stage extraction: extract exactly 1 frame instantly
         if not self.current_temp_dir:
-            import tempfile
-            self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+            import uuid
+            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
             
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
@@ -155,6 +196,8 @@ class CacheMixin:
             gpu_enabled=gpu_enabled,
             start_number=start_number
         )
+        self.extraction_thread.player_start = start_pos
+        self.extraction_thread.player_end = start_pos
         self.extraction_thread.finished_extraction.connect(self.on_first_frame_extracted)
         self.extraction_thread.start()
 
@@ -191,6 +234,11 @@ class CacheMixin:
         print(f"[on_first_frame_extracted] Triggering request_frame_extraction for current_cache_index={self.current_cache_index}")
         self.request_frame_extraction(self.current_cache_index, force=True)
 
+        if getattr(self, 'was_playing_before_cache_miss', False):
+            self.was_playing_before_cache_miss = False
+            if hasattr(self, 'play_pause') and not getattr(self, 'is_playing', False):
+                self.play_pause()
+
     def check_sliding_window(self):
         if self.last_extracted_center == -1:
             return
@@ -222,17 +270,20 @@ class CacheMixin:
         new_dict = {**self.cached_frame_dict, **frame_dict}
         self.cached_file_path = self.currentFilePath
 
-        # Prune old frames to save disk/RAM
-        center = self.last_extracted_center
-        prune_threshold = self.cache_window_half * 1.5
-        keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold and (not getattr(self, 'is_motion_photo', False) or k != 0)]
+        # Prune old frames to save disk/RAM (skip for short videos that fit entirely in cache)
+        if self.total_frames > self.cache_window_half * 2:
+            center = self.last_extracted_center
+            prune_threshold = self.cache_window_half * 1.5
+            keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold and (not getattr(self, 'is_motion_photo', False) or k != 0)]
 
-        for k in keys_to_delete:
-            try:
-                os.remove(new_dict[k])
-            except OSError:
-                pass
-            del new_dict[k]
+            for k in keys_to_delete:
+                val = new_dict[k]
+                if isinstance(val, str):
+                    try:
+                        os.remove(val)
+                    except OSError:
+                        pass
+                del new_dict[k]
 
         self.cached_frame_dict = new_dict
 
@@ -330,8 +381,12 @@ class CacheMixin:
 
     def update_pixmap_from_cache(self):
         if self.current_cache_index in getattr(self, 'cached_frame_dict', {}):
-            file_path = self.cached_frame_dict[self.current_cache_index]
-            pixmap = QPixmap(file_path)
+            data = self.cached_frame_dict[self.current_cache_index]
+            pixmap = QPixmap()
+            if isinstance(data, bytes):
+                pixmap.loadFromData(data)
+            elif isinstance(data, str):
+                pixmap.load(data)
 
             # Apply image adjustments
             b = self.brightnessSlider.value()
@@ -386,7 +441,7 @@ class CacheMixin:
                     f" [F: {self.current_cache_index + 1} / {self.total_frames}]"
                 )
 
-        if not self.is_scrubbing:
+        if not self.is_scrubbing and not self.is_playing:
             self.sync_progress_bar()
 
         if self.fps > 0:

@@ -70,16 +70,7 @@ class GlobalSettingsUiBuilderMixin:
         self.opacitySlider.valueChanged.connect(self.on_panel_opacity_changed)
         self.gsInnerLayout.addWidget(self.opacitySlider)
 
-        gpuRow = QHBoxLayout()
-        self.gsGPULabel = BodyLabel(tr('gpu_acceleration'))
-        self.gsGPUToggle = SwitchButton()
-        self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
-        self.gsGPUToggle.setChecked(self.config.get('gpu_acceleration', False))
-        self.gsGPUToggle.checkedChanged.connect(self.on_gpu_acceleration_changed)
-        gpuRow.addWidget(self.gsGPULabel)
-        gpuRow.addStretch(1)
-        gpuRow.addWidget(self.gsGPUToggle)
-        self.gsInnerLayout.addLayout(gpuRow)
+
 
         hline1 = QFrame()
         hline1.setFrameShape(QFrame.Shape.HLine)
@@ -227,7 +218,7 @@ class GlobalSettingsUiBuilderMixin:
             'shortcuts': dict(DEFAULT_CONFIG['shortcuts']),
             'palette': list(DEFAULT_CONFIG['palette']),
             'active_color_index': DEFAULT_CONFIG['active_color_index'],
-            'gpu_acceleration': False,
+            'gpu_acceleration': True,
             'accent_color': '#00f2ff',
             'bg_color': '#202020',
             'show_thumbnails': True,

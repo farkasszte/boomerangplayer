@@ -59,6 +59,12 @@ class PlaybackMixin:
                 self.load_video(files[0])
 
     def load_video(self, filePath):
+        was_playing = getattr(self, 'is_playing', False)
+        self.stop_playback()
+        self.was_playing_before_cache_miss = was_playing
+        self.frame_accumulator = 0.0
+        self.last_advance_ms = 0
+
         self.mediaPlayer.setSource(QUrl())
         self.cleanup_cache()
         self.save_current_markers()
@@ -305,6 +311,11 @@ class PlaybackMixin:
         if int_delta < 1:
             return
 
+        # Save state in case of a hold-frame cache miss
+        old_index = self.current_cache_index
+        old_forward = self.isForward
+        old_accumulator = self.frame_accumulator
+
         self.frame_accumulator -= int_delta
 
         loop_mode = self.loopCombo.currentIndex()
@@ -362,10 +373,28 @@ class PlaybackMixin:
         self.current_cache_index = max(0, min(max(0, self.total_frames - 1), self.current_cache_index))
 
         if self.current_cache_index not in self.cached_frame_dict:
+            # Restore state so we don't skip the missing frame once playback resumes
+            self.current_cache_index = old_index
+            self.isForward = old_forward
+            self.frame_accumulator = old_accumulator
+
             self.was_playing_before_cache_miss = self.is_playing
             self.stop_playback()
             self.loadingOverlay.show()
-            self.request_frame_extraction(self.current_cache_index, force=True)
+
+            if self.extraction_thread and self.extraction_thread.isRunning():
+                t_start = getattr(self.extraction_thread, 'player_start', -1)
+                t_end = getattr(self.extraction_thread, 'player_end', -1)
+                # Ensure we check the frame we *want* to display, which is old_index + int_delta
+                target_frame = old_index + int_delta if old_forward else old_index - int_delta
+                if t_start <= target_frame <= t_end:
+                    # Thread is already extracting the needed frames. Just wait.
+                    return
+            
+            # Thread is NOT running or NOT covering the needed frame. Force extraction.
+            # We request extraction centered on the frame we wanted to reach
+            target_frame = old_index + int_delta if old_forward else old_index - int_delta
+            self.request_frame_extraction(target_frame, force=True)
             return
 
         self.update_pixmap_from_cache()

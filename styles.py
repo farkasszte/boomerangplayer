@@ -186,7 +186,6 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
     styles['LOADING_OVERLAY_STYLE'] = """
         background: rgba(0,0,0,180);
         color: white;
-        font-size: 24px;
         font-weight: bold;
         border-radius: 10px;
     """

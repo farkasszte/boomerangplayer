@@ -177,7 +177,7 @@ class PlayerWindow(
         self.cached_file_path = None
         self.current_cache_index = 0
         self.last_extracted_center = -1
-        self.cache_window_half = 300
+        self.cache_window_half = self.config.get('cache_window', 900)
         self.is_zoomed_nav = False
         self.total_frames = 0
         self.is_playing = False

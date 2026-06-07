@@ -46,3 +46,4 @@ config.json
 error_log.txt
 .agents/
 graphify-out/
+.graphify_*

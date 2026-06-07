@@ -214,8 +214,7 @@ class GlobalSettingsLocaleManagerMixin:
         self.gsSaveBtn.setText(tr('save'))
         if hasattr(self, 'gsResetDefaultsBtn') and self.gsResetDefaultsBtn:
             self.gsResetDefaultsBtn.setText(tr('default'))
-        self.gsGPULabel.setText(tr('gpu_acceleration'))
-        self.gsGPUToggle.setToolTip(tr('gpu_acceleration_tip'))
+
         self.gsAccentBtn.setText(tr('accent_color'))
         self.gsBgBtn.setText(tr('bg_color'))
         if hasattr(self, 'opacityTitleLabel') and self.opacityTitleLabel:
