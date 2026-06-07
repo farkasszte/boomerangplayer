@@ -27,6 +27,7 @@ class PlaylistCrudMixin:
         old_full_name = os.path.basename(old_path)
         old_base_name, extension = os.path.splitext(old_full_name)
         
+        # pyrefly: ignore [bad-argument-type]
         new_base_name, ok = QInputDialog.getText(self, tr('rename_file_title'), tr('enter_new_name'), text=old_base_name)
         
         if ok and new_base_name and new_base_name != old_base_name:
@@ -37,6 +38,7 @@ class PlaylistCrudMixin:
                 is_current = (self.currentFilePath == old_path)
                 if is_current:
                     # Clear media player source to release file lock on Windows
+                    # pyrefly: ignore [missing-attribute]
                     self.mediaPlayer.setSource(QUrl())
                     
                     # Also stop extraction if it's running
@@ -44,7 +46,9 @@ class PlaylistCrudMixin:
                         self.extraction_thread.cancel()
 
                     # Stop any thumbnail generation for this file
+                    # pyrefly: ignore [missing-attribute]
                     if old_path in self.thumb_queue:
+                        # pyrefly: ignore [missing-attribute]
                         self.thumb_queue.remove(old_path)
 
                     for t in getattr(self, 'thumb_threads', []):
@@ -64,12 +68,18 @@ class PlaylistCrudMixin:
                 # Restore current file state if it was the one renamed
                 if is_current:
                     self.currentFilePath = new_path
+                    # pyrefly: ignore [missing-attribute]
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - {new_name}")
+                    # pyrefly: ignore [missing-attribute]
                     self.mediaPlayer.setSource(QUrl.fromLocalFile(new_path))
                     # Restore position
+                    # pyrefly: ignore [missing-attribute]
                     if self.fps > 0:
+                        # pyrefly: ignore [missing-attribute]
                         pos = int((self.current_cache_index * 1000) / self.fps)
+                        # pyrefly: ignore [missing-attribute]
                         self.mediaPlayer.setPosition(pos)
+                    # pyrefly: ignore [missing-attribute]
                     self.mediaPlayer.pause()
                 
                 # Update cache path if needed
@@ -77,7 +87,9 @@ class PlaylistCrudMixin:
                     self.cached_file_path = new_path
             except Exception as e:
                 # If error occurred, try to restore if it was current
+                # pyrefly: ignore [unbound-name]
                 if is_current and self.currentFilePath == old_path:
+                    # pyrefly: ignore [missing-attribute]
                     self.mediaPlayer.setSource(QUrl.fromLocalFile(old_path))
                 
                 InfoBar.error(
@@ -111,9 +123,11 @@ class PlaylistCrudMixin:
             is_current = (self.currentFilePath == path)
             if is_current:
                 # 1. Stop playback
+                # pyrefly: ignore [missing-attribute]
                 self.stop_playback()
                 
                 # 2. Clear media player source to release file lock on Windows
+                # pyrefly: ignore [missing-attribute]
                 self.mediaPlayer.setSource(QUrl())
                 
                 # 3. Stop extraction if running
@@ -121,7 +135,9 @@ class PlaylistCrudMixin:
                     self.extraction_thread.cancel()
 
                 # 4. Stop any thumbnail generation for this file
+                # pyrefly: ignore [missing-attribute]
                 if path in self.thumb_queue:
+                    # pyrefly: ignore [missing-attribute]
                     self.thumb_queue.remove(path)
 
                 for t in getattr(self, 'thumb_threads', []):
@@ -129,25 +145,34 @@ class PlaylistCrudMixin:
                         t.cancel()
                 
                 # 5. Cleanup cache
+                # pyrefly: ignore [missing-attribute]
                 self.cleanup_cache()
                 
                 # 6. Reset UI details
                 if hasattr(self, 'pixmapItem') and self.pixmapItem:
                     self.pixmapItem.setPixmap(QPixmap())
+                # pyrefly: ignore [missing-attribute]
                 self.progressBar.setRange(0, 0)
+                # pyrefly: ignore [missing-attribute]
                 self.progressBar.setValue(0)
+                # pyrefly: ignore [missing-attribute]
                 self.frameLabel.setText(" [F: 0]")
+                # pyrefly: ignore [missing-attribute]
                 self.currentTimeLabel.setText("00:00")
+                # pyrefly: ignore [missing-attribute]
                 self.totalTimeLabel.setText("00:00")
                 self.currentFilePath = None
+                # pyrefly: ignore [missing-attribute]
                 self.setWindowTitle(f"Boomerang Player v{VERSION}")
 
             success = send_to_recycle_bin(path)
             
             if success:
                 # Remove from playlist view
+                # pyrefly: ignore [missing-attribute]
                 row = self.playlistList.row(item)
                 if row >= 0:
+                    # pyrefly: ignore [missing-attribute]
                     self.playlistList.takeItem(row)
                 
                 # Remove from playlistData (markers)
@@ -169,7 +194,9 @@ class PlaylistCrudMixin:
 
         except Exception as e:
             # If error occurred and it was the current file, restore player source
+            # pyrefly: ignore [unbound-name]
             if is_current:
+                # pyrefly: ignore [missing-attribute]
                 self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
             
             InfoBar.error(
@@ -185,9 +212,11 @@ class PlaylistCrudMixin:
 
     def delete_selected_playlist_items(self):
         """Delete multiple selected playlist items (move to Recycle Bin)."""
+        # pyrefly: ignore [missing-attribute]
         selected_items = self.playlistList.selectedItems()
         if not selected_items:
             # Try current item
+            # pyrefly: ignore [missing-attribute]
             curr = self.playlistList.currentItem()
             if curr:
                 selected_items = [curr]
@@ -238,9 +267,11 @@ class PlaylistCrudMixin:
                 if is_current:
                     current_was_deleted = True
                     # 1. Stop playback
+                    # pyrefly: ignore [missing-attribute]
                     self.stop_playback()
                     
                     # 2. Clear media player source to release file lock
+                    # pyrefly: ignore [missing-attribute]
                     self.mediaPlayer.setSource(QUrl())
                     
                     # 3. Stop extraction if running
@@ -248,7 +279,9 @@ class PlaylistCrudMixin:
                         self.extraction_thread.cancel()
 
                     # 4. Stop any thumbnail generation for this file
+                    # pyrefly: ignore [missing-attribute]
                     if path in self.thumb_queue:
+                        # pyrefly: ignore [missing-attribute]
                         self.thumb_queue.remove(path)
 
                     for t in getattr(self, 'thumb_threads', []):
@@ -256,17 +289,24 @@ class PlaylistCrudMixin:
                             t.cancel()
                     
                     # 5. Cleanup cache
+                    # pyrefly: ignore [missing-attribute]
                     self.cleanup_cache()
                     
                     # 6. Reset UI details
                     if hasattr(self, 'pixmapItem') and self.pixmapItem:
                         self.pixmapItem.setPixmap(QPixmap())
+                    # pyrefly: ignore [missing-attribute]
                     self.progressBar.setRange(0, 0)
+                    # pyrefly: ignore [missing-attribute]
                     self.progressBar.setValue(0)
+                    # pyrefly: ignore [missing-attribute]
                     self.frameLabel.setText(" [F: 0]")
+                    # pyrefly: ignore [missing-attribute]
                     self.currentTimeLabel.setText("00:00")
+                    # pyrefly: ignore [missing-attribute]
                     self.totalTimeLabel.setText("00:00")
                     self.currentFilePath = None
+                    # pyrefly: ignore [missing-attribute]
                     self.setWindowTitle(f"Boomerang Player v{VERSION}")
 
                 success = send_to_recycle_bin(path)
@@ -285,17 +325,20 @@ class PlaylistCrudMixin:
                 error_count += 1
                 errors.append(f"{os.path.basename(path)} ({e})")
                 print(f"Error deleting {path}: {e}")
+                # pyrefly: ignore [unbound-name]
                 if current_was_deleted and is_current:
                     current_was_deleted = False
 
         # Remove items from playlist view in reverse order to maintain valid row indices
         rows_to_remove = []
         for item, _ in valid_items:
+            # pyrefly: ignore [missing-attribute]
             row = self.playlistList.row(item)
             if row >= 0:
                 rows_to_remove.append(row)
 
         for row in sorted(rows_to_remove, reverse=True):
+            # pyrefly: ignore [missing-attribute]
             self.playlistList.takeItem(row)
 
         # Show result
@@ -322,8 +365,10 @@ class PlaylistCrudMixin:
             )
 
     def remove_from_playlist(self):
+        # pyrefly: ignore [missing-attribute]
         selected_items = self.playlistList.selectedItems()
         if not selected_items:
+            # pyrefly: ignore [missing-attribute]
             curr = self.playlistList.currentItem()
             if curr:
                 selected_items = [curr]
@@ -332,26 +377,40 @@ class PlaylistCrudMixin:
             path = item.data(Qt.ItemDataRole.UserRole)
             if path in self.playlistData:
                 del self.playlistData[path]
+            # pyrefly: ignore [missing-attribute]
             row = self.playlistList.row(item)
             if row >= 0:
+                # pyrefly: ignore [missing-attribute]
                 self.playlistList.takeItem(row)
 
     def clear_playlist(self):
+        # pyrefly: ignore [missing-attribute]
         self.thumb_queue.clear()
+        # pyrefly: ignore [missing-attribute]
         for t in self.thumb_threads:
             t.cancel()
+        # pyrefly: ignore [missing-attribute]
         self.thumb_threads.clear()
 
+        # pyrefly: ignore [missing-attribute]
         self.playlistList.clear()
         self.playlistData = {}
+        # pyrefly: ignore [missing-attribute]
         self.stop_playback()
+        # pyrefly: ignore [missing-attribute]
         self.cleanup_cache()
         self.currentFilePath = None
+        # pyrefly: ignore [missing-attribute]
         self.setWindowTitle(f"Boomerang Player v{VERSION}")
         if hasattr(self, 'pixmapItem'):
             self.pixmapItem.setPixmap(QPixmap())
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.setRange(0, 0)
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.setValue(0)
+        # pyrefly: ignore [missing-attribute]
         self.frameLabel.setText(" [F: 0]")
+        # pyrefly: ignore [missing-attribute]
         self.currentTimeLabel.setText("00:00")
+        # pyrefly: ignore [missing-attribute]
         self.totalTimeLabel.setText("00:00")

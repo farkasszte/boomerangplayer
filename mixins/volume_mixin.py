@@ -6,21 +6,37 @@ from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QSlider
 from qfluentwidgets import FluentIcon
 from styles import FLUENT_SLIDER_STYLE
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QLabel, QPushButton
+    from PyQt6.QtMultimedia import QAudioOutput
+    VolumeMixinBase = QMainWindow
+else:
+    VolumeMixinBase = object
 
 
-class VolumeMixin:
+class VolumeMixin(VolumeMixinBase):
+    if TYPE_CHECKING:
+        audioOutput: QAudioOutput
+        volumeValueLabel: QLabel
+        volumeButton: QPushButton
+        userMutedIntent: bool
+        volumePopup: QFrame
 
     def set_volume(self, volume):
         self.audioOutput.setVolume(volume / 100.0)
         self.volumeValueLabel.setText(f"{volume}%")
         is_muted = volume == 0
         self.userMutedIntent = is_muted
+        # pyrefly: ignore [bad-argument-type]
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
 
     def toggle_mute(self):
         is_muted = not self.audioOutput.isMuted()
         self.audioOutput.setMuted(is_muted)
         self.userMutedIntent = is_muted
+        # pyrefly: ignore [bad-argument-type]
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
         if is_muted:
             self.volumeValueLabel.setText("0%")

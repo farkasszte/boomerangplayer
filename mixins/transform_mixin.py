@@ -7,7 +7,29 @@ from PyQt6.QtWidgets import QGraphicsView
 from PyQt6.QtGui import QTransform
 
 
-class TransformMixin:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QSlider, QLabel
+    from components import ZoomView, GPUPixmapItem
+    TransformMixinBase = QMainWindow
+else:
+    TransformMixinBase = object
+
+
+class TransformMixin(TransformMixinBase):
+    if TYPE_CHECKING:
+        zoomSlider: QSlider
+        zoomLevel: float
+        view: ZoomView
+        zoomValueLabel: QLabel
+        pixmapItem: GPUPixmapItem | None
+        isMirrored: bool
+        isMirroredVertical: bool
+        rotationAngle: int
+        last_applied_transform: QTransform
+        last_transform_state: tuple | None
+        loadingOverlay: QLabel
     # ------------------------------------------------------------------ #
     # Zoom                                                                 #
     # ------------------------------------------------------------------ #
@@ -49,11 +71,13 @@ class TransformMixin:
     def toggle_mirror(self):
         self.isMirrored = not self.isMirrored
         self.apply_transformations(fit=True)
+        # pyrefly: ignore [missing-attribute]
         self.save_current_markers()
 
     def toggle_vertical_mirror(self):
         self.isMirroredVertical = not self.isMirroredVertical
         self.apply_transformations(fit=True)
+        # pyrefly: ignore [missing-attribute]
         self.save_current_markers()
 
     def rotate_video(self):
@@ -62,11 +86,13 @@ class TransformMixin:
     def rotate_video_right(self):
         self.rotationAngle = (self.rotationAngle + 90) % 360
         self.apply_transformations(fit=True)
+        # pyrefly: ignore [missing-attribute]
         self.save_current_markers()
 
     def rotate_video_left(self):
         self.rotationAngle = (self.rotationAngle - 90) % 360
         self.apply_transformations(fit=True)
+        # pyrefly: ignore [missing-attribute]
         self.save_current_markers()
 
     # ------------------------------------------------------------------ #

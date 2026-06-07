@@ -116,8 +116,11 @@ class MarkersDialog(QDialog):
         self.setMinimumSize(420, 450)
         self.setStyleSheet("background: #202020; color: white;")
 
+        # pyrefly: ignore [bad-assignment, bad-override]
         self.layout = QVBoxLayout(self)
+        # pyrefly: ignore [missing-attribute]
         self.layout.setContentsMargins(15, 15, 15, 15)
+        # pyrefly: ignore [missing-attribute]
         self.layout.setSpacing(10)
 
         # List Widget
@@ -139,6 +142,7 @@ class MarkersDialog(QDialog):
             }
         """)
         self.listWidget.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        # pyrefly: ignore [missing-attribute]
         self.layout.addWidget(self.listWidget)
 
         # Bottom Buttons
@@ -153,6 +157,7 @@ class MarkersDialog(QDialog):
         btnLayout.addWidget(self.addMarkerBtn)
         btnLayout.addStretch(1)
         btnLayout.addWidget(self.closeBtn)
+        # pyrefly: ignore [missing-attribute]
         self.layout.addLayout(btnLayout)
 
         self.load_markers()
@@ -256,7 +261,36 @@ class MarkersDialog(QDialog):
         self.load_markers()
 
 
-class MarkerMixin:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QSlider
+    from config import Configuration
+    MarkerMixinBase = QMainWindow
+else:
+    MarkerMixinBase = object
+
+
+class MarkerMixin(MarkerMixinBase):
+    if TYPE_CHECKING:
+        current_cache_index: int
+        markers: list
+        needs_range_update: bool
+        progressBar: QSlider
+        playlistData: dict
+        currentFilePath: str | None
+        fps: float
+        cached_frame_dict: dict
+        config: Configuration
+        
+        # pyrefly: ignore [not-a-type]
+        update_loop_frames_label: callable
+        # pyrefly: ignore [not-a-type]
+        save_current_markers: callable
+        # pyrefly: ignore [not-a-type]
+        update_chronometer: callable
+        # pyrefly: ignore [not-a-type]
+        update_pixmap_from_cache: callable
     # ------------------------------------------------------------------ #
     # Marker CRUD                                                          #
     # ------------------------------------------------------------------ #
@@ -272,6 +306,7 @@ class MarkerMixin:
             self.markers.sort()
 
         self.needs_range_update = True
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
@@ -286,6 +321,7 @@ class MarkerMixin:
         self.markers.remove(closest)
 
         self.needs_range_update = True
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
@@ -293,6 +329,7 @@ class MarkerMixin:
 
     def clear_loop_markers(self):
         self.markers = []
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.update_markers(self.markers)
         self.update_loop_frames_label()
         self.save_current_markers()
@@ -303,10 +340,12 @@ class MarkerMixin:
     # ------------------------------------------------------------------ #
 
     def get_active_loop_range(self):
+        # pyrefly: ignore [missing-attribute]
         if not self.currentFilePath or self.total_frames <= 0:
             return 0, 0
 
-        f = int(self.current_cache_index)
+        f = self.current_cache_index
+        # pyrefly: ignore [missing-attribute]
         last_frame = max(0, self.total_frames - 1)
         valid_markers = [int(m) for m in self.markers if 0 < m < last_frame]
         full_markers = sorted(list(set([0, last_frame] + valid_markers)))
@@ -370,17 +409,24 @@ class MarkerMixin:
                 
             data = self.playlistData[self.currentFilePath]
             data['markers'] = self.markers
+            # pyrefly: ignore [missing-attribute]
             data['loopMode'] = self.loopCombo.currentIndex()
+            # pyrefly: ignore [missing-attribute]
             data['speed'] = self.speedSlider.value()
             data['isMirrored'] = self.isMirrored
             data['isMirroredVertical'] = self.isMirroredVertical
             data['rotationAngle'] = self.rotationAngle
+            # pyrefly: ignore [missing-attribute]
             data['brightness'] = self.brightnessSlider.value()
+            # pyrefly: ignore [missing-attribute]
             data['contrast'] = self.contrastSlider.value()
+            # pyrefly: ignore [missing-attribute]
             data['gamma'] = self.gammaSlider.value()
+            # pyrefly: ignore [missing-attribute]
             data['saturation'] = self.saturationSlider.value()
             data['lastPosition'] = self.current_cache_index
 
+            # pyrefly: ignore [missing-attribute]
             data['zoom'] = self.zoomSlider.value()
             if hasattr(self, 'view') and self.view:
                 center = self.view.mapToScene(self.view.viewport().rect().center())
@@ -395,41 +441,56 @@ class MarkerMixin:
             data = self.playlistData[self.currentFilePath]
             self.markers = data.get('markers', [])
             self.markers.sort()
+            # pyrefly: ignore [missing-attribute]
             self.progressBar.update_markers(self.markers)
             self.needs_range_update = True
 
             loop_mode = data.get('loopMode', 3)
+            # pyrefly: ignore [missing-attribute]
             self.loopCombo.setCurrentIndex(loop_mode)
             self.isPingPong = (loop_mode == 3)
 
+            # pyrefly: ignore [missing-attribute]
             self.speedSlider.setValue(data.get('speed', 100))
             self.isMirrored = data.get('isMirrored', False)
             self.isMirroredVertical = data.get('isMirroredVertical', False)
             self.rotationAngle = data.get('rotationAngle', 0)
 
+            # pyrefly: ignore [missing-attribute]
             self.brightnessSlider.setValue(data.get('brightness', 0))
+            # pyrefly: ignore [missing-attribute]
             self.contrastSlider.setValue(data.get('contrast', 100))
+            # pyrefly: ignore [missing-attribute]
             self.gammaSlider.setValue(data.get('gamma', 100))
+            # pyrefly: ignore [missing-attribute]
             self.saturationSlider.setValue(data.get('saturation', 100))
 
             # Restore zoom UI immediately to prevent cascade
             zoom_val = data.get('zoom', 100)
+            # pyrefly: ignore [missing-attribute]
             self.zoomSlider.blockSignals(True)
+            # pyrefly: ignore [missing-attribute]
             self.zoomSlider.setValue(zoom_val)
+            # pyrefly: ignore [missing-attribute]
             self.zoomSlider.blockSignals(False)
+            # pyrefly: ignore [missing-attribute]
             self.zoomValueLabel.setText(f"{zoom_val}%")
 
+            # pyrefly: ignore [missing-attribute]
             self.apply_transformations(fit=True)
             
             # Restore position
             # Restore position
             last_pos = data.get('lastPosition', 0)
             if last_pos > 0:
+                # pyrefly: ignore [missing-attribute]
                 self.set_position(last_pos)
         else:
             self.markers = []
+            # pyrefly: ignore [missing-attribute]
             self.progressBar.update_markers(self.markers)
             self.needs_range_update = True
+            # pyrefly: ignore [missing-attribute]
             self.speedSlider.setValue(100)
             
             # Reset transform state so previous video's flips/rotation don't carry over
@@ -438,12 +499,18 @@ class MarkerMixin:
             self.rotationAngle = 0
             
             # Reset zoom UI immediately
+            # pyrefly: ignore [missing-attribute]
             self.zoomSlider.blockSignals(True)
+            # pyrefly: ignore [missing-attribute]
             self.zoomSlider.setValue(100)
+            # pyrefly: ignore [missing-attribute]
             self.zoomSlider.blockSignals(False)
+            # pyrefly: ignore [missing-attribute]
             self.zoomValueLabel.setText("100%")
             
+            # pyrefly: ignore [missing-attribute]
             self.reset_adjustments()
+            # pyrefly: ignore [missing-attribute]
             self.apply_transformations(fit=True)
 
         self.update_loop_frames_label()

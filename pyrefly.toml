@@ -1,0 +1,8 @@
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
+[errors]
+"bad-override-param-name" = false
+

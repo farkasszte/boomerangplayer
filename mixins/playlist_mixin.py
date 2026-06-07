@@ -10,6 +10,14 @@ from mixins.playlist.sort_mixin import PlaylistSortMixin
 from mixins.playlist.persistence_mixin import PlaylistPersistenceMixin
 from mixins.playlist.info_mixin import PlaylistInfoMixin
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow
+    PlaylistMixinBase = QMainWindow
+else:
+    PlaylistMixinBase = object
+
 class PlaylistMixin(
     PlaylistCoreMixin,
     PlaylistThumbnailMixin,
@@ -17,6 +25,7 @@ class PlaylistMixin(
     PlaylistMenuMixin,
     PlaylistSortMixin,
     PlaylistPersistenceMixin,
-    PlaylistInfoMixin
+    PlaylistInfoMixin,
+    PlaylistMixinBase
 ):
     pass

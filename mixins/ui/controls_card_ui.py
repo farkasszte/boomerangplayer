@@ -20,18 +20,25 @@ class ControlsCardUIMixin:
         self.progressBar = MarkerSlider(Qt.Orientation.Horizontal)
         self.progressBar.setStyleSheet(FLUENT_SLIDER_STYLE)
         self.progressBar.setRange(0, 0)
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.sliderMoved.connect(self.set_position)
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.sliderReleased.connect(self.on_slider_released)
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.sliderPressed.connect(self.on_slider_pressed)
         self.totalTimeLabel = CaptionLabel("00:00")
 
         initial_vol = 50
+        # pyrefly: ignore [missing-attribute]
         if self.volume_ctrl:
             try:
+                # pyrefly: ignore [missing-attribute]
                 initial_vol = int(self.volume_ctrl.GetMasterVolumeLevelScalar() * 100)
+                # pyrefly: ignore [missing-attribute]
                 self.userMutedIntent = self.volume_ctrl.GetMute()
             except:
                 pass
+        # pyrefly: ignore [missing-attribute]
         self.audioOutput.setVolume(initial_vol / 100.0)
 
         progressLayout.addWidget(self.currentTimeLabel)
@@ -45,11 +52,13 @@ class ControlsCardUIMixin:
 
         self.toggleSettingsButton = ToolButton(FluentIcon.VIDEO)
         self.toggleSettingsButton.setToolTip(tr('video_settings'))
+        # pyrefly: ignore [missing-attribute]
         self.toggleSettingsButton.clicked.connect(self.toggle_settings)
         buttonsLayout.addWidget(self.toggleSettingsButton)
 
         self.globalSettingsButton = ToolButton(FluentIcon.SETTING)
         self.globalSettingsButton.setToolTip(tr('tip_settings'))
+        # pyrefly: ignore [missing-attribute]
         self.globalSettingsButton.clicked.connect(self.show_global_settings)
         buttonsLayout.addWidget(self.globalSettingsButton)
 
@@ -63,6 +72,7 @@ class ControlsCardUIMixin:
 
         self.stepBackButton = ToolButton(FluentIcon.LEFT_ARROW)
         self.stepBackButton.setToolTip(tr('tip_prev_frame'))
+        # pyrefly: ignore [missing-attribute]
         self.stepBackButton.clicked.connect(lambda: self.step_frame(-1))
         self.stepBackButton.setFixedSize(32, 32)
         self.stepBackButton.setStyleSheet(
@@ -83,6 +93,7 @@ class ControlsCardUIMixin:
         self.playBackwardButton.setStyleSheet(
             COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
         )
+        # pyrefly: ignore [missing-attribute]
         self.playBackwardButton.clicked.connect(self.play_pause_backward)
 
         self.playButton = ToolButton(FluentIcon.PLAY)
@@ -92,10 +103,12 @@ class ControlsCardUIMixin:
         self.playButton.setStyleSheet(
             COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
         )
+        # pyrefly: ignore [missing-attribute]
         self.playButton.clicked.connect(self.play_pause)
 
         self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
         self.stepForwardButton.setToolTip(tr('tip_next_frame'))
+        # pyrefly: ignore [missing-attribute]
         self.stepForwardButton.clicked.connect(lambda: self.step_frame(1))
         self.stepForwardButton.setFixedSize(32, 32)
         self.stepForwardButton.setStyleSheet(
@@ -115,6 +128,7 @@ class ControlsCardUIMixin:
 
         self.fullScreenButton = ToolButton(FluentIcon.FULL_SCREEN)
         self.fullScreenButton.setToolTip(tr('tip_full_screen'))
+        # pyrefly: ignore [missing-attribute]
         self.fullScreenButton.clicked.connect(self.toggle_full_screen)
         buttonsLayout.addWidget(self.fullScreenButton)
 
@@ -127,6 +141,7 @@ class ControlsCardUIMixin:
         self.volumeButton = ToolButton(FluentIcon.VOLUME)
         if self.userMutedIntent:
             self.volumeButton.setIcon(FluentIcon.MUTE)
+        # pyrefly: ignore [missing-attribute]
         self.volumeButton.clicked.connect(self.toggle_mute)
 
         self.volumeValueLabel = CaptionLabel(f"{initial_vol}%")
@@ -137,6 +152,7 @@ class ControlsCardUIMixin:
             "border: none; background: transparent; color: #ccc; font-size: 12px;"
         )
         self.volumeValueLabel.setCursor(Qt.CursorShape.PointingHandCursor)
+        # pyrefly: ignore [bad-assignment, missing-attribute]
         self.volumeValueLabel.mousePressEvent = lambda e: self.show_volume_flyout()
 
         volumeContainerLayout.addWidget(self.volumeButton)
@@ -147,17 +163,20 @@ class ControlsCardUIMixin:
 
         self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
         self.togglePlaylistButton.setToolTip(tr('tip_playlist'))
+        # pyrefly: ignore [missing-attribute]
         self.togglePlaylistButton.clicked.connect(self.toggle_playlist)
         buttonsLayout.addWidget(self.togglePlaylistButton)
 
         self.toggleDrawingButton = ToolButton(FluentIcon.EDIT)
         self.toggleDrawingButton.setToolTip(tr('tip_drawing'))
+        # pyrefly: ignore [missing-attribute]
         self.toggleDrawingButton.clicked.connect(self.toggle_drawing_panel)
         buttonsLayout.addWidget(self.toggleDrawingButton)
 
         self.controlsLayout.addLayout(buttonsLayout)
 
         # Setup auto-hide controls timer for fullscreen
+        # pyrefly: ignore [bad-argument-type]
         self.controls_timer = QTimer(self)
         self.controls_timer.setInterval(3000)
         self.controls_timer.setSingleShot(True)
@@ -165,6 +184,7 @@ class ControlsCardUIMixin:
         
         # Install event filters to detect user interaction recursively
         self.install_controls_event_filter(self.controlsCard)
+        # pyrefly: ignore [missing-attribute]
         self.install_controls_event_filter(self.view)
 
     def install_controls_event_filter(self, widget):
@@ -181,6 +201,7 @@ class ControlsCardUIMixin:
                 self.controls_timer.stop()
             # Ensure mouse cursor is restored in windowed mode
             if hasattr(self, 'view') and not getattr(self.view, 'drawing_mode', False):
+                # pyrefly: ignore [missing-attribute]
                 self.setCursor(Qt.CursorShape.ArrowCursor)
                 self.view.setCursor(Qt.CursorShape.ArrowCursor)
             return
@@ -206,6 +227,7 @@ class ControlsCardUIMixin:
 
         # Restore mouse cursor in fullscreen on movement
         if hasattr(self, 'view') and not getattr(self.view, 'drawing_mode', False):
+            # pyrefly: ignore [missing-attribute]
             self.setCursor(Qt.CursorShape.ArrowCursor)
             self.view.setCursor(Qt.CursorShape.ArrowCursor)
             
@@ -243,6 +265,7 @@ class ControlsCardUIMixin:
             
             # Hide mouse cursor in fullscreen after 3s of inactivity
             if hasattr(self, 'view') and not getattr(self.view, 'drawing_mode', False):
+                # pyrefly: ignore [missing-attribute]
                 self.setCursor(Qt.CursorShape.BlankCursor)
                 self.view.setCursor(Qt.CursorShape.BlankCursor)
                 
@@ -255,6 +278,7 @@ class ControlsCardUIMixin:
                 self.show_controls()
         
         try:
+            # pyrefly: ignore [missing-attribute]
             return super().eventFilter(watched, event)
         except AttributeError:
             return False

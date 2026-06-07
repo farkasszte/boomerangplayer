@@ -29,14 +29,36 @@ from mixins.ui.style_mixin import StyleUIMixin
 from mixins.ui.shortcut_mixin import ShortcutUIMixin
 from mixins.ui.fullscreen_mixin import FullscreenUIMixin
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QHBoxLayout
+    from qfluentwidgets import NavigationInterface
+    from PyQt6.QtMultimedia import QAudioOutput
+    from config import Configuration
+    UIMixinBase = QMainWindow
+else:
+    UIMixinBase = object
+
+# pyrefly: ignore [inconsistent-inheritance]
 class UIMixin(
     PlaylistSidebarUIMixin,
     DrawingSidebarUIMixin,
     ControlsCardUIMixin,
     StyleUIMixin,
     ShortcutUIMixin,
-    FullscreenUIMixin
+    FullscreenUIMixin,
+    UIMixinBase
 ):
+    if TYPE_CHECKING:
+        stackedWidget: QStackedWidget
+        navigationInterface: NavigationInterface
+        hBoxLayout: QHBoxLayout
+        config: Configuration
+        audioOutput: QAudioOutput
+        pixmapItem: GPUPixmapItem | None
+        # pyrefly: ignore [not-a-type]
+        update_ui_texts: callable
 
     def init_ui(self):
         # Main interface widget
@@ -51,17 +73,23 @@ class UIMixin(
 
         self.scene = QGraphicsScene()
         self.view = ZoomView(self.scene, self.playerInterface)
+        # pyrefly: ignore [missing-attribute]
         self.view.filesDropped.connect(self.handle_view_drop)
+        # pyrefly: ignore [missing-attribute]
         self.view.zoomChanged.connect(self.on_user_zoom_changed)
         self.view.setStyleSheet("border: none; background: black;")
 
         # Build all sidebars (mixin methods)
+        # pyrefly: ignore [missing-attribute]
         self.init_global_settings_sidebar()
+        # pyrefly: ignore [missing-attribute]
         self.init_video_settings_sidebar()
         self._init_playlist_sidebar()
         self._init_drawing_sidebar()
 
+        # pyrefly: ignore [missing-attribute]
         self.mainSplitter.addWidget(self.globalSettingsContainer)
+        # pyrefly: ignore [missing-attribute]
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.playlistContainer)
@@ -72,6 +100,7 @@ class UIMixin(
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
 
         # Pen preview (needs to happen after drawing sidebar is built)
+        # pyrefly: ignore [missing-attribute]
         self.update_pen_preview()
 
         self.pixmapItem = GPUPixmapItem()
@@ -102,6 +131,7 @@ class UIMixin(
                 self.update_loading_overlay_geometry()
                 
         self.loadingOverlay.show = custom_show
+        # pyrefly: ignore [bad-assignment]
         self.loadingOverlay.setText = custom_setText
 
         # Chronometer Overlay
@@ -130,6 +160,7 @@ class UIMixin(
         # Premium drag feature
         def overlayMousePressEvent(event):
             if event.button() == Qt.MouseButton.LeftButton:
+                # pyrefly: ignore [missing-attribute]
                 self.chronometerOverlay._drag_start_pos = event.globalPosition().toPoint() - self.chronometerOverlay.pos()
                 event.accept()
                 
@@ -141,7 +172,9 @@ class UIMixin(
                 self.chronometerOverlay.move(vx, vy)
                 event.accept()
 
+        # pyrefly: ignore [bad-assignment]
         self.chronometerOverlay.mousePressEvent = overlayMousePressEvent
+        # pyrefly: ignore [bad-assignment]
         self.chronometerOverlay.mouseMoveEvent = overlayMouseMoveEvent
 
         # Controls card
@@ -179,7 +212,7 @@ class UIMixin(
         self.setup_shortcuts()
 
     def update_gpu_state(self):
-        if hasattr(self, 'view') and hasattr(self, 'pixmapItem'):
+        if hasattr(self, 'view') and self.pixmapItem is not None:
             enabled = self.config.get('gpu_acceleration', False)
             
             # Switch viewport dynamically

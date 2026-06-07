@@ -9,7 +9,36 @@ from translations import tr
 from utils import format_chrono_time
 
 
-class DrawingMixin:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QLabel, QFrame, QSplitter, QButtonGroup
+    from components import ZoomView, GPUPixmapItem
+    from config import Configuration
+    DrawingMixinBase = QMainWindow
+else:
+    DrawingMixinBase = object
+
+
+class DrawingMixin(DrawingMixinBase):
+    if TYPE_CHECKING:
+        view: ZoomView
+        chronometerOverlay: QFrame
+        chronoTimeLabel: QLabel
+        chronoSectionLabel: QLabel
+        chronoPositionLabel: QLabel
+        currentFilePath: str | None
+        fps: float
+        markers: list
+        drawingContainer: QFrame
+        playlistContainer: QFrame
+        mainSplitter: QSplitter
+        toolGroup: QButtonGroup
+        config: Configuration
+        paletteButtons: list
+        penSizeLabel: QLabel
+        penPreview: QLabel
+        pixmapItem: GPUPixmapItem | None
     # ------------------------------------------------------------------ #
     # Drawing mode toggles                                                 #
     # ------------------------------------------------------------------ #
@@ -47,6 +76,7 @@ class DrawingMixin:
             self.chronoPositionLabel.setText("")
             return
 
+        # pyrefly: ignore [missing-attribute]
         current_frame = self.current_cache_index
 
         # Get the most recent marker/section boundary before or at the current frame
@@ -99,7 +129,9 @@ class DrawingMixin:
         self.view.drawing_tool = tool_id
         for btn in self.toolGroup.buttons():
             btn.setProperty('checked', btn.isChecked())
+            # pyrefly: ignore [missing-attribute]
             btn.style().unpolish(btn)
+            # pyrefly: ignore [missing-attribute]
             btn.style().polish(btn)
 
         if tool_id in ['obj_eraser', 'area_eraser']:
@@ -130,6 +162,7 @@ class DrawingMixin:
 
     def select_palette_color(self):
         btn = self.sender()
+        # pyrefly: ignore [missing-attribute]
         idx = btn.property('color_idx')
         palette = self.config.get('palette', [])
         if 0 <= idx < len(palette):
@@ -224,7 +257,7 @@ class DrawingMixin:
     # ------------------------------------------------------------------ #
 
     def save_drawing_screenshot(self):
-        if not self.pixmapItem.pixmap():
+        if self.pixmapItem is None or not self.pixmapItem.pixmap():
             return
 
         rect = self.pixmapItem.pixmap().rect()

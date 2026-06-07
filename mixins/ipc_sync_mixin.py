@@ -15,6 +15,7 @@ class IPCSyncMixin:
         self._block_broadcast = False
         
         # Create UDP socket
+        # pyrefly: ignore [bad-argument-type]
         self.udp_socket = QUdpSocket(self)
         
         # Bind to port 28357 with share and reuse flags on AnyIPv4 to receive multicast
@@ -138,23 +139,30 @@ class IPCSyncMixin:
                     if self.sync_offset is not None and hasattr(self, 'total_frames') and self.total_frames > 0:
                         target_frame = remote_frame + self.sync_offset
                         target_frame = max(0, min(self.total_frames - 1, target_frame))
+                        # pyrefly: ignore [missing-attribute]
                         if target_frame != self.current_cache_index:
+                            # pyrefly: ignore [missing-attribute]
                             self.set_position(target_frame)
 
+                    # pyrefly: ignore [missing-attribute]
                     self._start_playback()
 
                 elif action == "pause":
+                    # pyrefly: ignore [missing-attribute]
                     self.stop_playback()
 
                 elif action == "step":
                     if value is not None:
+                        # pyrefly: ignore [missing-attribute]
                         self.step_frame(int(value))
 
                 elif action == "seek":
                     if self.sync_offset is not None and hasattr(self, 'total_frames') and self.total_frames > 0:
                         target_frame = remote_frame + self.sync_offset
                         target_frame = max(0, min(self.total_frames - 1, target_frame))
+                        # pyrefly: ignore [missing-attribute]
                         if target_frame != self.current_cache_index:
+                            # pyrefly: ignore [missing-attribute]
                             self.set_position(target_frame)
 
                 elif action == "speed":
@@ -165,7 +173,9 @@ class IPCSyncMixin:
                     self.sync_offset = 0
                     if hasattr(self, 'total_frames') and self.total_frames > 0:
                         target_frame = max(0, min(self.total_frames - 1, remote_frame))
+                        # pyrefly: ignore [missing-attribute]
                         if target_frame != self.current_cache_index:
+                            # pyrefly: ignore [missing-attribute]
                             self.set_position(target_frame)
 
             except Exception as e:

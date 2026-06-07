@@ -8,7 +8,7 @@ from utils import get_resource_path
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None, video_codec=None):
         super().__init__(parent)
         self.video_path = video_path
         self.start_frame = start_frame
@@ -20,6 +20,7 @@ class FrameExtractionThread(QThread):
         self.player_idx = player_idx
         self.start_number = start_number if start_number is not None else start_frame
         self.temp_dir = temp_dir
+        self.video_codec = video_codec
 
     def _extract_from_pipe(self, cmd, creationflags):
         if self._is_cancelled:
@@ -45,6 +46,7 @@ class FrameExtractionThread(QThread):
         frame_idx = self.start_number
         
         while not self._is_cancelled:
+            # pyrefly: ignore [missing-attribute]
             chunk = self.process.stdout.read(65536)
             if not chunk:
                 break
@@ -97,7 +99,24 @@ class FrameExtractionThread(QThread):
             
             def build_cmd(gpu=False, fallback_output_only=False):
                 c = [ffmpeg_path, "-y"]
-                if gpu:
+                use_cuvid = False
+                if gpu and self.video_codec:
+                    cuvid_decoders = {
+                        'av1': 'av1_cuvid',
+                        'h264': 'h264_cuvid',
+                        'hevc': 'hevc_cuvid',
+                        'h265': 'hevc_cuvid',
+                        'vp9': 'vp9_cuvid',
+                        'mpeg4': 'mpeg4_cuvid',
+                        'mpeg2video': 'mpeg2_cuvid',
+                        'vc1': 'vc1_cuvid'
+                    }
+                    codec = self.video_codec.lower()
+                    if codec in cuvid_decoders:
+                        c.extend(["-c:v", cuvid_decoders[codec]])
+                        use_cuvid = True
+                
+                if gpu and not use_cuvid:
                     c.extend(["-hwaccel", "auto"])
                 
                 # Use all available CPU threads for decoding/encoding

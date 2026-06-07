@@ -33,7 +33,7 @@ class DropListWidget(QListWidget):
 
     def wheelEvent(self, event):
         scrollbar = self.verticalScrollBar()
-        if scrollbar.maximum() > scrollbar.minimum():
+        if scrollbar and scrollbar.maximum() > scrollbar.minimum():
             delta = event.angleDelta().y()
             # Fine scrolling: 20 pixels per wheel tick (120 / 6) for maximum smoothness
             scroll_amount = -int(delta)

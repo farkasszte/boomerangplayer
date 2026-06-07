@@ -5,22 +5,33 @@ from translations import tr
 
 class PlaylistMenuMixin:
     def show_add_menu(self):
+        # pyrefly: ignore [missing-attribute]
         menu_hint = self.addMenu.sizeHint()
+        # pyrefly: ignore [missing-attribute]
         pos = self.btn_add.mapToGlobal(QPoint(0, -menu_hint.height()))
+        # pyrefly: ignore [missing-attribute]
         self.addMenu.exec(pos)
 
     def show_sort_menu(self):
+        # pyrefly: ignore [missing-attribute]
         if self.playlistList.count() == 0:
             return
+        # pyrefly: ignore [missing-attribute]
         menu_hint = self.sortMenu.sizeHint()
+        # pyrefly: ignore [missing-attribute]
         pos = self.btn_sort.mapToGlobal(QPoint(0, -menu_hint.height()))
+        # pyrefly: ignore [missing-attribute]
         self.sortMenu.exec(pos)
 
     def show_clear_menu(self):
+        # pyrefly: ignore [missing-attribute]
         if self.playlistList.count() == 0:
             return
+        # pyrefly: ignore [missing-attribute]
         menu_hint = self.removeMenu.sizeHint()
+        # pyrefly: ignore [missing-attribute]
         pos = self.btn_clear.mapToGlobal(QPoint(0, -menu_hint.height()))
+        # pyrefly: ignore [missing-attribute]
         self.removeMenu.exec(pos)
 
     def show_remove_menu(self):
@@ -29,12 +40,16 @@ class PlaylistMenuMixin:
     def show_playlist_context_menu(self, item, pos):
         # Don't auto-select single item when multi-select is already in effect
         if not item.isSelected():
+            # pyrefly: ignore [missing-attribute]
             self.playlistList.clearSelection()
             item.setSelected(True)
+            # pyrefly: ignore [missing-attribute]
             self.playlistList.setCurrentItem(item)
 
+        # pyrefly: ignore [missing-attribute]
         selected_count = len(self.playlistList.selectedItems())
 
+        # pyrefly: ignore [no-matching-overload]
         menu = QMenu(self)
         menu.setStyleSheet(MENU_STYLE)
 
@@ -45,11 +60,15 @@ class PlaylistMenuMixin:
                 menu.addAction(f"{tr('export_photo')} ({len(mjpeg_items)})", lambda: self.bulk_export_motion_jpg_photos(mjpeg_items))
                 menu.addAction(f"{tr('export_video')} ({len(mjpeg_items)})", lambda: self.bulk_export_motion_jpg_videos(mjpeg_items))
             
+            # pyrefly: ignore [missing-attribute]
             menu.addAction(f"{tr('delete_file')} ({selected_count})", self.delete_selected_playlist_items)
+            # pyrefly: ignore [missing-attribute]
             menu.addAction(f"{tr('remove_selected')} ({selected_count})", self.remove_from_playlist)
         else:
             # Single item: full context menu
+            # pyrefly: ignore [missing-attribute]
             menu.addAction(tr('rename'), lambda: self.rename_playlist_item(item))
+            # pyrefly: ignore [missing-attribute]
             menu.addAction(tr('open_in_new_window'), lambda: self.open_in_new_window(item))
 
             # Motion JPG export actions
@@ -60,7 +79,9 @@ class PlaylistMenuMixin:
                 menu.addAction(tr('export_photo'), lambda: self.export_motion_jpg_photo(item))
                 menu.addAction(tr('export_video'), lambda: self.export_motion_jpg_video(item))
 
+            # pyrefly: ignore [missing-attribute]
             menu.addAction(tr('remove_selected'), self.remove_from_playlist)
+            # pyrefly: ignore [missing-attribute]
             menu.addAction(tr('delete_file'), lambda: self.delete_playlist_item(item))
 
         menu.exec(pos)
@@ -68,6 +89,7 @@ class PlaylistMenuMixin:
     def get_selected_mjpeg_items(self):
         from utils import get_embedded_video_offset
         mjpeg_items = []
+        # pyrefly: ignore [missing-attribute]
         for sel_item in self.playlistList.selectedItems():
             filePath = sel_item.data(Qt.ItemDataRole.UserRole)
             if filePath:
@@ -83,6 +105,7 @@ class PlaylistMenuMixin:
         if not mjpeg_items:
             return
 
+        # pyrefly: ignore [bad-argument-type]
         export_dir = QFileDialog.getExistingDirectory(self, tr('select_folder'))
         if not export_dir:
             return
@@ -103,12 +126,14 @@ class PlaylistMenuMixin:
 
         if errors:
             QMessageBox.warning(
+                # pyrefly: ignore [bad-argument-type]
                 self,
                 tr('error') or "Error",
                 f"Exported {success_count} photos. Failures:\n" + "\n".join(errors)
             )
         else:
             QMessageBox.information(
+                # pyrefly: ignore [bad-argument-type]
                 self,
                 tr('info') or "Information",
                 f"Successfully exported {success_count} photos to {export_dir}."
@@ -121,6 +146,7 @@ class PlaylistMenuMixin:
         if not mjpeg_items:
             return
 
+        # pyrefly: ignore [bad-argument-type]
         export_dir = QFileDialog.getExistingDirectory(self, tr('select_folder'))
         if not export_dir:
             return
@@ -142,12 +168,14 @@ class PlaylistMenuMixin:
 
         if errors:
             QMessageBox.warning(
+                # pyrefly: ignore [bad-argument-type]
                 self,
                 tr('error') or "Error",
                 f"Exported {success_count} videos. Failures:\n" + "\n".join(errors)
             )
         else:
             QMessageBox.information(
+                # pyrefly: ignore [bad-argument-type]
                 self,
                 tr('info') or "Information",
                 f"Successfully exported {success_count} videos to {export_dir}."
@@ -164,6 +192,7 @@ class PlaylistMenuMixin:
 
         offset = get_embedded_video_offset(filePath)
         if offset is None:
+            # pyrefly: ignore [bad-argument-type]
             QMessageBox.warning(self, tr('warning') or "Warning", "This is not a valid Motion JPG file.")
             return
 
@@ -172,6 +201,7 @@ class PlaylistMenuMixin:
         default_name = f"{base}_photo.jpg"
 
         save_path, _ = QFileDialog.getSaveFileName(
+            # pyrefly: ignore [bad-argument-type]
             self,
             tr('export_photo'),
             os.path.join(os.path.dirname(filePath), default_name),
@@ -185,6 +215,7 @@ class PlaylistMenuMixin:
                 with open(save_path, 'wb') as f:
                     f.write(data)
             except Exception as e:
+                # pyrefly: ignore [bad-argument-type]
                 QMessageBox.critical(self, tr('error') or "Error", f"Failed to export photo: {e}")
 
     def export_motion_jpg_video(self, item):
@@ -198,6 +229,7 @@ class PlaylistMenuMixin:
 
         offset = get_embedded_video_offset(filePath)
         if offset is None:
+            # pyrefly: ignore [bad-argument-type]
             QMessageBox.warning(self, tr('warning') or "Warning", "This is not a valid Motion JPG file.")
             return
 
@@ -206,6 +238,7 @@ class PlaylistMenuMixin:
         default_name = f"{base}_video.mp4"
 
         save_path, _ = QFileDialog.getSaveFileName(
+            # pyrefly: ignore [bad-argument-type]
             self,
             tr('export_video'),
             os.path.join(os.path.dirname(filePath), default_name),
@@ -220,4 +253,5 @@ class PlaylistMenuMixin:
                 with open(save_path, 'wb') as f:
                     f.write(data)
             except Exception as e:
+                # pyrefly: ignore [bad-argument-type]
                 QMessageBox.critical(self, tr('error') or "Error", f"Failed to export video: {e}")

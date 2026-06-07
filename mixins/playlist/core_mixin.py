@@ -16,7 +16,9 @@ class PlaylistCoreMixin:
             valid_files = [f for f in files if f.lower().endswith(valid_exts)]
             if valid_files:
                 self.add_files_to_playlist(valid_files)
+                # pyrefly: ignore [missing-attribute]
                 if not self.currentFilePath:
+                    # pyrefly: ignore [missing-attribute]
                     self.load_video(valid_files[0])
 
     # ------------------------------------------------------------------ #
@@ -24,9 +26,12 @@ class PlaylistCoreMixin:
     # ------------------------------------------------------------------ #
 
     def add_files_to_playlist(self, file_paths, cached_thumbnails=None):
+        # pyrefly: ignore [missing-attribute]
         show_thumbs = self.thumbToggle.isChecked()
+        # pyrefly: ignore [missing-attribute]
         show_names = self.fileNameToggle.isChecked()
         
+        # pyrefly: ignore [missing-attribute]
         size_idx = self.config.get('thumbnail_size_index', 1)
         sizes = [
             (QSize(80, 80), QSize(80, 90)),
@@ -37,7 +42,9 @@ class PlaylistCoreMixin:
 
         # Gather existing absolute paths to prevent duplicate entries
         existing_paths = set()
+        # pyrefly: ignore [missing-attribute]
         for i in range(self.playlistList.count()):
+            # pyrefly: ignore [missing-attribute]
             item = self.playlistList.item(i)
             path = item.data(Qt.ItemDataRole.UserRole)
             if path:
@@ -93,14 +100,17 @@ class PlaylistCoreMixin:
                     item.setText(baseName)
                     item.setIcon(QIcon())
                 
+                # pyrefly: ignore [missing-attribute]
                 self.playlistList.addItem(item)
                 
                 if show_thumbs and not has_cached_thumb:
+                    # pyrefly: ignore [missing-attribute]
                     self.thumb_queue.append(filePath)
                 
                 existing_paths.add(abs_path.lower())
         
         if show_thumbs:
+            # pyrefly: ignore [missing-attribute]
             self._process_thumb_queue()
 
     # ------------------------------------------------------------------ #
@@ -109,6 +119,7 @@ class PlaylistCoreMixin:
 
     def on_playlist_item_clicked(self, item):
         filePath = item.data(Qt.ItemDataRole.UserRole)
+        # pyrefly: ignore [missing-attribute]
         self.load_video(filePath)
 
     # ------------------------------------------------------------------ #
@@ -116,15 +127,20 @@ class PlaylistCoreMixin:
     # ------------------------------------------------------------------ #
 
     def toggle_playlist(self):
+        # pyrefly: ignore [missing-attribute]
         is_visible = self.playlistContainer.isVisible()
         if not is_visible:
+            # pyrefly: ignore [missing-attribute]
             self.drawingContainer.hide()
+        # pyrefly: ignore [missing-attribute]
         self.playlistContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
+            # pyrefly: ignore [missing-attribute]
             sizes = self.mainSplitter.sizes()
             if len(sizes) > 3 and sizes[3] < 250:
                 sizes[3] = 250
+                # pyrefly: ignore [missing-attribute]
                 self.mainSplitter.setSizes(sizes)

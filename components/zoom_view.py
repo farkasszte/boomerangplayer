@@ -2,7 +2,8 @@ import math
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
 from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont
 from PyQt6.QtWidgets import (QGraphicsView, QInputDialog, QGraphicsPathItem, 
-                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup)
+                             QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup,
+                             QGraphicsScene)
 from translations import tr
 
 class ZoomView(QGraphicsView):
@@ -78,8 +79,13 @@ class ZoomView(QGraphicsView):
         self.undo_stack = []
         self.current_undo_transaction = []
         self.original_paths_in_drag = {} # item -> path before this drag
-        self.last_eraser_pos = None
         self.measure_group = None
+
+    def scene(self) -> QGraphicsScene:
+        s = super().scene()
+        if s is None:
+            raise RuntimeError("Scene is not set")
+        return s
 
     def set_drawing_mode(self, enabled):
         self.drawing_mode = enabled
@@ -214,45 +220,47 @@ class ZoomView(QGraphicsView):
                     
                 if self.current_path_item:
                     if self.drawing_tool == 'pen':
+                        # pyrefly: ignore [missing-attribute]
                         self.current_path.lineTo(curr_pos)
                     else:
-                        new_path = QPainterPath()
-                        rect = QRectF(self.start_scene_pos, curr_pos).normalized()
-                        
-                        if self.drawing_tool == 'rect':
-                            new_path.addRect(rect)
-                        elif self.drawing_tool == 'ellipse':
-                            new_path.addEllipse(rect)
-                        elif self.drawing_tool == 'triangle':
-                            new_path.moveTo(rect.left() + rect.width()/2, rect.top())
-                            new_path.lineTo(rect.bottomLeft())
-                            new_path.lineTo(rect.bottomRight())
-                            new_path.closeSubpath()
-                        elif self.drawing_tool == 'line':
-                            new_path.moveTo(self.start_scene_pos)
-                            new_path.lineTo(curr_pos)
-                        elif self.drawing_tool == 'arrow':
-                            new_path.moveTo(self.start_scene_pos)
-                            new_path.lineTo(curr_pos)
-                            angle = math.atan2(curr_pos.y() - self.start_scene_pos.y(), curr_pos.x() - self.start_scene_pos.x())
-                            headSize = max(15, self.pen_width * 3)
-                            p1 = curr_pos - QPointF(headSize * math.cos(angle - math.pi / 6),
-                                                 headSize * math.sin(angle - math.pi / 6))
-                            p2 = curr_pos - QPointF(headSize * math.cos(angle + math.pi / 6),
-                                                 headSize * math.sin(angle + math.pi / 6))
-                            new_path.moveTo(curr_pos)
-                            new_path.lineTo(p1)
-                            new_path.moveTo(curr_pos)
-                            new_path.lineTo(p2)
-                        
-                        self.current_path = new_path
+                        if self.start_scene_pos is not None:
+                            new_path = QPainterPath()
+                            rect = QRectF(self.start_scene_pos, curr_pos).normalized()
+                            
+                            if self.drawing_tool == 'rect':
+                                new_path.addRect(rect)
+                            elif self.drawing_tool == 'ellipse':
+                                new_path.addEllipse(rect)
+                            elif self.drawing_tool == 'triangle':
+                                new_path.moveTo(rect.left() + rect.width()/2, rect.top())
+                                new_path.lineTo(rect.bottomLeft())
+                                new_path.lineTo(rect.bottomRight())
+                                new_path.closeSubpath()
+                            elif self.drawing_tool == 'line':
+                                new_path.moveTo(self.start_scene_pos)
+                                new_path.lineTo(curr_pos)
+                            elif self.drawing_tool == 'arrow':
+                                new_path.moveTo(self.start_scene_pos)
+                                new_path.lineTo(curr_pos)
+                                angle = math.atan2(curr_pos.y() - self.start_scene_pos.y(), curr_pos.x() - self.start_scene_pos.x())
+                                headSize = max(15, self.pen_width * 3)
+                                p1 = curr_pos - QPointF(headSize * math.cos(angle - math.pi / 6),
+                                                     headSize * math.sin(angle - math.pi / 6))
+                                p2 = curr_pos - QPointF(headSize * math.cos(angle + math.pi / 6),
+                                                     headSize * math.sin(angle + math.pi / 6))
+                                new_path.moveTo(curr_pos)
+                                new_path.lineTo(p1)
+                                new_path.moveTo(curr_pos)
+                                new_path.lineTo(p2)
+                            
+                            self.current_path = new_path
                     
                     if self.current_path and not self.current_path.isEmpty():
                         try:
                             self.current_path_item.setPath(self.current_path)
                         except RuntimeError:
                             self.current_path_item = None
-                elif self.drawing_tool == 'measure' and self.measure_group:
+                elif self.drawing_tool == 'measure' and self.measure_group and self.start_scene_pos is not None:
                     new_path = QPainterPath()
                     new_path.moveTo(self.start_scene_pos)
                     new_path.lineTo(curr_pos)
@@ -560,6 +568,7 @@ class ZoomView(QGraphicsView):
         self.strokes = []
 
     def get_scroll_state(self):
+        # pyrefly: ignore [missing-attribute]
         return (self.horizontalScrollBar().value(), self.verticalScrollBar().value())
     
     def set_scroll_state(self, x, y):
@@ -567,7 +576,9 @@ class ZoomView(QGraphicsView):
         QTimer.singleShot(50, lambda: self._apply_scroll(x, y))
 
     def _apply_scroll(self, x, y):
+        # pyrefly: ignore [missing-attribute]
         self.horizontalScrollBar().setValue(x)
+        # pyrefly: ignore [missing-attribute]
         self.verticalScrollBar().setValue(y)
 
     def dragEnterEvent(self, event):

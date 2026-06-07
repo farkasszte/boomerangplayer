@@ -11,13 +11,52 @@ from PyQt6.QtCore import Qt
 from translations import tr
 
 
-class CacheMixin:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QLabel, QSlider
+    from PyQt6.QtCore import QThread
+    from config import Configuration
+    from components import GPUPixmapItem
+    CacheMixinBase = QMainWindow
+else:
+    CacheMixinBase = object
+
+
+class CacheMixin(CacheMixinBase):
+    if TYPE_CHECKING:
+        current_temp_dir: str | None
+        cached_frame_dict: dict
+        last_extracted_center: int
+        pixmapItem: GPUPixmapItem | None
+        currentFilePath: str | None
+        total_frames: int
+        cache_window_half: int
+        video_codec: str | None
+        config: Configuration
+        fps: float
+        progressBar: QSlider
+        playlistData: dict
+        loadingOverlay: QLabel
+        brightnessSlider: QSlider
+        contrastSlider: QSlider
+        gammaSlider: QSlider
+        saturationSlider: QSlider
+        isMirrored: bool
+        isMirroredVertical: bool
+        rotationAngle: int
+        frameLabel: QLabel
+        currentTimeLabel: QLabel
+        is_playing: bool
+        is_scrubbing: bool
+        extraction_thread: QThread | None
     # ------------------------------------------------------------------ #
     # Cache housekeeping                                                   #
     # ------------------------------------------------------------------ #
 
     def cleanup_cache(self, keep_extracted_video=False):
         if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
+            # pyrefly: ignore [missing-attribute]
             self.extraction_thread.cancel()
             self.extraction_thread.wait()
 
@@ -44,8 +83,9 @@ class CacheMixin:
                 self.current_temp_dir = None
         self.cached_frame_dict = {}
         self.last_extracted_center = -1
-        if hasattr(self, 'pixmapItem'):
-            self.pixmapItem.setPixmap(QPixmap())
+        pixmap_item = getattr(self, 'pixmapItem', None)
+        if pixmap_item is not None:
+            pixmap_item.setPixmap(QPixmap())
 
     # ------------------------------------------------------------------ #
     # Extraction requests                                                  #
@@ -66,9 +106,11 @@ class CacheMixin:
             if force:
                 print(f"[request_frame_extraction] Cancelling running extraction thread for force request (center={center_frame}, running range={t_start}-{t_end}).")
                 try:
+                    # pyrefly: ignore [missing-attribute]
                     self.extraction_thread.finished_extraction.disconnect()
                 except TypeError:
                     pass
+                # pyrefly: ignore [missing-attribute]
                 self.extraction_thread.cancel()
                 self.extraction_thread.wait()
                 self.extraction_thread = None
@@ -139,9 +181,12 @@ class CacheMixin:
             self.current_temp_dir,
             self,
             gpu_enabled=gpu_enabled,
-            start_number=start_number
+            start_number=start_number,
+            video_codec=self.video_codec
         )
+        # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_start = player_range_start
+        # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_end = player_range_end
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
@@ -160,6 +205,7 @@ class CacheMixin:
         
         # If it's a motion photo, cache frame 0 as the high-res photo path
         if getattr(self, 'is_motion_photo', False):
+            # pyrefly: ignore [missing-attribute]
             self.cached_frame_dict[0] = self.motion_photo_original_path
 
         if start_pos in self.cached_frame_dict:
@@ -196,9 +242,12 @@ class CacheMixin:
             self.current_temp_dir,
             self,
             gpu_enabled=gpu_enabled,
-            start_number=start_number
+            start_number=start_number,
+            video_codec=self.video_codec
         )
+        # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_start = start_pos
+        # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_end = start_pos
         self.extraction_thread.finished_extraction.connect(self.on_first_frame_extracted)
         self.extraction_thread.start()
@@ -218,6 +267,7 @@ class CacheMixin:
             fit_needed = not hasattr(self, 'initial_fit_done')
             if fit_needed:
                 self.initial_fit_done = True
+                # pyrefly: ignore [missing-attribute]
                 self.apply_transformations(fit=True)
                 if hasattr(self, '_apply_file_saved_zoom'):
                     self._apply_file_saved_zoom()
@@ -323,9 +373,12 @@ class CacheMixin:
             self.current_temp_dir,
             self,
             gpu_enabled=gpu_enabled,
-            start_number=start_number
+            start_number=start_number,
+            video_codec=self.video_codec
         )
+        # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_start = player_range_start
+        # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_end = player_range_end
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
@@ -350,6 +403,7 @@ class CacheMixin:
 
         # Atomic swap: build the new dict, prune, then assign in one shot
         new_dict = {**self.cached_frame_dict, **frame_dict}
+        # pyrefly: ignore [bad-assignment]
         self.cached_file_path = self.currentFilePath
 
         # Prune old/future frames to save RAM (skip for short videos that fit entirely in cache)
@@ -388,6 +442,7 @@ class CacheMixin:
 
         self.update_pixmap_from_cache()
         if fit_needed:
+            # pyrefly: ignore [missing-attribute]
             self.apply_transformations(fit=True)
             if hasattr(self, '_apply_file_saved_zoom'):
                 self._apply_file_saved_zoom()
@@ -403,6 +458,7 @@ class CacheMixin:
 
         if getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False
+            # pyrefly: ignore [missing-attribute]
             self.play_pause()
 
     # ------------------------------------------------------------------ #
@@ -416,9 +472,11 @@ class CacheMixin:
         self.progressBar.blockSignals(True)
 
         is_zoomed = getattr(self, 'is_zoomed_nav', False)
+        # pyrefly: ignore [missing-attribute]
         self.progressBar.set_zoomed(is_zoomed)
 
         if is_zoomed:
+            # pyrefly: ignore [missing-attribute]
             start_f, end_f = self.get_active_loop_range()
             self.progressBar.setRange(start_f, max(start_f, end_f))
         else:
@@ -445,8 +503,10 @@ class CacheMixin:
         if hasattr(self, '_last_adj_params'):
             delattr(self, '_last_adj_params')
         self.update_pixmap_from_cache()
+        # pyrefly: ignore [missing-attribute]
         self.apply_transformations(fit=True)
         if not getattr(self, 'is_loading_video', False):
+            # pyrefly: ignore [missing-attribute]
             self.save_current_markers()
 
     def _get_adj_lut(self, b, c, g):
@@ -487,14 +547,16 @@ class CacheMixin:
 
             gpu_enabled = self.config.get('gpu_acceleration', False)
             if gpu_enabled:
-                if hasattr(self, 'pixmapItem'):
-                    self.pixmapItem.update_params(b, c, g, s)
+                pixmap_item = getattr(self, 'pixmapItem', None)
+                if pixmap_item is not None:
+                    pixmap_item.update_params(b, c, g, s)
             elif b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
                 img = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
                 width, height = img.width(), img.height()
 
                 ptr = img.bits()
                 ptr.setsize(img.sizeInBytes())
+                # pyrefly: ignore [no-matching-overload]
                 arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
                 if b != 0 or c != 1.0 or g != 1.0:
@@ -514,7 +576,7 @@ class CacheMixin:
 
                 pixmap = QPixmap.fromImage(img)
 
-            if self.pixmapItem:
+            if self.pixmapItem is not None:
                 self.pixmapItem.setPixmap(pixmap)
                 
                 # Only auto-fit when transitioning to/from the static JPEG (frame 0) of a motion photo
@@ -524,6 +586,7 @@ class CacheMixin:
                     if self.current_cache_index == 0 or last_idx == 0:
                         fit_val = True
                 
+                # pyrefly: ignore [missing-attribute]
                 self.apply_transformations(fit=fit_val)
                 self._last_rendered_index = self.current_cache_index
 

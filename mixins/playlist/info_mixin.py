@@ -6,9 +6,22 @@ from PyQt6.QtWidgets import QMenu, QWidgetAction, QLabel, QVBoxLayout, QWidget
 from translations import tr
 from utils import get_resource_path
 from styles import MENU_STYLE
+from typing import TYPE_CHECKING
 
-class PlaylistInfoMixin:
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMainWindow, QPushButton
+    PlaylistInfoMixinBase = QMainWindow
+else:
+    PlaylistInfoMixinBase = object
+
+class PlaylistInfoMixin(PlaylistInfoMixinBase):
+    if TYPE_CHECKING:
+        currentFilePath: str | None
+        currentVideoPath: str | None
+        fps: float
+        infoButton: QPushButton
     def show_file_info(self):
+        # pyrefly: ignore [bad-argument-type, missing-attribute]
         if not self.currentFilePath or not os.path.exists(self.currentFilePath):
             return
 
@@ -25,6 +38,7 @@ class PlaylistInfoMixin:
             ]
 
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            # pyrefly: ignore [no-matching-overload]
             result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
             data = json.loads(result)
 
@@ -41,6 +55,7 @@ class PlaylistInfoMixin:
             container = fmt.get('format_name', 'unknown').split(',')[0]
 
             video_text = (
+                # pyrefly: ignore [missing-attribute]
                 f"<b>{tr('video')}</b><br>"
                 f"<b>{tr('resolution')}:</b> {res}<br>"
                 f"<b>{tr('codec')}:</b> {codec} ({pix_fmt})<br>"
@@ -75,6 +90,7 @@ class PlaylistInfoMixin:
             )
 
             # Create a compact menu instead of a MessageBox
+            # pyrefly: ignore [no-matching-overload]
             menu = QMenu(self)
             menu.setStyleSheet(MENU_STYLE)
             
@@ -93,6 +109,7 @@ class PlaylistInfoMixin:
             menu.addAction(action)
             
             # Show menu next to the info button
+            # pyrefly: ignore [missing-attribute]
             pos = self.infoButton.mapToGlobal(QPoint(0, self.infoButton.height() + 5))
             menu.exec(pos)
 
