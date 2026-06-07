@@ -13,7 +13,7 @@ class StyleUIMixin:
         s = get_styles(accent_color, bg_color)
 
         # Update main UI elements
-        sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 
+        sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 'qvSlider',
                    'brightnessSlider', 'contrastSlider', 'gammaSlider', 'saturationSlider', 'opacitySlider']
         for slider_name in sliders:
             if hasattr(self, slider_name):
@@ -66,6 +66,15 @@ class StyleUIMixin:
         if hasattr(self, 'loopCombo'):
             self.loopCombo.setStyleSheet(s['COMBO_STYLE'])
 
+        # Update SpinBoxes
+        spinboxes = ['speedValueLabel', 'zoomValueLabel', 'cacheValueLabel', 'qvValueSpinBox',
+                     'brightnessSpinBox', 'contrastSpinBox', 'gammaSpinBox', 'saturationSpinBox',
+                     'penSizeLabel']
+        for spin_name in spinboxes:
+            if hasattr(self, spin_name):
+                spin = getattr(self, spin_name)
+                spin.setStyleSheet(s['SPINBOX_STYLE'])
+
         # Update SwitchButtons
         switches = ['navToggle', 'gsGPUToggle', 'thumbToggle', 'fileNameToggle', 'laserModeToggle', 'chronometerToggle', 'drawModeToggle', 'lockSyncToggle']
         for sw_name in switches:
@@ -90,10 +99,12 @@ class StyleUIMixin:
 
         # Update pen color label
         if hasattr(self, 'penSizeLabel'):
-            self.penSizeLabel.setStyleSheet(
-                "color: white; font-size: 13px; font-weight: 500; "
-                "background: transparent; border: none !important;"
-            )
+            from PyQt6.QtWidgets import QLabel
+            if isinstance(self.penSizeLabel, QLabel):
+                self.penSizeLabel.setStyleSheet(
+                    "color: white; font-size: 13px; font-weight: 500; "
+                    "background: transparent; border: none !important;"
+                )
 
         # Update Sidebar Titles and Category Labels
         titles = ['settingsTitle', 'globalSettingsTitle', 'drawingSidebarTitle', 'playlistLabel']

@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QSlider
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QSlider, QSpinBox
 from qfluentwidgets import CaptionLabel, SwitchButton, PushButton, ToolButton
 from styles import TOOL_BTN_STYLE, FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE
 from translations import tr
@@ -141,11 +141,12 @@ class DrawingSidebarUIMixin:
         self.penPreview.setStyleSheet("background: transparent; border: none !important;")
         thicknessRow.addWidget(self.penPreview)
 
-        self.penSizeLabel = QLabel("3 px")
-        self.penSizeLabel.setStyleSheet(
-            "color: white; font-size: 13px; font-weight: 500; "
-            "background: transparent; border: none !important;"
-        )
+        self.penSizeLabel = QSpinBox()
+        self.penSizeLabel.setRange(1, 60)
+        self.penSizeLabel.setValue(3)
+        self.penSizeLabel.setSuffix(" px")
+        self.penSizeLabel.setFixedWidth(80)
+        self.penSizeLabel.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         thicknessRow.addWidget(self.penSizeLabel)
         thicknessRow.addStretch(1)
 
@@ -170,6 +171,11 @@ class DrawingSidebarUIMixin:
         self.penSizeSlider.setRange(1, 60)
         self.penSizeSlider.setValue(3)
         self.penSizeSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        
+        # Bidirectional sync
+        self.penSizeLabel.valueChanged.connect(self.penSizeSlider.setValue)
+        self.penSizeSlider.valueChanged.connect(self.penSizeLabel.setValue)
+        
         # pyrefly: ignore [missing-attribute]
         self.penSizeSlider.valueChanged.connect(self.update_pen_width)
         self.drawingSidebarLayout.addWidget(self.penSizeSlider)

@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QImage, QMatrix4x4
+from PyQt6.QtGui import QImage, QMatrix4x4, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture
@@ -13,6 +13,7 @@ class GPUPixmapItem(QGraphicsPixmapItem):
         super().__init__(parent)
         self.shader = None
         self.gpu_enabled = False
+        self.current_image = QImage()
         
         # Image adjustment parameters
         self.brightness = 0.0    # -1.0 to 1.0
@@ -22,10 +23,41 @@ class GPUPixmapItem(QGraphicsPixmapItem):
         
         self.texture = None
         self._last_pixmap_id = None
+        self._new_image_loaded = False
 
     def __del__(self):
         if self.texture:
             self.texture.destroy()
+
+    def boundingRect(self):
+        if not self.current_image.isNull():
+            from PyQt6.QtCore import QRectF
+            return QRectF(0.0, 0.0, float(self.current_image.width()), float(self.current_image.height()))
+        return super().boundingRect()
+
+    def setImage(self, image):
+        if not image.isNull():
+            self.current_image = image.convertToFormat(QImage.Format.Format_RGBA8888)
+            pix = self.pixmap()
+            if pix.isNull() or pix.width() != image.width() or pix.height() != image.height():
+                super().setPixmap(QPixmap.fromImage(self.current_image))
+            self._new_image_loaded = True
+            self.update()
+        else:
+            self.current_image = QImage()
+            super().setPixmap(QPixmap())
+            self._new_image_loaded = False
+            self.update()
+
+    def setPixmap(self, pixmap):
+        super().setPixmap(pixmap)
+        if not pixmap.isNull():
+            self.current_image = pixmap.toImage().convertToFormat(QImage.Format.Format_RGBA8888)
+            self._new_image_loaded = True
+        else:
+            self.current_image = QImage()
+            self._new_image_loaded = False
+        self.update()
 
     def update_params(self, b, c, g, s):
         self.brightness = b / 100.0
@@ -91,44 +123,45 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             
         if not self.shader.link():
             print("Shader link error:", self.shader.log())
-
+ 
     def paint(self, painter, option, widget):
         try:
-            if not self.gpu_enabled or self.pixmap().isNull():
+            if not self.gpu_enabled or self.pixmap().isNull() or self.current_image.isNull():
                 super().paint(painter, option, widget)
                 return
-
+ 
             # Ensure we are rendering in an OpenGL context
             if not isinstance(widget, QOpenGLWidget):
                 super().paint(painter, option, widget)
                 return
-
+ 
             self._init_shader()
             
             if not self.shader or not self.shader.isLinked():
                 super().paint(painter, option, widget)
                 return
-
+ 
             pix = self.pixmap()
-            img = pix.toImage().convertToFormat(QImage.Format.Format_RGBA8888)
+            img = self.current_image
             
-            # Update texture if pixmap changed
-            current_key = pix.cacheKey()
-            if self.texture is None or self.texture.width() != pix.width() or self.texture.height() != pix.height():
+            # Update texture if image dimensions changed
+            texture_recreated = False
+            if self.texture is None or self.texture.width() != img.width() or self.texture.height() != img.height():
                 if self.texture:
                     self.texture.destroy()
                 self.texture = QOpenGLTexture(QOpenGLTexture.Target.Target2D)
-                self.texture.setSize(pix.width(), pix.height())
+                self.texture.setSize(img.width(), img.height())
                 self.texture.setFormat(QOpenGLTexture.TextureFormat.RGBA8_UNorm)
                 self.texture.allocateStorage()
                 self.texture.setMinificationFilter(QOpenGLTexture.Filter.Linear)
                 self.texture.setMagnificationFilter(QOpenGLTexture.Filter.Linear)
                 self.texture.setWrapMode(QOpenGLTexture.WrapMode.ClampToEdge)
+                texture_recreated = True
             
-            if current_key != self._last_pixmap_id:
-                # Optimized update: reuse memory, just copy pixels
+            if self._new_image_loaded or texture_recreated:
+                # Optimized update: upload CPU image memory directly to GPU texture (no readback!)
                 self.texture.setData(QOpenGLTexture.PixelFormat.RGBA, QOpenGLTexture.PixelType.UInt8, img.constBits())
-                self._last_pixmap_id = current_key
+                self._new_image_loaded = False
 
             painter.beginNativePainting()
             
@@ -145,11 +178,11 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             proj.ortho(0, widget.width(), widget.height(), 0, -1, 1)
             
             self.shader.setUniformValue("matrix", proj * matrix)
-            self.shader.setUniformValue("u_brightness", float(self.brightness))
-            self.shader.setUniformValue("u_contrast", float(self.contrast))
-            self.shader.setUniformValue("u_gamma", float(self.gamma))
-            self.shader.setUniformValue("u_saturation", float(self.saturation))
-            self.shader.setUniformValue("u_opacity", float(painter.opacity()))
+            self.shader.setUniformValue("u_brightness", self.brightness)
+            self.shader.setUniformValue("u_contrast", self.contrast)
+            self.shader.setUniformValue("u_gamma", self.gamma)
+            self.shader.setUniformValue("u_saturation", self.saturation)
+            self.shader.setUniformValue("u_opacity", painter.opacity())
             self.shader.setUniformValue("u_texture", 0)
 
             self.texture.bind(0)

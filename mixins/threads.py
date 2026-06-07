@@ -8,7 +8,7 @@ from utils import get_resource_path
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None, video_codec=None):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None, video_codec=None, qv_value=2):
         super().__init__(parent)
         self.video_path = video_path
         self.start_frame = start_frame
@@ -21,6 +21,7 @@ class FrameExtractionThread(QThread):
         self.start_number = start_number if start_number is not None else start_frame
         self.temp_dir = temp_dir
         self.video_codec = video_codec
+        self.qv_value = qv_value
 
     def _extract_from_pipe(self, cmd, creationflags):
         if self._is_cancelled:
@@ -139,7 +140,7 @@ class FrameExtractionThread(QThread):
                     "-vframes", str(self.num_frames),
                     "-f", "image2pipe",
                     "-vcodec", "mjpeg",
-                    "-q:v", "2", 
+                    "-q:v", str(self.qv_value), 
                     "-"
                 ])
                 return c

@@ -72,7 +72,14 @@ class GlobalSettingsLocaleManagerMixin:
         # pyrefly: ignore [missing-attribute]
         self.laserModeToggleLabel.setText(tr('laser_mode'))
         # pyrefly: ignore [missing-attribute]
-        self.penSizeLabel.setText(f"{self.penSizeSlider.value()} px")
+        if hasattr(self, 'penSizeLabel') and self.penSizeLabel:
+            from PyQt6.QtWidgets import QLabel
+            if isinstance(self.penSizeLabel, QLabel):
+                self.penSizeLabel.setText(f"{self.penSizeSlider.value()} px")
+            else:
+                self.penSizeLabel.blockSignals(True)
+                self.penSizeLabel.setValue(self.penSizeSlider.value())
+                self.penSizeLabel.blockSignals(False)
         # pyrefly: ignore [missing-attribute]
         self.penColorBtn.setText(tr('color'))
         # pyrefly: ignore [missing-attribute]

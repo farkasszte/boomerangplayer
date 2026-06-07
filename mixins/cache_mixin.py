@@ -83,6 +83,10 @@ class CacheMixin(CacheMixinBase):
                 self.current_temp_dir = None
         self.cached_frame_dict = {}
         self.last_extracted_center = -1
+        self._last_rendered_index = -1
+        self._last_base_index = -1
+        if hasattr(self, '_current_base_image'):
+            self._current_base_image = QImage()
         pixmap_item = getattr(self, 'pixmapItem', None)
         if pixmap_item is not None:
             pixmap_item.setPixmap(QPixmap())
@@ -172,7 +176,8 @@ class CacheMixin(CacheMixinBase):
 
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
-        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, temp_dir={self.current_temp_dir}")
+        qv_value = self.config.get('qv_value', 2)
+        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, temp_dir={self.current_temp_dir}, qv_value={qv_value}")
         self.extraction_thread = FrameExtractionThread(
             video_path,
             actual_start_frame,
@@ -182,7 +187,8 @@ class CacheMixin(CacheMixinBase):
             self,
             gpu_enabled=gpu_enabled,
             start_number=start_number,
-            video_codec=self.video_codec
+            video_codec=self.video_codec,
+            qv_value=qv_value
         )
         # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_start = player_range_start
@@ -234,6 +240,7 @@ class CacheMixin(CacheMixinBase):
 
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
+        qv_value = self.config.get('qv_value', 2)
         self.extraction_thread = FrameExtractionThread(
             video_path,
             actual_start_frame,
@@ -243,7 +250,8 @@ class CacheMixin(CacheMixinBase):
             self,
             gpu_enabled=gpu_enabled,
             start_number=start_number,
-            video_codec=self.video_codec
+            video_codec=self.video_codec,
+            qv_value=qv_value
         )
         # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_start = start_pos
@@ -361,7 +369,8 @@ class CacheMixin(CacheMixinBase):
 
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
-        print(f"[check_proactive_cache] Starting proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_end={target_end}")
+        qv_value = self.config.get('qv_value', 2)
+        print(f"[check_proactive_cache] Starting proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_end={target_end}, qv_value={qv_value}")
         
         self.last_extracted_center = start_frame + num_frames // 2
 
@@ -374,7 +383,8 @@ class CacheMixin(CacheMixinBase):
             self,
             gpu_enabled=gpu_enabled,
             start_number=start_number,
-            video_codec=self.video_codec
+            video_codec=self.video_codec,
+            qv_value=qv_value
         )
         # pyrefly: ignore [missing-attribute]
         self.extraction_thread.player_start = player_range_start
@@ -496,6 +506,11 @@ class CacheMixin(CacheMixinBase):
         self.gammaSlider.setValue(100)
         self.saturationSlider.setValue(100)
         
+        if hasattr(self, 'brightnessSpinBox'): self.brightnessSpinBox.setValue(0)
+        if hasattr(self, 'contrastSpinBox'): self.contrastSpinBox.setValue(100)
+        if hasattr(self, 'gammaSpinBox'): self.gammaSpinBox.setValue(100)
+        if hasattr(self, 'saturationSpinBox'): self.saturationSpinBox.setValue(100)
+        
         self.isMirrored = False
         self.isMirroredVertical = False
         self.rotationAngle = 0
@@ -533,13 +548,7 @@ class CacheMixin(CacheMixinBase):
     def update_pixmap_from_cache(self):
         if self.current_cache_index in getattr(self, 'cached_frame_dict', {}):
             data = self.cached_frame_dict[self.current_cache_index]
-            pixmap = QPixmap()
-            if isinstance(data, bytes):
-                pixmap.loadFromData(data)
-            elif isinstance(data, str):
-                pixmap.load(data)
 
-            # Apply image adjustments
             b = self.brightnessSlider.value()
             c = self.contrastSlider.value() / 100.0
             g = self.gammaSlider.value() / 100.0
@@ -547,48 +556,81 @@ class CacheMixin(CacheMixinBase):
 
             gpu_enabled = self.config.get('gpu_acceleration', False)
             if gpu_enabled:
-                pixmap_item = getattr(self, 'pixmapItem', None)
-                if pixmap_item is not None:
-                    pixmap_item.update_params(b, c, g, s)
-            elif b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
-                img = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
-                width, height = img.width(), img.height()
+                if self.pixmapItem is not None:
+                    if self.current_cache_index == getattr(self, '_last_rendered_index', -1):
+                        self.pixmapItem.update_params(b, c, g, s)
+                    else:
+                        image = QImage()
+                        if isinstance(data, bytes):
+                            image.loadFromData(data)
+                        elif isinstance(data, str):
+                            image.load(data)
+                        
+                        self.pixmapItem.setImage(image)
+                        self.pixmapItem.update_params(b, c, g, s)
+                        
+                        fit_val = False
+                        if getattr(self, 'is_motion_photo', False):
+                            last_idx = getattr(self, '_last_rendered_index', -1)
+                            if self.current_cache_index == 0 or last_idx == 0:
+                                fit_val = True
+                        
+                        # pyrefly: ignore [missing-attribute]
+                        self.apply_transformations(fit=fit_val)
+                        self._last_rendered_index = self.current_cache_index
+            else:
+                # Software rendering path
+                if (hasattr(self, '_last_base_index') and self._last_base_index == self.current_cache_index 
+                        and hasattr(self, '_current_base_image') and not self._current_base_image.isNull()):
+                    img = self._current_base_image.copy()
+                else:
+                    pixmap = QPixmap()
+                    if isinstance(data, bytes):
+                        pixmap.loadFromData(data)
+                    elif isinstance(data, str):
+                        pixmap.load(data)
+                    img = pixmap.toImage()
+                    self._current_base_image = img
+                    self._last_base_index = self.current_cache_index
 
-                ptr = img.bits()
-                ptr.setsize(img.sizeInBytes())
-                # pyrefly: ignore [no-matching-overload]
-                arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
+                if b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
+                    img = img.convertToFormat(QImage.Format.Format_ARGB32)
+                    width, height = img.width(), img.height()
+                    ptr = img.bits()
+                    ptr.setsize(img.sizeInBytes())
+                    # pyrefly: ignore [no-matching-overload]
+                    arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
-                if b != 0 or c != 1.0 or g != 1.0:
-                    lut = self._get_adj_lut(b, c, g)
-                    arr[:, :, :3] = lut[arr[:, :, :3]]
+                    if b != 0 or c != 1.0 or g != 1.0:
+                        lut = self._get_adj_lut(b, c, g)
+                        arr[:, :, :3] = lut[arr[:, :, :3]]
 
-                if s != 1.0:
-                    b_chan = arr[:, :, 0].astype(np.float32)
-                    g_chan = arr[:, :, 1].astype(np.float32)
-                    r_chan = arr[:, :, 2].astype(np.float32)
-                    
-                    gray = (0.299 * r_chan + 0.587 * g_chan + 0.114 * b_chan)
-                    
-                    arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
-                    arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
-                    arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
+                    if s != 1.0:
+                        b_chan = arr[:, :, 0].astype(np.float32)
+                        g_chan = arr[:, :, 1].astype(np.float32)
+                        r_chan = arr[:, :, 2].astype(np.float32)
+                        
+                        gray = (0.299 * r_chan + 0.587 * g_chan + 0.114 * b_chan)
+                        
+                        arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
+                        arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
+                        arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
 
                 pixmap = QPixmap.fromImage(img)
 
-            if self.pixmapItem is not None:
-                self.pixmapItem.setPixmap(pixmap)
-                
-                # Only auto-fit when transitioning to/from the static JPEG (frame 0) of a motion photo
-                fit_val = False
-                if getattr(self, 'is_motion_photo', False):
-                    last_idx = getattr(self, '_last_rendered_index', -1)
-                    if self.current_cache_index == 0 or last_idx == 0:
-                        fit_val = True
-                
-                # pyrefly: ignore [missing-attribute]
-                self.apply_transformations(fit=fit_val)
-                self._last_rendered_index = self.current_cache_index
+                if self.pixmapItem is not None:
+                    self.pixmapItem.setPixmap(pixmap)
+                    
+                    # Only auto-fit when transitioning to/from the static JPEG (frame 0) of a motion photo
+                    fit_val = False
+                    if getattr(self, 'is_motion_photo', False):
+                        last_idx = getattr(self, '_last_rendered_index', -1)
+                        if self.current_cache_index == 0 or last_idx == 0:
+                            fit_val = True
+                    
+                    # pyrefly: ignore [missing-attribute]
+                    self.apply_transformations(fit=fit_val)
+                    self._last_rendered_index = self.current_cache_index
 
             if hasattr(self, 'frameLabel'):
                 self.frameLabel.setText(

@@ -89,6 +89,25 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
         }}
     """
 
+    styles['SPINBOX_STYLE'] = f"""
+        QSpinBox {{
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            padding: 4px 6px;
+            color: white;
+            font-size: 13px;
+        }}
+        QSpinBox:hover {{
+            background: rgba(255,255,255,0.1);
+        }}
+        QSpinBox:focus {{
+            border: 1px solid {accent_color};
+            background: rgba(255,255,255,0.08);
+        }}
+    """
+
     styles['ACTION_BTN_STYLE'] = """
         PushButton {
             border: none;
@@ -187,7 +206,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
         background: rgba(0,0,0,180);
         color: white;
         font-weight: bold;
-        border-radius: 10px;
+        border-radius: 0px;
     """
     
     return styles

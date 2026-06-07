@@ -184,7 +184,14 @@ class DrawingMixin(DrawingMixinBase):
 
     def update_pen_width(self, val):
         self.view.pen_width = val
-        self.penSizeLabel.setText(f"{val} px")
+        if hasattr(self, 'penSizeLabel') and self.penSizeLabel:
+            from PyQt6.QtWidgets import QLabel
+            if isinstance(self.penSizeLabel, QLabel):
+                self.penSizeLabel.setText(f"{val} px")
+            else:
+                self.penSizeLabel.blockSignals(True)
+                self.penSizeLabel.setValue(val)
+                self.penSizeLabel.blockSignals(False)
         self.view.update_cursor_size()
         self.update_pen_preview()
 

@@ -5,7 +5,7 @@ SettingsMixin — video settings sidebar builder (speed, zoom, cache,
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
-                              QGridLayout, QWidget, QComboBox)
+                              QGridLayout, QWidget, QComboBox, QSpinBox)
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, ToolButton, FluentIcon)
 from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE)
@@ -26,13 +26,13 @@ class SettingsMixin(SettingsMixinBase):
     if TYPE_CHECKING:
         config: Configuration
         cache_window_half: int
-        cacheValueLabel: QLabel
+        cacheValueLabel: QSpinBox
         cacheSlider: QSlider
         loopCombo: QComboBox
         speedSlider: QSlider
-        speedValueLabel: QLabel
+        speedValueLabel: QSpinBox
         zoomSlider: QSlider
-        zoomValueLabel: QLabel
+        zoomValueLabel: QSpinBox
         brightnessSlider: QSlider
         contrastSlider: QSlider
         gammaSlider: QSlider
@@ -95,8 +95,12 @@ class SettingsMixin(SettingsMixinBase):
     def _build_speed_section(self):
         speedHeader = QHBoxLayout()
         self.speedLabel = CaptionLabel(tr('playback_speed'))
-        self.speedValueLabel = CaptionLabel("1.0x")
-        self.speedValueLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.speedValueLabel = QSpinBox()
+        self.speedValueLabel.setRange(10, 500)
+        self.speedValueLabel.setValue(100)
+        self.speedValueLabel.setSuffix("%")
+        self.speedValueLabel.setFixedWidth(80)
+        self.speedValueLabel.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         speedHeader.addWidget(self.speedLabel)
         speedHeader.addStretch(1)
         speedHeader.addWidget(self.speedValueLabel)
@@ -108,6 +112,10 @@ class SettingsMixin(SettingsMixinBase):
         self.speedSlider.setToolTip(tr('tip_playback_speed'))
         # pyrefly: ignore [missing-attribute]
         self.speedSlider.valueChanged.connect(self.on_speed_slider_changed)
+        
+        self.speedValueLabel.valueChanged.connect(self.speedSlider.setValue)
+        self.speedSlider.valueChanged.connect(self.speedValueLabel.setValue)
+        
         self.settingsInnerLayout.addLayout(speedHeader)
         self.settingsInnerLayout.addWidget(self.speedSlider)
 
@@ -116,8 +124,12 @@ class SettingsMixin(SettingsMixinBase):
         zoomGroup.setSpacing(5)
         zoomHeader = QHBoxLayout()
         self.zoomLabel = CaptionLabel(tr('zoom'))
-        self.zoomValueLabel = CaptionLabel("100%")
-        self.zoomValueLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.zoomValueLabel = QSpinBox()
+        self.zoomValueLabel.setRange(100, 1000)
+        self.zoomValueLabel.setValue(100)
+        self.zoomValueLabel.setSuffix("%")
+        self.zoomValueLabel.setFixedWidth(80)
+        self.zoomValueLabel.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         zoomHeader.addWidget(self.zoomLabel)
         zoomHeader.addStretch(1)
         zoomHeader.addWidget(self.zoomValueLabel)
@@ -129,6 +141,10 @@ class SettingsMixin(SettingsMixinBase):
         self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         self.zoomSlider.setToolTip(tr('tip_zoom'))
         self.zoomSlider.valueChanged.connect(self.update_zoom)
+        
+        self.zoomValueLabel.valueChanged.connect(self.zoomSlider.setValue)
+        self.zoomSlider.valueChanged.connect(self.zoomValueLabel.setValue)
+        
         zoomGroup.addWidget(self.zoomSlider)
 
         self.settingsInnerLayout.addLayout(zoomGroup)
@@ -138,15 +154,18 @@ class SettingsMixin(SettingsMixinBase):
         cacheGroup.setSpacing(5)
         cacheHeader = QHBoxLayout()
         self.cacheLabel = CaptionLabel(tr('cache_window'))
-        self.cacheValueLabel = CaptionLabel(str(self.cache_window_half))
-        self.cacheValueLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.cacheValueLabel = QSpinBox()
+        self.cacheValueLabel.setRange(100, 3000)
+        self.cacheValueLabel.setValue(self.cache_window_half)
+        self.cacheValueLabel.setFixedWidth(80)
+        self.cacheValueLabel.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         cacheHeader.addWidget(self.cacheLabel)
         cacheHeader.addStretch(1)
         cacheHeader.addWidget(self.cacheValueLabel)
         cacheGroup.addLayout(cacheHeader)
 
         self.cacheSlider = QSlider(Qt.Orientation.Horizontal)
-        self.cacheSlider.setRange(100, 1500)
+        self.cacheSlider.setRange(100, 3000)
         self.cacheSlider.setSingleStep(10)
         self.cacheSlider.setPageStep(50)
         self.cacheSlider.setValue(self.cache_window_half)
@@ -156,7 +175,9 @@ class SettingsMixin(SettingsMixinBase):
         def update_cache_size(val):
             rounded_val = (val // 10) * 10
             self.cache_window_half = rounded_val
-            self.cacheValueLabel.setText(str(rounded_val))
+            self.cacheValueLabel.blockSignals(True)
+            self.cacheValueLabel.setValue(rounded_val)
+            self.cacheValueLabel.blockSignals(False)
             if val != rounded_val:
                 self.cacheSlider.blockSignals(True)
                 self.cacheSlider.setValue(rounded_val)
@@ -180,7 +201,58 @@ class SettingsMixin(SettingsMixinBase):
             self._cache_debounce_timer.start(300)
 
         self.cacheSlider.valueChanged.connect(update_cache_size)
+        self.cacheValueLabel.valueChanged.connect(self.cacheSlider.setValue)
         cacheGroup.addWidget(self.cacheSlider)
+        
+        # --- MJPEG Quality Slider ---
+        qvGroup = QVBoxLayout()
+        qvGroup.setSpacing(5)
+        qvHeader = QHBoxLayout()
+        self.qvLabel = CaptionLabel(tr('mjpeg_quality'))
+        self.qvValueSpinBox = QSpinBox()
+        self.qvValueSpinBox.setRange(1, 31)
+        default_qv = self.config.get('qv_value', 2)
+        self.qvValueSpinBox.setValue(default_qv)
+        self.qvValueSpinBox.setFixedWidth(80)
+        self.qvValueSpinBox.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        qvHeader.addWidget(self.qvLabel)
+        qvHeader.addStretch(1)
+        qvHeader.addWidget(self.qvValueSpinBox)
+        qvGroup.addLayout(qvHeader)
+
+        self.qvSlider = QSlider(Qt.Orientation.Horizontal)
+        self.qvSlider.setRange(1, 31)
+        self.qvSlider.setValue(default_qv)
+        self.qvSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.qvSlider.setToolTip(tr('tip_mjpeg_quality'))
+        
+        self.qvValueSpinBox.valueChanged.connect(self.qvSlider.setValue)
+        
+        def update_qv_value(val):
+            self.config['qv_value'] = val
+            self.config.save()
+            
+            if self.qvValueSpinBox.value() != val:
+                self.qvValueSpinBox.blockSignals(True)
+                self.qvValueSpinBox.setValue(val)
+                self.qvValueSpinBox.blockSignals(False)
+                
+            if hasattr(self, '_qv_debounce_timer'):
+                self._qv_debounce_timer.stop()
+            from PyQt6.QtCore import QTimer
+            self._qv_debounce_timer = QTimer()
+            self._qv_debounce_timer.setSingleShot(True)
+            self._qv_debounce_timer.timeout.connect(
+                # pyrefly: ignore [missing-attribute]
+                lambda: self.request_frame_extraction(self.current_cache_index, force=True)
+                        if getattr(self, 'currentFilePath', None) else None
+            )
+            self._qv_debounce_timer.start(300)
+
+        self.qvSlider.valueChanged.connect(update_qv_value)
+        qvGroup.addWidget(self.qvSlider)
+        cacheGroup.addLayout(qvGroup)
+        
         self.settingsInnerLayout.addLayout(cacheGroup)
         hline2 = QFrame()
         hline2.setFrameShape(QFrame.Shape.HLine)
@@ -196,27 +268,47 @@ class SettingsMixin(SettingsMixinBase):
             layout = QVBoxLayout()
             header = QHBoxLayout()
             lbl = CaptionLabel(label_text)
-            val_lbl = CaptionLabel(str(default))
-            val_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            
+            spin = QSpinBox()
+            spin.setRange(min_val, max_val)
+            spin.setValue(default)
+            spin.setFixedWidth(80)
+            spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+            
             header.addWidget(lbl)
             header.addStretch(1)
-            header.addWidget(val_lbl)
+            header.addWidget(spin)
+            
             slider = QSlider(Qt.Orientation.Horizontal)
             slider.setRange(min_val, max_val)
             slider.setValue(default)
             slider.setStyleSheet(FLUENT_SLIDER_STYLE)
             slider.setToolTip(tr(tip_key))
+            
             slider.valueChanged.connect(
-                lambda v: (val_lbl.setText(str(v)), self.update_pixmap_from_cache())
+                lambda v: (
+                    spin.blockSignals(True),
+                    spin.setValue(v),
+                    spin.blockSignals(False),
+                    self.update_pixmap_from_cache()
+                )
+            )
+            spin.valueChanged.connect(
+                lambda v: (
+                    slider.blockSignals(True),
+                    slider.setValue(v),
+                    slider.blockSignals(False),
+                    self.update_pixmap_from_cache()
+                )
             )
             layout.addLayout(header)
             layout.addWidget(slider)
-            return slider, lbl, layout
+            return slider, lbl, layout, spin
 
-        self.brightnessSlider, self.brightnessLabel, l1 = create_adj_slider(tr('brightness'), -100, 100, 0, 'tip_brightness')
-        self.contrastSlider,   self.contrastLabel,   l2 = create_adj_slider(tr('contrast'),     0, 200, 100, 'tip_contrast')
-        self.gammaSlider,      self.gammaLabel,      l3 = create_adj_slider(tr('gamma'),        10, 300, 100, 'tip_gamma')
-        self.saturationSlider, self.saturationLabel, l4 = create_adj_slider(tr('saturation'),    0, 200, 100, 'tip_saturation')
+        self.brightnessSlider, self.brightnessLabel, l1, self.brightnessSpinBox = create_adj_slider(tr('brightness'), -100, 100, 0, 'tip_brightness')
+        self.contrastSlider,   self.contrastLabel,   l2, self.contrastSpinBox   = create_adj_slider(tr('contrast'),     0, 200, 100, 'tip_contrast')
+        self.gammaSlider,      self.gammaLabel,      l3, self.gammaSpinBox      = create_adj_slider(tr('gamma'),        10, 300, 100, 'tip_gamma')
+        self.saturationSlider, self.saturationLabel, l4, self.saturationSpinBox = create_adj_slider(tr('saturation'),    0, 200, 100, 'tip_saturation')
 
         for l in [l1, l2, l3, l4]:
             self.settingsInnerLayout.addLayout(l)

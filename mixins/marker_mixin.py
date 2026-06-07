@@ -474,7 +474,13 @@ class MarkerMixin(MarkerMixinBase):
             # pyrefly: ignore [missing-attribute]
             self.zoomSlider.blockSignals(False)
             # pyrefly: ignore [missing-attribute]
-            self.zoomValueLabel.setText(f"{zoom_val}%")
+            if hasattr(self, 'zoomValueLabel') and self.zoomValueLabel:
+                if hasattr(self.zoomValueLabel, 'setValue'):
+                    self.zoomValueLabel.blockSignals(True)
+                    self.zoomValueLabel.setValue(zoom_val)
+                    self.zoomValueLabel.blockSignals(False)
+                else:
+                    self.zoomValueLabel.setText(f"{zoom_val}%")
 
             # pyrefly: ignore [missing-attribute]
             self.apply_transformations(fit=True)
@@ -506,7 +512,13 @@ class MarkerMixin(MarkerMixinBase):
             # pyrefly: ignore [missing-attribute]
             self.zoomSlider.blockSignals(False)
             # pyrefly: ignore [missing-attribute]
-            self.zoomValueLabel.setText("100%")
+            if hasattr(self, 'zoomValueLabel') and self.zoomValueLabel:
+                if hasattr(self.zoomValueLabel, 'setValue'):
+                    self.zoomValueLabel.blockSignals(True)
+                    self.zoomValueLabel.setValue(100)
+                    self.zoomValueLabel.blockSignals(False)
+                else:
+                    self.zoomValueLabel.setText("100%")
             
             # pyrefly: ignore [missing-attribute]
             self.reset_adjustments()

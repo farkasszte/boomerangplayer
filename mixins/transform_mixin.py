@@ -49,7 +49,13 @@ class TransformMixin(TransformMixinBase):
         self.view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
         self.view.zoomLevel = self.zoomLevel
-        self.zoomValueLabel.setText(f"{snapped}%")
+        if hasattr(self, 'zoomValueLabel') and self.zoomValueLabel:
+            if hasattr(self.zoomValueLabel, 'setValue'):
+                self.zoomValueLabel.blockSignals(True)
+                self.zoomValueLabel.setValue(snapped)
+                self.zoomValueLabel.blockSignals(False)
+            else:
+                self.zoomValueLabel.setText(f"{snapped}%")
 
     def sync_zoom_ui(self, zoom_level):
         self.zoomLevel = zoom_level
@@ -61,7 +67,13 @@ class TransformMixin(TransformMixinBase):
         self.zoomSlider.setValue(val)
         self.zoomSlider.setSliderPosition(val)
         self.zoomSlider.blockSignals(False)
-        self.zoomValueLabel.setText(f"{val}%")
+        if hasattr(self, 'zoomValueLabel') and self.zoomValueLabel:
+            if hasattr(self.zoomValueLabel, 'setValue'):
+                self.zoomValueLabel.blockSignals(True)
+                self.zoomValueLabel.setValue(val)
+                self.zoomValueLabel.blockSignals(False)
+            else:
+                self.zoomValueLabel.setText(f"{val}%")
         self.zoomSlider.update()
 
     # ------------------------------------------------------------------ #

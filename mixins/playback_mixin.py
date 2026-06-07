@@ -612,8 +612,13 @@ class PlaybackMixin(PlaybackMixinBase):
             return
         rate = snapped / 100.0
         self.mediaPlayer.setPlaybackRate(rate)
-        # pyrefly: ignore [missing-attribute]
-        self.speedValueLabel.setText(f"{snapped}%")
+        if hasattr(self, 'speedValueLabel') and self.speedValueLabel:
+            if hasattr(self.speedValueLabel, 'setValue'):
+                self.speedValueLabel.blockSignals(True)
+                self.speedValueLabel.setValue(snapped)
+                self.speedValueLabel.blockSignals(False)
+            else:
+                self.speedValueLabel.setText(f"{snapped}%")
 
         if not getattr(self, '_block_broadcast', False):
             # pyrefly: ignore [missing-attribute]
