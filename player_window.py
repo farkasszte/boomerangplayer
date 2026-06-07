@@ -62,7 +62,7 @@ class PlayerWindow(
         self.view = None
 
         from qfluentwidgets import setTheme, Theme, setThemeColor
-        setTheme(Theme.DARK)
+        setTheme(Theme.LIGHT if self.config.get('inverse_text', False) else Theme.DARK)
         
         accent_color = self.config.get('accent_color', '#00f2ff')
         from PyQt6.QtGui import QColor

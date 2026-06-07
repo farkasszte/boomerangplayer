@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
-VERSION = "2.4"
+VERSION = "2.5"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -59,6 +59,7 @@ DEFAULT_CONFIG = {
     'audio_device': '',
     'panel_opacity': 100,
     'speed_locked': False,
+    'inverse_text': False,
     'shortcuts': {
         'play_pause': Qt.Key.Key_Space,
         'smart_mark': Qt.Key.Key_S,

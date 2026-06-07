@@ -627,8 +627,9 @@ class SettingsMixin(SettingsMixinBase):
             self.speedLockBtn.setToolTip(tr('tip_speed_locked'))
         else:
             from PyQt6.QtGui import QColor
-            # Render the SVG using white color (#ffffff)
-            self.speedLockBtn.setIcon(UNLOCK_ICON.icon(color=QColor('#ffffff')))
+            # Render the SVG using white/dark color depending on setting
+            unlocked_color = '#1c1c1c' if self.config.get('inverse_text', False) else '#ffffff'
+            self.speedLockBtn.setIcon(UNLOCK_ICON.icon(color=QColor(unlocked_color)))
             self.speedLockBtn.setToolTip(tr('tip_speed_unlocked'))
 
 

@@ -54,8 +54,11 @@ class PlaylistSidebarUIMixin:
         """Update the playlist list stylesheet using the current accent color."""
         # pyrefly: ignore [missing-attribute]
         accent = self.config.get('accent_color', '#00f2ff')
+        # pyrefly: ignore [missing-attribute]
+        inverse_text = self.config.get('inverse_text', False)
+        fg_color = "#1c1c1c" if inverse_text else "#ffffff"
         self.playlistList.setStyleSheet(
-            "QListWidget { border: none; background: transparent; outline: none; } "
+            f"QListWidget {{ border: none; background: transparent; outline: none; color: {fg_color}; }} "
             "QListWidget::item { border: none; outline: none; } "
             "QScrollBar:vertical { width: 0px; } "
             f"QListWidget::item:selected {{ background: rgba({_hex_to_rgb(accent)}, 0.3); border: none; outline: none; }} "

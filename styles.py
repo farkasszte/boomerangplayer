@@ -1,7 +1,18 @@
 # Styles for Boomerang Player
 
-def get_styles(accent_color="#00f2ff", bg_color="#202020"):
+def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
     styles = {}
+    
+    fg_color = "#1c1c1c" if inverse_text else "#ffffff"
+    sec_fg_color = "#555555" if inverse_text else "#aaaaaa"
+    
+    # Dynamic borders and translucent backgrounds
+    border_color = "rgba(0, 0, 0, 0.35)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+    border_bottom_color = "rgba(0, 0, 0, 0.45)" if inverse_text else "rgba(255, 255, 255, 0.2)"
+    bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
+    bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+    bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+    menu_selected_bg = "rgba(0, 0, 0, 0.12)" if inverse_text else "rgba(255, 255, 255, 0.15)"
     
     styles['FLUENT_SLIDER_STYLE'] = f"""
     QSlider::groove:horizontal {{
@@ -26,60 +37,62 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
     }}
     """
 
-    styles['COMPACT_BTN_STYLE'] = """
-    ToolButton {
-        border: 1px solid rgba(255, 255, 255, 0.08);
+    styles['COMPACT_BTN_STYLE'] = f"""
+    ToolButton {{
+        border: 1px solid {border_color};
         border-right: none;
         border-radius: 0px;
-        background: rgba(255, 255, 255, 0.05);
+        background: {bg_translucent};
         padding: 0px;
         min-width: 32px;
         min-height: 32px;
         max-height: 32px;
         margin: 0px;
-    }
-    ToolButton:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-    ToolButton:pressed {
-        background: rgba(255, 255, 255, 0.03);
-    }
+    }}
+    ToolButton:hover {{
+        background: {bg_hover};
+    }}
+    ToolButton:pressed {{
+        background: {bg_pressed};
+    }}
     """
 
     styles['MENU_STYLE'] = f"""
         QMenu {{
             background-color: {bg_color};
-            color: white;
-            border: 1px solid #333;
+            color: {fg_color};
+            border: 1px solid {border_color};
             border-radius: 5px;
             padding: 5px;
         }}
         QMenu::item {{
             padding: 5px 25px 5px 20px;
             border-radius: 3px;
+            color: {fg_color};
         }}
         QMenu::item:selected {{
-            background-color: #333;
+            background-color: {menu_selected_bg};
+            color: {fg_color};
         }}
     """
 
     styles['COMBO_STYLE'] = f"""
         QComboBox {{
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            background: {bg_translucent};
+            border: 1px solid {border_color};
+            border-bottom: 1px solid {border_bottom_color};
             border-radius: 5px; padding: 4px 10px;
-            min-height: 22px; color: white; font-size: 13px;
+            min-height: 22px; color: {fg_color}; font-size: 13px;
         }}
-        QComboBox:hover {{ background: rgba(255,255,255,0.1); }}
+        QComboBox:hover {{ background: {bg_hover}; }}
         QComboBox::drop-down {{ border: none; width: 0px; }}
         QComboBox::down-arrow {{ image: none; border: none; background: transparent; }}
         QComboBox QAbstractItemView {{
             background-color: {bg_color};
             border: 1px solid rgba(0,0,0,0.4);
             selection-background-color: {accent_color};
-            selection-color: white;
-            color: white; outline: none;
+            selection-color: {fg_color};
+            color: {fg_color}; outline: none;
         }}
     """
 
@@ -91,38 +104,38 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
 
     styles['SPINBOX_STYLE'] = f"""
         QSpinBox {{
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            background: {bg_translucent};
+            border: 1px solid {border_color};
+            border-bottom: 1px solid {border_bottom_color};
             border-radius: 5px;
             padding: 4px 6px;
-            color: white;
+            color: {fg_color};
             font-size: 13px;
         }}
         QSpinBox:hover {{
-            background: rgba(255,255,255,0.1);
+            background: {bg_hover};
         }}
         QSpinBox:focus {{
             border: 1px solid {accent_color};
-            background: rgba(255,255,255,0.08);
+            background: {bg_translucent};
         }}
     """
 
-    styles['ACTION_BTN_STYLE'] = """
-        PushButton {
+    styles['ACTION_BTN_STYLE'] = f"""
+        PushButton {{
             border: none;
             border-radius: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
+            background: {bg_translucent};
+            border: 1px solid {border_color};
+            color: {fg_color};
             font-size: 13px;
             font-weight: 500;
             padding: 8px;
             min-width: 60px;
-        }
-        PushButton:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+        }}
+        PushButton:hover {{
+            background: {bg_hover};
+        }}
     """
 
     styles['TOOL_BTN_STYLE'] = f"""
@@ -130,12 +143,13 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
             font-size: 13px;
             font-weight: 500;
             padding: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: {bg_translucent};
+            border: 1px solid {border_color};
             border-radius: 4px;
+            color: {fg_color};
         }}
         PushButton:hover, ToolButton:hover {{
-            background: rgba(255, 255, 255, 0.1);
+            background: {bg_hover};
         }}
         PushButton[checked=true], ToolButton[checked=true] {{
             background: rgba({_hex_to_rgb(accent_color)}, 0.15);
@@ -149,19 +163,19 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
         }}
     """
 
-    styles['TRIGGER_STYLE'] = """
-        PushButton {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px; color: white;
+    styles['TRIGGER_STYLE'] = f"""
+        PushButton {{
+            background: {bg_translucent};
+            border: 1px solid {border_color};
+            border-bottom: 1px solid {border_bottom_color};
+            border-radius: 4px; color: {fg_color};
             padding: 8px 12px; text-align: left; font-size: 13px;
-        }
-        PushButton:hover { background: rgba(255,255,255,0.1); }
+        }}
+        PushButton:hover {{ background: {bg_hover}; }}
     """
 
-    styles['TITLE_STYLE'] = "font-size: 16px; font-weight: bold; color: white; background: transparent;"
-    styles['CAPTION_STYLE'] = "font-weight: bold; color: #aaaaaa; background: transparent;"
+    styles['TITLE_STYLE'] = f"font-size: 16px; font-weight: bold; color: {fg_color}; background: transparent;"
+    styles['CAPTION_STYLE'] = f"font-weight: bold; color: {sec_fg_color}; background: transparent;"
     
     # Borderless/Accent colored menu popup style
     styles['MENU_POPUP_STYLE'] = f"""
@@ -172,11 +186,11 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
         }}
         QMenu::item {{
             padding: 8px 25px;
-            color: white;
+            color: {fg_color};
             background-color: transparent;
         }}
         QMenu::item:selected {{
-            background-color: rgba(255,255,255,0.1);
+            background-color: {menu_selected_bg};
         }}
         QMenu::item:checked {{
             color: {accent_color};
@@ -188,23 +202,23 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020"):
     """
 
     # Chronometer Overlay dark translucent card style
-    styles['CHRONO_OVERLAY_STYLE'] = """
-        QFrame {
+    styles['CHRONO_OVERLAY_STYLE'] = f"""
+        QFrame {{
             background-color: rgba(15, 15, 15, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid {border_color};
             border-radius: 8px;
-        }
-        QLabel {
-            color: #e3e3e3;
+        }}
+        QLabel {{
+            color: {fg_color};
             background: transparent;
             border: none;
-        }
+        }}
     """
 
     # Caching / Loading mask overlay style
-    styles['LOADING_OVERLAY_STYLE'] = """
+    styles['LOADING_OVERLAY_STYLE'] = f"""
         background: rgba(0,0,0,180);
-        color: white;
+        color: {fg_color};
         font-weight: bold;
         border-radius: 0px;
     """

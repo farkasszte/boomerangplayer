@@ -57,6 +57,7 @@ TRANSLATIONS = {
         'full_screen': 'Full screen',
         'on': 'On',
         'off': 'Off',
+        'inverse_text': 'Inverse text color',
         
         # Menu actions
         'add_media': 'Add media / playlist',
@@ -281,6 +282,7 @@ TRANSLATIONS = {
         'act_full_screen': 'Teljes képernyő ki/be',
         'on': 'Be',
         'off': 'Ki',
+        'inverse_text': 'Szövegszín megfordítása',
         
         # Menu actions
         'add_media': 'Média / lista hozzáadása',

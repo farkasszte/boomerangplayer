@@ -10,7 +10,14 @@ class StyleUIMixin:
             # pyrefly: ignore [missing-attribute]
             bg_color = self.config.get('bg_color', '#202020')
 
-        s = get_styles(accent_color, bg_color)
+        # pyrefly: ignore [missing-attribute]
+        inverse_text = self.config.get('inverse_text', False)
+        s = get_styles(accent_color, bg_color, inverse_text)
+        fg_color = "#1c1c1c" if inverse_text else "#ffffff"
+        border_color = "rgba(0, 0, 0, 0.35)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+        bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
+        bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
 
         # Update main UI elements
         sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 'qvSlider',
@@ -32,7 +39,8 @@ class StyleUIMixin:
         action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn', 'gsResetDefaultsBtn', 'thumbSizeBtn',
                        'syncFrameButton', 'saveLoopButton', 'saveFrameButton', 'mirrorButton', 
                        'mirrorVerticalButton', 'rotateLeftButton', 'rotateRightButton', 'resetAdjButton', 'infoButton',
-                       'smartMarkButton', 'manageMarkersButton', 'deleteMarkerButton', 'clearMarkersButton']
+                       'smartMarkButton', 'manageMarkersButton', 'deleteMarkerButton', 'clearMarkersButton',
+                       'penColorBtn', 'btn_add', 'btn_sort', 'btn_save', 'btn_clear']
         for btn_name in action_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -55,8 +63,70 @@ class StyleUIMixin:
                 if btn_name == 'stepBackButton':
                     style += "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }"
                 elif btn_name == 'stepForwardButton':
-                    style += "ToolButton { border-right: 1px solid rgba(255,255,255,0.08); border-top-right-radius: 4px; border-bottom-right-radius: 4px; }"
+                    style += f"ToolButton {{ border-right: 1px solid {border_color}; border-top-right-radius: 4px; border-bottom-right-radius: 4px; }}"
                 btn.setStyleSheet(style)
+
+        # Controls card bottom row tool buttons styling
+        cc_btns = ['toggleSettingsButton', 'globalSettingsButton', 'fullScreenButton', 
+                   'volumeButton', 'togglePlaylistButton', 'toggleDrawingButton']
+        for btn_name in cc_btns:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                btn.setFixedSize(32, 32)
+                btn.setStyleSheet(f"""
+                    ToolButton {{
+                        border: 1px solid {border_color};
+                        border-radius: 4px;
+                        background: {bg_translucent};
+                        color: {fg_color};
+                        min-width: 32px;
+                        min-height: 32px;
+                    }}
+                    ToolButton:hover {{
+                        background: {bg_hover};
+                    }}
+                    ToolButton:pressed {{
+                        background: {bg_pressed};
+                    }}
+                """)
+
+        # Regenerate controls card play/pause icons
+        if hasattr(self, 'flippedPlayIcon'):
+            from qfluentwidgets import FluentIcon
+            from PyQt6.QtGui import QPixmap, QIcon
+            from PyQt6.QtCore import QSize
+            play_pixmap = FluentIcon.PLAY.icon().pixmap(QSize(24, 24))
+            flipped_play_pixmap = QPixmap.fromImage(play_pixmap.toImage().mirrored(True, False))
+            self.flippedPlayIcon = QIcon(flipped_play_pixmap)
+            self.normalPlayIcon = FluentIcon.PLAY.icon()
+            self.pauseIcon = FluentIcon.PAUSE.icon()
+
+        if hasattr(self, 'update_play_icons'):
+            self.update_play_icons()
+
+        # Regenerate and apply controls card icons
+        if hasattr(self, 'toggleSettingsButton'):
+            from qfluentwidgets import FluentIcon
+            icons_map = {
+                'toggleSettingsButton': FluentIcon.VIDEO,
+                'globalSettingsButton': FluentIcon.SETTING,
+                'stepBackButton': FluentIcon.LEFT_ARROW,
+                'stepForwardButton': FluentIcon.RIGHT_ARROW,
+                'fullScreenButton': FluentIcon.FULL_SCREEN,
+                'togglePlaylistButton': FluentIcon.MENU,
+                'toggleDrawingButton': FluentIcon.EDIT,
+            }
+            for btn_name, icon in icons_map.items():
+                if hasattr(self, btn_name):
+                    getattr(self, btn_name).setIcon(icon)
+            
+            if hasattr(self, 'volumeButton'):
+                if getattr(self, 'userMutedIntent', False):
+                    # pyrefly: ignore [missing-attribute]
+                    self.volumeButton.setIcon(FluentIcon.MUTE)
+                else:
+                    # pyrefly: ignore [missing-attribute]
+                    self.volumeButton.setIcon(FluentIcon.VOLUME)
 
         # Update palette border in drawing mixin if it exists
         if hasattr(self, 'paletteButtons') and hasattr(self, 'update_palette_ui'):
@@ -93,18 +163,24 @@ class StyleUIMixin:
         if hasattr(self, 'chronoTimeLabel') and self.chronoTimeLabel:
             self.chronoTimeLabel.setStyleSheet(f"font-size: 26px; font-weight: bold; font-family: 'Segoe UI Semibold', 'Courier New'; color: {accent_color};")
         if hasattr(self, 'chronoSectionLabel') and self.chronoSectionLabel:
-            self.chronoSectionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+            self.chronoSectionLabel.setStyleSheet(f"font-size: 12px; color: {fg_color}; line-height: 140%;")
         if hasattr(self, 'chronoPositionLabel') and self.chronoPositionLabel:
-            self.chronoPositionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+            self.chronoPositionLabel.setStyleSheet(f"font-size: 12px; color: {fg_color}; line-height: 140%;")
 
         # Update pen color label
         if hasattr(self, 'penSizeLabel'):
             from PyQt6.QtWidgets import QLabel
             if isinstance(self.penSizeLabel, QLabel):
                 self.penSizeLabel.setStyleSheet(
-                    "color: white; font-size: 13px; font-weight: 500; "
+                    f"color: {fg_color}; font-size: 13px; font-weight: 500; "
                     "background: transparent; border: none !important;"
                 )
+
+        # Update first three rows text of drawing panel
+        for label_name in ['drawModeToggleLabel', 'laserModeToggleLabel', 'chronometerToggleLabel']:
+            if hasattr(self, label_name):
+                lbl = getattr(self, label_name)
+                lbl.setStyleSheet(f"color: {fg_color}; font-size: 13px;")
 
         # Update Sidebar Titles and Category Labels
         titles = ['settingsTitle', 'globalSettingsTitle', 'drawingSidebarTitle', 'playlistLabel']

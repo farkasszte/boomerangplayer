@@ -44,3 +44,15 @@ class GlobalSettingsColorManagerMixin:
             self.opacityValueLabel.setText(f"{value}%")
         if hasattr(self, 'refresh_custom_styles'):
             self.refresh_custom_styles()
+
+    def on_inverse_text_changed(self, checked):
+        # pyrefly: ignore [missing-attribute]
+        self.config['inverse_text'] = checked
+        
+        from qfluentwidgets import setTheme, Theme
+        setTheme(Theme.LIGHT if checked else Theme.DARK)
+
+        if hasattr(self, 'refresh_custom_styles'):
+            self.refresh_custom_styles()
+        # pyrefly: ignore [missing-attribute]
+        self.update_ui_texts()

@@ -61,6 +61,20 @@ class GlobalSettingsUiBuilderMixin:
         self.gsBgBtn.clicked.connect(self.choose_bg_color)
         self.gsInnerLayout.addWidget(self.gsBgBtn)
 
+        inverseTextRow = QHBoxLayout()
+        self.inverseTextLabel = CaptionLabel(tr('inverse_text'))
+        self.inverseTextToggle = SwitchButton()
+        # pyrefly: ignore [missing-attribute]
+        self.inverseTextToggle.setChecked(self.config.get('inverse_text', False))
+        self.inverseTextToggle.setOnText(tr('on'))
+        self.inverseTextToggle.setOffText(tr('off'))
+        # pyrefly: ignore [missing-attribute]
+        self.inverseTextToggle.checkedChanged.connect(self.on_inverse_text_changed)
+        inverseTextRow.addWidget(self.inverseTextLabel)
+        inverseTextRow.addStretch(1)
+        inverseTextRow.addWidget(self.inverseTextToggle)
+        self.gsInnerLayout.addLayout(inverseTextRow)
+
         opacityRow = QHBoxLayout()
         self.opacityTitleLabel = CaptionLabel(tr('panel_opacity'))
         self.opacityValueLabel = CaptionLabel(f"{self.pending_panel_opacity}%")
@@ -245,6 +259,7 @@ class GlobalSettingsUiBuilderMixin:
             'gpu_acceleration': True,
             'accent_color': '#00f2ff',
             'bg_color': '#202020',
+            'inverse_text': False,
             'show_thumbnails': True,
             'show_filenames': True,
             'thumbnail_size_index': 1,
@@ -276,6 +291,13 @@ class GlobalSettingsUiBuilderMixin:
             self.gsGPUToggle.blockSignals(True)
             self.gsGPUToggle.setChecked(False)
             self.gsGPUToggle.blockSignals(False)
+        if hasattr(self, 'inverseTextToggle'):
+            self.inverseTextToggle.blockSignals(True)
+            self.inverseTextToggle.setChecked(False)
+            self.inverseTextToggle.blockSignals(False)
+        # Reset theme to dark when inverse_text is turned off
+        from qfluentwidgets import setTheme, Theme
+        setTheme(Theme.DARK)
 
         # Playlist
         if hasattr(self, 'thumbToggle'):
