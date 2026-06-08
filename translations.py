@@ -60,7 +60,8 @@ TRANSLATIONS = {
         'inverse_text': 'Inverse text color',
         
         # Menu actions
-        'add_media': 'Add media / playlist',
+        'add_videos': 'Add videos…',
+        'add_images': 'Add images…',
         'add_video_folder': 'Add video folder',
         'add_image_folder': 'Add image folder',
         'load_playlist': 'Load playlist',
@@ -152,12 +153,15 @@ TRANSLATIONS = {
         'sync_title': 'Multi-Instance sync',
         
         # Dialogs
+        'add_videos_title': 'Add videos / playlist',
+        'add_images_title': 'Add images',
         'add_files_title': 'Add files / playlist',
         'save_project_title': 'Save project',
         'open_project_title': 'Open project',
         'select_folder': 'Select folder',
         'json_files': 'JSON files',
         'bpl_files': 'Boomerang Playlist with Thumbnails',
+        'video_files': 'Video files',
         'media_files': 'Media files',
         'file_info_title': 'File information',
         'end': 'End',
@@ -288,7 +292,8 @@ TRANSLATIONS = {
         'inverse_text': 'Szövegszín megfordítása',
         
         # Menu actions
-        'add_media': 'Média / lista hozzáadása',
+        'add_videos': 'Videók hozzáadása…',
+        'add_images': 'Képek hozzáadása…',
         'add_video_folder': 'Videó mappa hozzáadása',
         'add_image_folder': 'Kép mappa hozzáadása',
         'load_playlist': 'Lista betöltése',
@@ -380,12 +385,15 @@ TRANSLATIONS = {
         'sync_title': 'Több-példányos szinkron',
         
         # Dialogs
+        'add_videos_title': 'Videók / lista hozzáadása',
+        'add_images_title': 'Képek hozzáadása',
         'add_files_title': 'Fájlok / lista hozzáadása',
         'save_project_title': 'Projekt mentése',
         'open_project_title': 'Projekt megnyitása',
         'select_folder': 'Mappa kiválasztása',
         'json_files': 'JSON fájlok',
         'bpl_files': 'Boomerang lejátszási lista bélyegképekkel',
+        'video_files': 'Videó fájlok',
         'media_files': 'Média fájlok',
         'file_info_title': 'Fájl információ',
         'end': 'Vége',

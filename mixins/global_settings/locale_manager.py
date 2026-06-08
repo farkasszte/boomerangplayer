@@ -158,11 +158,9 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.addMenu.clear()
         
-        self.addMenu.addAction(tr('add_media'), self.open_file)
+        self.addMenu.addAction(tr('add_videos'), lambda: self.open_media(media_type="video"))
         
-        self.addMenu.addAction(tr('add_video_folder'), lambda: self.add_folder_contents(type="video"))
-        
-        self.addMenu.addAction(tr('add_image_folder'), lambda: self.add_folder_contents(type="image"))
+        self.addMenu.addAction(tr('add_images'), lambda: self.open_media(media_type="image"))
 
         
         self.sortMenu.clear()

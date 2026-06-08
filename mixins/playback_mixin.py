@@ -55,50 +55,93 @@ class PlaybackMixin(PlaybackMixinBase):
     # File / video loading                                                 #
     # ------------------------------------------------------------------ #
 
-    def open_file(self):
+    def open_media(self, media_type="video"):
+        """
+        Unified smart file/folder picker.
+        • Selecting one or more files  → adds those files directly.
+        • Clicking a folder and pressing Open (non-native dialog) → adds ALL
+          matching files from that folder automatically.
+        Supports playlist files (.json / .bpl) in video mode.
+        """
         from PyQt6.QtWidgets import QFileDialog
-        fileNames, _ = QFileDialog.getOpenFileNames(
-            self, tr('add_files_title'), "",
-            f"{tr('media_files')} (*.mp4 *.mkv *.avi *.mov *.jpg *.jpeg *.png *.bmp *.webp *.tiff);;{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl)"
-        )
-        if fileNames:
-            playlist_files = [f for f in fileNames if f.lower().endswith(('.json', '.bpl'))]
-            media_files = [f for f in fileNames if not f.lower().endswith(('.json', '.bpl'))]
-            
-            if playlist_files:
-                
-                self.load_playlist_by_path(playlist_files[0])
-                if media_files:
-                    
-                    self.add_files_to_playlist(media_files)
-            else:
-                
-                self.add_files_to_playlist(media_files)
-                if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
-                    self.load_video(media_files[0])
 
-    def add_folder_contents(self, type="video"):
-        from PyQt6.QtWidgets import QFileDialog
-        folder = QFileDialog.getExistingDirectory(self, tr('select_folder'))
-        if not folder:
+        if media_type == "video":
+            exts_tuple = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v')
+            name_filters = [
+                f"{tr('video_files')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v)",
+                f"{tr('json_files')} (*.json)",
+                f"{tr('bpl_files')} (*.bpl)",
+            ]
+            title = tr('add_videos_title')
+        else:
+            exts_tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+            name_filters = [
+                f"{tr('image_files')} (*.jpg *.jpeg *.png *.bmp *.webp *.tiff)",
+            ]
+            title = tr('add_images_title')
+
+        dialog = QFileDialog(self, title)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        # Non-native mode: allows single-clicking a folder to place it in the
+        # filename field so the user can press Open to add the whole folder.
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        dialog.setNameFilters(name_filters)
+
+        # --- Dark palette: toolbar arrows render as white icons on dark bg ---
+        from PyQt6.QtGui import QPalette, QColor
+        pal = QPalette()
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Window,          QColor('#2a2a2a'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.WindowText,      QColor('#ffffff'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Base,            QColor('#1e1e1e'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.AlternateBase,   QColor('#252525'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Text,            QColor('#ffffff'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Button,          QColor('#3a3a3a'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ButtonText,      QColor('#ffffff'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.BrightText,      QColor('#ffffff'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipBase,     QColor('#3a3a3a'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipText,     QColor('#ffffff'))
+        accent = QColor(self.config.get('accent_color', '#00f2ff'))
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Highlight,       accent)
+        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.HighlightedText, QColor('#000000'))
+        dialog.setPalette(pal)
+
+        # --- Sidebar: list all available drives directly (no "My Computer" step) ---
+        from PyQt6.QtCore import QDir, QUrl
+        drive_urls = [QUrl.fromLocalFile(d.absolutePath()) for d in QDir.drives()]
+        dialog.setSidebarUrls(drive_urls)
+
+        if not dialog.exec():
             return
 
-        if type == "video":
-            exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v')
-        else:
-            exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+        selected = dialog.selectedFiles()
+        if not selected:
+            return
 
-        files = [
-            os.path.join(folder, f)
-            for f in os.listdir(folder)
-            if f.lower().endswith(exts)
-        ]
+        files_to_add = []
+        playlist_files = []
 
-        if files:
-            
-            self.add_files_to_playlist(sorted(files))
+        for path in selected:
+            if os.path.isdir(path):
+                # Folder selected → expand to all matching files, sorted
+                files_to_add.extend(sorted(
+                    os.path.join(path, f)
+                    for f in os.listdir(path)
+                    if f.lower().endswith(exts_tuple)
+                ))
+            elif os.path.isfile(path):
+                if path.lower().endswith(('.json', '.bpl')):
+                    playlist_files.append(path)
+                else:
+                    files_to_add.append(path)
+
+        if playlist_files:
+            self.load_playlist_by_path(playlist_files[0])
+            if files_to_add:
+                self.add_files_to_playlist(files_to_add)
+        elif files_to_add:
+            self.add_files_to_playlist(files_to_add)
             if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
-                self.load_video(files[0])
+                self.load_video(files_to_add[0])
 
     def load_video(self, filePath):
         was_playing = getattr(self, 'is_playing', False)

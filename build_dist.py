@@ -22,6 +22,7 @@ args = [
     f'--name={APP_NAME}',
     '--icon=resources/app_icon.ico',
     '--add-data=resources;resources', # Bundle resources folder including SVGs and window icon
+    '--runtime-tmpdir=%TEMP%\\BoomerangPlayer',
     '--clean',
 ]
 
