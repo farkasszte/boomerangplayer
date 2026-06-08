@@ -167,7 +167,7 @@ class FullscreenUIMixin:
                 
                 self.globalSettingsContainer.show()
 
-             ignore [bad-assignment]
+             
             self.sidebars_hidden_by_controls = None
 
             # Ensure controls are shown and timer is stopped when exiting fullscreen

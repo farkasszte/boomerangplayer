@@ -15,7 +15,6 @@ class IPCSyncMixin:
         self._block_broadcast = False
         
         # Create UDP socket
-         ignore [bad-argument-type]
         self.udp_socket = QUdpSocket(self)
         
         # Bind to port 28357 with share and reuse flags on AnyIPv4 to receive multicast

@@ -6,7 +6,6 @@ class GlobalSettingsColorManagerMixin:
     def choose_accent_color(self):
         
         current_hex = self.config.get('accent_color', '#00f2ff')
-         ignore [bad-argument-type]
         color = QColorDialog.getColor(QColor(current_hex), self, tr('select_color'))
         if color.isValid():
             self.pending_accent_color = color.name()
@@ -24,7 +23,6 @@ class GlobalSettingsColorManagerMixin:
 
     def choose_bg_color(self):
         current_hex = self.pending_bg_color
-         ignore [bad-argument-type]
         color = QColorDialog.getColor(QColor(current_hex), self, tr('choose_bg_color'))
         if color.isValid():
             self.pending_bg_color = color.name()

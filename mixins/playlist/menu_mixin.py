@@ -49,7 +49,6 @@ class PlaylistMenuMixin:
         
         selected_count = len(self.playlistList.selectedItems())
 
-         ignore [no-matching-overload]
         menu = QMenu(self)
         menu.setStyleSheet(MENU_STYLE)
 
@@ -105,7 +104,6 @@ class PlaylistMenuMixin:
         if not mjpeg_items:
             return
 
-         ignore [bad-argument-type]
         export_dir = QFileDialog.getExistingDirectory(self, tr('select_folder'))
         if not export_dir:
             return
@@ -126,14 +124,12 @@ class PlaylistMenuMixin:
 
         if errors:
             QMessageBox.warning(
-                 ignore [bad-argument-type]
                 self,
                 tr('error') or "Error",
                 f"Exported {success_count} photos. Failures:\n" + "\n".join(errors)
             )
         else:
             QMessageBox.information(
-                 ignore [bad-argument-type]
                 self,
                 tr('info') or "Information",
                 f"Successfully exported {success_count} photos to {export_dir}."
@@ -146,7 +142,6 @@ class PlaylistMenuMixin:
         if not mjpeg_items:
             return
 
-         ignore [bad-argument-type]
         export_dir = QFileDialog.getExistingDirectory(self, tr('select_folder'))
         if not export_dir:
             return
@@ -168,14 +163,12 @@ class PlaylistMenuMixin:
 
         if errors:
             QMessageBox.warning(
-                 ignore [bad-argument-type]
                 self,
                 tr('error') or "Error",
                 f"Exported {success_count} videos. Failures:\n" + "\n".join(errors)
             )
         else:
             QMessageBox.information(
-                 ignore [bad-argument-type]
                 self,
                 tr('info') or "Information",
                 f"Successfully exported {success_count} videos to {export_dir}."
@@ -192,7 +185,6 @@ class PlaylistMenuMixin:
 
         offset = get_embedded_video_offset(filePath)
         if offset is None:
-             ignore [bad-argument-type]
             QMessageBox.warning(self, tr('warning') or "Warning", "This is not a valid Motion JPG file.")
             return
 
@@ -201,7 +193,6 @@ class PlaylistMenuMixin:
         default_name = f"{base}_photo.jpg"
 
         save_path, _ = QFileDialog.getSaveFileName(
-             ignore [bad-argument-type]
             self,
             tr('export_photo'),
             os.path.join(os.path.dirname(filePath), default_name),
@@ -215,7 +206,6 @@ class PlaylistMenuMixin:
                 with open(save_path, 'wb') as f:
                     f.write(data)
             except Exception as e:
-                 ignore [bad-argument-type]
                 QMessageBox.critical(self, tr('error') or "Error", f"Failed to export photo: {e}")
 
     def export_motion_jpg_video(self, item):
@@ -229,7 +219,6 @@ class PlaylistMenuMixin:
 
         offset = get_embedded_video_offset(filePath)
         if offset is None:
-             ignore [bad-argument-type]
             QMessageBox.warning(self, tr('warning') or "Warning", "This is not a valid Motion JPG file.")
             return
 
@@ -238,7 +227,6 @@ class PlaylistMenuMixin:
         default_name = f"{base}_video.mp4"
 
         save_path, _ = QFileDialog.getSaveFileName(
-             ignore [bad-argument-type]
             self,
             tr('export_video'),
             os.path.join(os.path.dirname(filePath), default_name),
@@ -253,5 +241,4 @@ class PlaylistMenuMixin:
                 with open(save_path, 'wb') as f:
                     f.write(data)
             except Exception as e:
-                 ignore [bad-argument-type]
                 QMessageBox.critical(self, tr('error') or "Error", f"Failed to export video: {e}")

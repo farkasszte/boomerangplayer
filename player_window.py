@@ -58,7 +58,6 @@ class PlayerWindow(
 
         # Attributes that must exist before super().__init__() (triggers resize)
         self.videoItem = None
-         ignore [bad-assignment]
         self.view = None
 
         from qfluentwidgets import setTheme, Theme, setThemeColor
@@ -174,10 +173,8 @@ class PlayerWindow(
 
         # ---- Cache / playback variables --------------------------------
         self.cached_frame_dict = {}
-         ignore [bad-override-mutable-attribute]
         self.current_temp_dir = None
         self.extraction_thread = None
-         ignore [bad-assignment]
         self.cached_file_path = None
         self.current_cache_index = 0
         self.last_extracted_center = -1

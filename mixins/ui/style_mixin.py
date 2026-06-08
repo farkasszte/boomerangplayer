@@ -200,7 +200,6 @@ class StyleUIMixin:
 
         
         opacity = getattr(self, 'pending_panel_opacity', self.config.get('panel_opacity', 100))
-         ignore [unsupported-operation]
         opacity_float = opacity / 100.0
         rgb_bg = hex_to_rgb(bg_color)
         transparent_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"

@@ -5,7 +5,6 @@ from styles import get_styles
 
 class GlobalSettingsLocaleManagerMixin:
     def show_language_menu(self):
-         ignore [no-matching-overload]
         menu = QMenu(parent=self)
         menu.setWindowFlags(
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint

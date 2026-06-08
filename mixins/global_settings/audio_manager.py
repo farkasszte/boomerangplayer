@@ -5,7 +5,6 @@ from styles import get_styles
 
 class GlobalSettingsAudioManagerMixin:
     def show_audio_menu(self):
-         ignore [no-matching-overload]
         menu = QMenu(parent=self)
         menu.setWindowFlags(
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint

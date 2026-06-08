@@ -413,7 +413,7 @@ class CacheMixin(CacheMixinBase):
 
         # Atomic swap: build the new dict, prune, then assign in one shot
         new_dict = {**self.cached_frame_dict, **frame_dict}
-         ignore [bad-assignment]
+         
         self.cached_file_path = self.currentFilePath
 
         # Prune old/future frames to save RAM (skip for short videos that fit entirely in cache)
@@ -594,7 +594,6 @@ class CacheMixin(CacheMixinBase):
                     width, height = img.width(), img.height()
                     ptr = img.bits()
                     ptr.setsize(img.sizeInBytes())
-                     ignore [no-matching-overload]
                     arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
                     if b != 0 or c != 1.0 or g != 1.0:

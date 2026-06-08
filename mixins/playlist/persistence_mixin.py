@@ -9,7 +9,6 @@ class PlaylistPersistenceMixin:
     def save_playlist_to_file(self):
         filters = f"{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl)"
         fileName, selectedFilter = QFileDialog.getSaveFileName(
-             ignore [bad-argument-type]
             self, tr('save_project_title'), "", filters
         )
         if fileName:
@@ -87,7 +86,6 @@ class PlaylistPersistenceMixin:
     def load_playlist_from_file(self):
         filters = f"{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl);;{tr('all_files')} (*)"
         fileName, _ = QFileDialog.getOpenFileName(
-             ignore [bad-argument-type]
             self, tr('open_project_title'), "", filters
         )
         if fileName:

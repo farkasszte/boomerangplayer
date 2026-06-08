@@ -44,19 +44,12 @@ class PlaybackMixin(PlaybackMixinBase):
         config: Configuration
         speedSlider: QSlider
         
-         ignore [not-a-type]
         cleanup_cache: callable
-         ignore [not-a-type]
         save_current_markers: callable
-         ignore [not-a-type]
         update_pixmap_from_cache: callable
-         ignore [not-a-type]
         apply_transformations: callable
-         ignore [not-a-type]
         sync_progress_bar: callable
-         ignore [not-a-type]
         start_full_extraction: callable
-         ignore [not-a-type]
         load_markers_for_current: callable
     # ------------------------------------------------------------------ #
     # File / video loading                                                 #
@@ -206,7 +199,6 @@ class PlaybackMixin(PlaybackMixinBase):
                 self.update_duration(duration_ms)
 
                 self.mediaPlayer.pause()
-                 ignore [bad-argument-type]
                 self.playButton.setIcon(FluentIcon.PLAY)
                 self.playButton.setEnabled(True)
 

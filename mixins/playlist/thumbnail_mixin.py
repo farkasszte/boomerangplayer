@@ -20,7 +20,6 @@ class PlaylistThumbnailMixin:
             filePath = self.thumb_queue.pop(0)
             
             # Don't process if already being processed or finished (though queue should handle this)
-             ignore [not-iterable]
             already_running = any(t.filePath == filePath for t in self.thumb_threads)
             if already_running:
                 continue
@@ -104,7 +103,6 @@ class PlaylistThumbnailMixin:
             self.thumbSizeBtn.setText(current_label)
 
     def show_thumb_size_menu(self):
-         ignore [no-matching-overload]
         menu = QMenu(parent=self)
         menu.setWindowFlags(
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint

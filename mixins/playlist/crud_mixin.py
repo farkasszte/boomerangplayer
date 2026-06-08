@@ -27,7 +27,6 @@ class PlaylistCrudMixin:
         old_full_name = os.path.basename(old_path)
         old_base_name, extension = os.path.splitext(old_full_name)
         
-         ignore [bad-argument-type]
         new_base_name, ok = QInputDialog.getText(self, tr('rename_file_title'), tr('enter_new_name'), text=old_base_name)
         
         if ok and new_base_name and new_base_name != old_base_name:

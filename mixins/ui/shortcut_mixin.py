@@ -39,7 +39,6 @@ class ShortcutUIMixin:
             if key_val is not None:
                 try:
                     key_code = int(key_val)
-                     ignore [no-matching-overload]
                     shortcut = QShortcut(QKeySequence(key_code), self)
                     shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
                     shortcut.activated.connect(lambda s=slot: self.trigger_shortcut_action(s))

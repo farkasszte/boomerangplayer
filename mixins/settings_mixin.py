@@ -57,9 +57,7 @@ class SettingsMixin(SettingsMixinBase):
         saturationSlider: QSlider
         is_motion_photo: bool
         
-         ignore [not-a-type]
         update_zoom: callable
-         ignore [not-a-type]
         update_pixmap_from_cache: callable
 
     def init_video_settings_sidebar(self):

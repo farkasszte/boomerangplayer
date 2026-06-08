@@ -116,7 +116,6 @@ class MarkersDialog(QDialog):
         self.setMinimumSize(420, 450)
         self.setStyleSheet("background: #202020; color: white;")
 
-         ignore [bad-assignment, bad-override]
         self.layout = QVBoxLayout(self)
         
         self.layout.setContentsMargins(15, 15, 15, 15)
@@ -283,13 +282,9 @@ class MarkerMixin(MarkerMixinBase):
         cached_frame_dict: dict
         config: Configuration
         
-         ignore [not-a-type]
         update_loop_frames_label: callable
-         ignore [not-a-type]
         save_current_markers: callable
-         ignore [not-a-type]
         update_chronometer: callable
-         ignore [not-a-type]
         update_pixmap_from_cache: callable
     # ------------------------------------------------------------------ #
     # Marker CRUD                                                          #

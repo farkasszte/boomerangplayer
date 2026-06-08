@@ -152,7 +152,6 @@ class ControlsCardUIMixin:
             "border: none; background: transparent; color: #ccc; font-size: 12px;"
         )
         self.volumeValueLabel.setCursor(Qt.CursorShape.PointingHandCursor)
-         ignore [bad-assignment, missing-attribute]
         self.volumeValueLabel.mousePressEvent = lambda e: self.show_volume_flyout()
 
         volumeContainerLayout.addWidget(self.volumeButton)
@@ -176,7 +175,6 @@ class ControlsCardUIMixin:
         self.controlsLayout.addLayout(buttonsLayout)
 
         # Setup auto-hide controls timer for fullscreen
-         ignore [bad-argument-type]
         self.controls_timer = QTimer(self)
         self.controls_timer.setInterval(3000)
         self.controls_timer.setSingleShot(True)

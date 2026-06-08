@@ -110,7 +110,6 @@ class PlaylistSidebarUIMixin:
 
         self.btn_add = PushButton(tr('add'))
         self.btn_add.setToolTip(tr('tip_add'))
-         ignore [no-matching-overload]
         self.addMenu = QMenu(self)
         self.addMenu.setStyleSheet(MENU_STYLE)
         
@@ -124,7 +123,6 @@ class PlaylistSidebarUIMixin:
 
         self.btn_sort = PushButton(tr('sort'))
         self.btn_sort.setToolTip(tr('tip_sort'))
-         ignore [no-matching-overload]
         self.sortMenu = QMenu(self)
         self.sortMenu.setStyleSheet(MENU_STYLE)
         
@@ -145,7 +143,6 @@ class PlaylistSidebarUIMixin:
 
         self.btn_clear = PushButton(tr('clear'))
         self.btn_clear.setToolTip(tr('tip_clear'))
-         ignore [no-matching-overload]
         self.removeMenu = QMenu(self)
         self.removeMenu.setStyleSheet(MENU_STYLE)
         

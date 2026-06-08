@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 else:
     UIMixinBase = object
 
- ignore [inconsistent-inheritance]
 class UIMixin(
     PlaylistSidebarUIMixin,
     DrawingSidebarUIMixin,
@@ -57,7 +56,6 @@ class UIMixin(
         config: Configuration
         audioOutput: QAudioOutput
         pixmapItem: GPUPixmapItem | None
-         ignore [not-a-type]
         update_ui_texts: callable
 
     def init_ui(self):
@@ -131,7 +129,7 @@ class UIMixin(
                 self.update_loading_overlay_geometry()
                 
         self.loadingOverlay.show = custom_show
-         ignore [bad-assignment]
+         
         self.loadingOverlay.setText = custom_setText
 
         # Chronometer Overlay
@@ -172,9 +170,9 @@ class UIMixin(
                 self.chronometerOverlay.move(vx, vy)
                 event.accept()
 
-         ignore [bad-assignment]
+         
         self.chronometerOverlay.mousePressEvent = overlayMousePressEvent
-         ignore [bad-assignment]
+         
         self.chronometerOverlay.mouseMoveEvent = overlayMouseMoveEvent
 
         # Controls card

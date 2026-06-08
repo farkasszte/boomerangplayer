@@ -25,7 +25,6 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
         mediaPlayer: QMediaPlayer
 
     def show_file_info(self):
-         ignore [bad-argument-type, missing-attribute]
         if not self.currentFilePath or not os.path.exists(self.currentFilePath):
             return
 
@@ -42,7 +41,6 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
             ]
 
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-             ignore [no-matching-overload]
             result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
             data = json.loads(result)
 
@@ -122,7 +120,6 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                 info_text += f"<br><br><font color='#888'>{self.currentFilePath}</font>"
 
             # Build the popup menu
-             ignore [no-matching-overload]
             menu = QMenu(self)
             
             inverse_text = self.config.get('inverse_text', False)

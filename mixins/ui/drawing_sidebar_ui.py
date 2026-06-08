@@ -60,7 +60,6 @@ class DrawingSidebarUIMixin:
 
         toolsLayout = QGridLayout()
         toolsLayout.setSpacing(8)
-         ignore [bad-argument-type]
         self.toolGroup = QButtonGroup(self)
         self.toolGroup.setExclusive(True)
 
