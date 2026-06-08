@@ -220,7 +220,7 @@ class ZoomView(QGraphicsView):
                     
                 if self.current_path_item:
                     if self.drawing_tool == 'pen':
-                        # pyrefly: ignore [missing-attribute]
+                        
                         self.current_path.lineTo(curr_pos)
                     else:
                         if self.start_scene_pos is not None:
@@ -568,7 +568,7 @@ class ZoomView(QGraphicsView):
         self.strokes = []
 
     def get_scroll_state(self):
-        # pyrefly: ignore [missing-attribute]
+        
         return (self.horizontalScrollBar().value(), self.verticalScrollBar().value())
     
     def set_scroll_state(self, x, y):
@@ -576,9 +576,9 @@ class ZoomView(QGraphicsView):
         QTimer.singleShot(50, lambda: self._apply_scroll(x, y))
 
     def _apply_scroll(self, x, y):
-        # pyrefly: ignore [missing-attribute]
+        
         self.horizontalScrollBar().setValue(x)
-        # pyrefly: ignore [missing-attribute]
+        
         self.verticalScrollBar().setValue(y)
 
     def dragEnterEvent(self, event):

@@ -20,7 +20,7 @@ sys.stdout = open(os.devnull, 'w')
 try:
     import qfluentwidgets
     from qfluentwidgets import FluentWindow
-    # pyrefly: ignore [missing-attribute]
+    
     qfluentwidgets.HELP_MESSAGE = False
 finally:
     sys.stdout.close()
@@ -58,7 +58,7 @@ class PlayerWindow(
 
         # Attributes that must exist before super().__init__() (triggers resize)
         self.videoItem = None
-        # pyrefly: ignore [bad-assignment]
+         ignore [bad-assignment]
         self.view = None
 
         from qfluentwidgets import setTheme, Theme, setThemeColor
@@ -174,10 +174,10 @@ class PlayerWindow(
 
         # ---- Cache / playback variables --------------------------------
         self.cached_frame_dict = {}
-        # pyrefly: ignore [bad-override-mutable-attribute]
+         ignore [bad-override-mutable-attribute]
         self.current_temp_dir = None
         self.extraction_thread = None
-        # pyrefly: ignore [bad-assignment]
+         ignore [bad-assignment]
         self.cached_file_path = None
         self.current_cache_index = 0
         self.last_extracted_center = -1

@@ -56,7 +56,7 @@ class CacheMixin(CacheMixinBase):
 
     def cleanup_cache(self, keep_extracted_video=False):
         if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
-            # pyrefly: ignore [missing-attribute]
+            
             self.extraction_thread.cancel()
             self.extraction_thread.wait()
 
@@ -110,11 +110,11 @@ class CacheMixin(CacheMixinBase):
             if force:
                 print(f"[request_frame_extraction] Cancelling running extraction thread for force request (center={center_frame}, running range={t_start}-{t_end}).")
                 try:
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.extraction_thread.finished_extraction.disconnect()
                 except TypeError:
                     pass
-                # pyrefly: ignore [missing-attribute]
+                
                 self.extraction_thread.cancel()
                 self.extraction_thread.wait()
                 self.extraction_thread = None
@@ -190,9 +190,9 @@ class CacheMixin(CacheMixinBase):
             video_codec=self.video_codec,
             qv_value=qv_value
         )
-        # pyrefly: ignore [missing-attribute]
+        
         self.extraction_thread.player_start = player_range_start
-        # pyrefly: ignore [missing-attribute]
+        
         self.extraction_thread.player_end = player_range_end
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
@@ -211,7 +211,7 @@ class CacheMixin(CacheMixinBase):
         
         # If it's a motion photo, cache frame 0 as the high-res photo path
         if getattr(self, 'is_motion_photo', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.cached_frame_dict[0] = self.motion_photo_original_path
 
         if start_pos in self.cached_frame_dict:
@@ -253,9 +253,9 @@ class CacheMixin(CacheMixinBase):
             video_codec=self.video_codec,
             qv_value=qv_value
         )
-        # pyrefly: ignore [missing-attribute]
+        
         self.extraction_thread.player_start = start_pos
-        # pyrefly: ignore [missing-attribute]
+        
         self.extraction_thread.player_end = start_pos
         self.extraction_thread.finished_extraction.connect(self.on_first_frame_extracted)
         self.extraction_thread.start()
@@ -275,7 +275,7 @@ class CacheMixin(CacheMixinBase):
             fit_needed = not hasattr(self, 'initial_fit_done')
             if fit_needed:
                 self.initial_fit_done = True
-                # pyrefly: ignore [missing-attribute]
+                
                 self.apply_transformations(fit=True)
                 if hasattr(self, '_apply_file_saved_zoom'):
                     self._apply_file_saved_zoom()
@@ -386,9 +386,9 @@ class CacheMixin(CacheMixinBase):
             video_codec=self.video_codec,
             qv_value=qv_value
         )
-        # pyrefly: ignore [missing-attribute]
+        
         self.extraction_thread.player_start = player_range_start
-        # pyrefly: ignore [missing-attribute]
+        
         self.extraction_thread.player_end = player_range_end
         self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
         self.extraction_thread.start()
@@ -413,7 +413,7 @@ class CacheMixin(CacheMixinBase):
 
         # Atomic swap: build the new dict, prune, then assign in one shot
         new_dict = {**self.cached_frame_dict, **frame_dict}
-        # pyrefly: ignore [bad-assignment]
+         ignore [bad-assignment]
         self.cached_file_path = self.currentFilePath
 
         # Prune old/future frames to save RAM (skip for short videos that fit entirely in cache)
@@ -441,10 +441,6 @@ class CacheMixin(CacheMixinBase):
         self.cached_frame_dict = new_dict
 
         self.loadingOverlay.hide()
-        self.loadingOverlay.setText(
-            f"{tr('caching')}: {start_frame} - {start_frame + num_frames}. "
-            f"Cache size: {len(self.cached_frame_dict)}"
-        )
 
         fit_needed = not hasattr(self, 'initial_fit_done')
         if fit_needed:
@@ -452,7 +448,7 @@ class CacheMixin(CacheMixinBase):
 
         self.update_pixmap_from_cache()
         if fit_needed:
-            # pyrefly: ignore [missing-attribute]
+            
             self.apply_transformations(fit=True)
             if hasattr(self, '_apply_file_saved_zoom'):
                 self._apply_file_saved_zoom()
@@ -468,7 +464,7 @@ class CacheMixin(CacheMixinBase):
 
         if getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False
-            # pyrefly: ignore [missing-attribute]
+            
             self.play_pause()
 
     # ------------------------------------------------------------------ #
@@ -482,11 +478,11 @@ class CacheMixin(CacheMixinBase):
         self.progressBar.blockSignals(True)
 
         is_zoomed = getattr(self, 'is_zoomed_nav', False)
-        # pyrefly: ignore [missing-attribute]
+        
         self.progressBar.set_zoomed(is_zoomed)
 
         if is_zoomed:
-            # pyrefly: ignore [missing-attribute]
+            
             start_f, end_f = self.get_active_loop_range()
             self.progressBar.setRange(start_f, max(start_f, end_f))
         else:
@@ -518,10 +514,10 @@ class CacheMixin(CacheMixinBase):
         if hasattr(self, '_last_adj_params'):
             delattr(self, '_last_adj_params')
         self.update_pixmap_from_cache()
-        # pyrefly: ignore [missing-attribute]
+        
         self.apply_transformations(fit=True)
         if not getattr(self, 'is_loading_video', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.save_current_markers()
 
     def _get_adj_lut(self, b, c, g):
@@ -575,7 +571,7 @@ class CacheMixin(CacheMixinBase):
                             if self.current_cache_index == 0 or last_idx == 0:
                                 fit_val = True
                         
-                        # pyrefly: ignore [missing-attribute]
+                        
                         self.apply_transformations(fit=fit_val)
                         self._last_rendered_index = self.current_cache_index
             else:
@@ -598,7 +594,7 @@ class CacheMixin(CacheMixinBase):
                     width, height = img.width(), img.height()
                     ptr = img.bits()
                     ptr.setsize(img.sizeInBytes())
-                    # pyrefly: ignore [no-matching-overload]
+                     ignore [no-matching-overload]
                     arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
                     if b != 0 or c != 1.0 or g != 1.0:
@@ -628,7 +624,7 @@ class CacheMixin(CacheMixinBase):
                         if self.current_cache_index == 0 or last_idx == 0:
                             fit_val = True
                     
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.apply_transformations(fit=fit_val)
                     self._last_rendered_index = self.current_cache_index
 

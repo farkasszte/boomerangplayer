@@ -29,14 +29,14 @@ class VolumeMixin(VolumeMixinBase):
         self.volumeValueLabel.setText(f"{volume}%")
         is_muted = volume == 0
         self.userMutedIntent = is_muted
-        # pyrefly: ignore [bad-argument-type]
+         ignore [bad-argument-type]
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
 
     def toggle_mute(self):
         is_muted = not self.audioOutput.isMuted()
         self.audioOutput.setMuted(is_muted)
         self.userMutedIntent = is_muted
-        # pyrefly: ignore [bad-argument-type]
+         ignore [bad-argument-type]
         self.volumeButton.setIcon(FluentIcon.MUTE if is_muted else FluentIcon.VOLUME)
         if is_muted:
             self.volumeValueLabel.setText("0%")

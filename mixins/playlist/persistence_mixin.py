@@ -9,7 +9,7 @@ class PlaylistPersistenceMixin:
     def save_playlist_to_file(self):
         filters = f"{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl)"
         fileName, selectedFilter = QFileDialog.getSaveFileName(
-            # pyrefly: ignore [bad-argument-type]
+             ignore [bad-argument-type]
             self, tr('save_project_title'), "", filters
         )
         if fileName:
@@ -20,9 +20,9 @@ class PlaylistPersistenceMixin:
                 fileName += '.json'
 
             data = {'files': [], 'markers': self.playlistData}
-            # pyrefly: ignore [missing-attribute]
+            
             for i in range(self.playlistList.count()):
-                # pyrefly: ignore [missing-attribute]
+                
                 item = self.playlistList.item(i)
                 data['files'].append(item.data(Qt.ItemDataRole.UserRole))
             
@@ -30,9 +30,9 @@ class PlaylistPersistenceMixin:
                 # Add base64 cached thumbnails
                 thumbnails = {}
                 from PyQt6.QtCore import QByteArray, QBuffer
-                # pyrefly: ignore [missing-attribute]
+                
                 for i in range(self.playlistList.count()):
-                    # pyrefly: ignore [missing-attribute]
+                    
                     item = self.playlistList.item(i)
                     filePath = item.data(Qt.ItemDataRole.UserRole)
                     icon = item.icon()
@@ -60,17 +60,17 @@ class PlaylistPersistenceMixin:
                 with open(fileName, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
-                # pyrefly: ignore [missing-attribute]
+                
                 self.playlistList.clear()
                 self.playlistData = data.get('markers', {})
 
                 cached_thumbnails = data.get('thumbnails', None)
-                # pyrefly: ignore [missing-attribute]
+                
                 self.add_files_to_playlist(data.get('files', []), cached_thumbnails=cached_thumbnails)
 
-                # pyrefly: ignore [missing-attribute]
+                
                 if self.playlistList.count() > 0:
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
             except Exception as e:
                 print(f"Error loading playlist: {e}")
@@ -87,7 +87,7 @@ class PlaylistPersistenceMixin:
     def load_playlist_from_file(self):
         filters = f"{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl);;{tr('all_files')} (*)"
         fileName, _ = QFileDialog.getOpenFileName(
-            # pyrefly: ignore [bad-argument-type]
+             ignore [bad-argument-type]
             self, tr('open_project_title'), "", filters
         )
         if fileName:

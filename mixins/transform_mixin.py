@@ -77,13 +77,13 @@ class TransformMixin(TransformMixinBase):
     def toggle_mirror(self):
         self.isMirrored = not self.isMirrored
         self.apply_transformations(fit=True)
-        # pyrefly: ignore [missing-attribute]
+        
         self.save_current_markers()
 
     def toggle_vertical_mirror(self):
         self.isMirroredVertical = not self.isMirroredVertical
         self.apply_transformations(fit=True)
-        # pyrefly: ignore [missing-attribute]
+        
         self.save_current_markers()
 
     def rotate_video(self):
@@ -92,13 +92,13 @@ class TransformMixin(TransformMixinBase):
     def rotate_video_right(self):
         self.rotationAngle = (self.rotationAngle + 90) % 360
         self.apply_transformations(fit=True)
-        # pyrefly: ignore [missing-attribute]
+        
         self.save_current_markers()
 
     def rotate_video_left(self):
         self.rotationAngle = (self.rotationAngle - 90) % 360
         self.apply_transformations(fit=True)
-        # pyrefly: ignore [missing-attribute]
+        
         self.save_current_markers()
 
     # ------------------------------------------------------------------ #

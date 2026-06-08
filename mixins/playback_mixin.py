@@ -44,19 +44,19 @@ class PlaybackMixin(PlaybackMixinBase):
         config: Configuration
         speedSlider: QSlider
         
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         cleanup_cache: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         save_current_markers: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         update_pixmap_from_cache: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         apply_transformations: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         sync_progress_bar: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         start_full_extraction: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         load_markers_for_current: callable
     # ------------------------------------------------------------------ #
     # File / video loading                                                 #
@@ -73,13 +73,13 @@ class PlaybackMixin(PlaybackMixinBase):
             media_files = [f for f in fileNames if not f.lower().endswith(('.json', '.bpl'))]
             
             if playlist_files:
-                # pyrefly: ignore [missing-attribute]
+                
                 self.load_playlist_by_path(playlist_files[0])
                 if media_files:
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.add_files_to_playlist(media_files)
             else:
-                # pyrefly: ignore [missing-attribute]
+                
                 self.add_files_to_playlist(media_files)
                 if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
                     self.load_video(media_files[0])
@@ -102,7 +102,7 @@ class PlaybackMixin(PlaybackMixinBase):
         ]
 
         if files:
-            # pyrefly: ignore [missing-attribute]
+            
             self.add_files_to_playlist(sorted(files))
             if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
                 self.load_video(files[0])
@@ -117,7 +117,7 @@ class PlaybackMixin(PlaybackMixinBase):
         self.mediaPlayer.setSource(QUrl())
         self.cleanup_cache()
         self.save_current_markers()
-
+        is_image = False   # pre-initialise; re-assigned below once filePath is validated
         try:
             self.is_loading_video = True
             self.currentFilePath = filePath
@@ -206,7 +206,7 @@ class PlaybackMixin(PlaybackMixinBase):
                 self.update_duration(duration_ms)
 
                 self.mediaPlayer.pause()
-                # pyrefly: ignore [bad-argument-type]
+                 ignore [bad-argument-type]
                 self.playButton.setIcon(FluentIcon.PLAY)
                 self.playButton.setEnabled(True)
 
@@ -227,7 +227,6 @@ class PlaybackMixin(PlaybackMixinBase):
                 parent=self
             )
         finally:
-            # pyrefly: ignore [unbound-name]
             if not self.currentFilePath or is_image:
                 pass  # Image path: flag cleared by _apply_file_saved_zoom timer
             if not hasattr(self, '_apply_file_saved_zoom'):
@@ -315,17 +314,17 @@ class PlaybackMixin(PlaybackMixinBase):
         self.update_play_icons()
 
         self.frame_accumulator = 0.0
-        # pyrefly: ignore [missing-attribute]
+        
         self.elapsedTimer.start()
         self.last_advance_ms = 0
 
-        # pyrefly: ignore [missing-attribute]
+        
         self.playbackTimer.start(10)
 
         if self.isForward and self.fps > 0:
             audio_pos = int((self.current_cache_index * 1000) / self.fps)
             self.mediaPlayer.setPosition(audio_pos)
-            # pyrefly: ignore [missing-attribute]
+            
             self.audioOutput.setMuted(self.userMutedIntent)
             # Ensure the playback rate is set before calling play
             rate = self.speedSlider.value() / 100.0
@@ -333,22 +332,22 @@ class PlaybackMixin(PlaybackMixinBase):
             self.mediaPlayer.play()
         else:
             self.mediaPlayer.pause()
-            # pyrefly: ignore [missing-attribute]
+            
             self.audioOutput.setMuted(True)
 
         if not getattr(self, '_block_broadcast', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.broadcast_sync_event("play", {"isForward": self.isForward, "speed": self.speedSlider.value()})
 
     def stop_playback(self):
         self.is_playing = False
-        # pyrefly: ignore [missing-attribute]
+        
         self.playbackTimer.stop()
         self.mediaPlayer.pause()
         self.update_play_icons()
 
         if not getattr(self, '_block_broadcast', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.broadcast_sync_event("pause", None)
 
     # ------------------------------------------------------------------ #
@@ -359,14 +358,14 @@ class PlaybackMixin(PlaybackMixinBase):
         if not getattr(self, 'cached_frame_dict', None) or self.fps <= 0:
             return
 
-        # pyrefly: ignore [missing-attribute]
+        
         current_ms = self.elapsedTimer.elapsed()
         delta_ms = current_ms - self.last_advance_ms
         self.last_advance_ms = current_ms
 
         delta_ms = min(delta_ms, 100)
 
-        # pyrefly: ignore [missing-attribute]
+        
         rate = self.speedSlider.value() / 100.0
         frames_to_advance = (delta_ms * self.fps * rate) / 1000.0
 
@@ -385,17 +384,17 @@ class PlaybackMixin(PlaybackMixinBase):
 
         self.frame_accumulator -= int_delta
 
-        # pyrefly: ignore [missing-attribute]
+        
         loop_mode = self.loopCombo.currentIndex()
         if loop_mode == 0:
             start_frame = 0
             end_frame = max(0, self.total_frames - 1)
         else:
             if getattr(self, 'needs_range_update', True):
-                # pyrefly: ignore [missing-attribute]
+                
                 self.active_loop_start, self.active_loop_end = self.get_active_loop_range()
                 self.needs_range_update = False
-                # pyrefly: ignore [missing-attribute]
+                
                 self.update_loop_frames_label()
 
             start_frame = self.active_loop_start
@@ -409,7 +408,7 @@ class PlaybackMixin(PlaybackMixinBase):
                         self.isForward = False
                         self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
                         self.mediaPlayer.pause()
-                        # pyrefly: ignore [missing-attribute]
+                        
                         self.audioOutput.setMuted(True)
                     else:
                         self.current_cache_index = start_frame + (self.current_cache_index - end_frame - 1)
@@ -418,7 +417,7 @@ class PlaybackMixin(PlaybackMixinBase):
                         self.mediaPlayer.setPosition(
                             int(self.current_cache_index * 1000 / self.fps)
                         )
-                        # pyrefly: ignore [missing-attribute]
+                        
                         self.audioOutput.setVolume(self.audioOutput.volume())
                 else:
                     self.current_cache_index = end_frame
@@ -429,13 +428,13 @@ class PlaybackMixin(PlaybackMixinBase):
                 if loop_mode == 3:  # Ping-pong
                     self.isForward = True
                     self.current_cache_index = start_frame + (start_frame - self.current_cache_index)
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.audioOutput.setVolume(self.audioOutput.volume())
                     if self.fps > 0:
                         self.mediaPlayer.setPosition(
                             int(self.current_cache_index * 1000 / self.fps)
                         )
-                        # pyrefly: ignore [missing-attribute]
+                        
                         self.audioOutput.setMuted(self.userMutedIntent)
                         # Ensure the playback rate is set before calling play
                         rate = self.speedSlider.value() / 100.0
@@ -457,10 +456,10 @@ class PlaybackMixin(PlaybackMixinBase):
 
             self.was_playing_before_cache_miss = self.is_playing
             self.stop_playback()
-            # pyrefly: ignore [missing-attribute]
+            
             self.loadingOverlay.show()
 
-            # pyrefly: ignore [missing-attribute]
+            
             if self.extraction_thread and self.extraction_thread.isRunning():
                 t_start = getattr(self.extraction_thread, 'player_start', -1)
                 t_end = getattr(self.extraction_thread, 'player_end', -1)
@@ -473,15 +472,15 @@ class PlaybackMixin(PlaybackMixinBase):
             # Thread is NOT running or NOT covering the needed frame. Force extraction.
             # We request extraction centered on the frame we wanted to reach
             target_frame = old_index + int_delta if old_forward else old_index - int_delta
-            # pyrefly: ignore [missing-attribute]
+            
             self.request_frame_extraction(target_frame, force=True)
             return
 
         self.update_pixmap_from_cache()
-        # pyrefly: ignore [missing-attribute]
+        
         self.check_sliding_window()
         self.sync_progress_bar()
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_chronometer()
 
     # ------------------------------------------------------------------ #
@@ -494,24 +493,24 @@ class PlaybackMixin(PlaybackMixinBase):
         self.isForward = True
 
         if index not in getattr(self, 'cached_frame_dict', {}):
-            # pyrefly: ignore [missing-attribute]
+            
             self.loadingOverlay.show()
-            # pyrefly: ignore [missing-attribute]
+            
             self.request_frame_extraction(index, force=True)
         else:
             self.update_pixmap_from_cache()
-            # pyrefly: ignore [missing-attribute]
+            
             self.check_sliding_window()
-            # pyrefly: ignore [missing-attribute]
+            
             self.update_chronometer()
 
         if self.fps > 0:
             ms = int((index * 1000) / self.fps)
-            # pyrefly: ignore [missing-attribute]
+            
             self.currentTimeLabel.setText(format_time(ms))
 
         if not getattr(self, '_block_broadcast', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.broadcast_sync_event("seek", index)
 
     def on_slider_pressed(self):
@@ -523,30 +522,30 @@ class PlaybackMixin(PlaybackMixinBase):
             pos = int((self.current_cache_index * 1000) / self.fps)
             self.mediaPlayer.setPosition(pos)
         self.update_pixmap_from_cache()
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_chronometer()
 
     def step_frame(self, direction):
         self.current_cache_index += direction
-        # pyrefly: ignore [missing-attribute]
+        
         max_frame = self.progressBar.maximum() if self.progressBar.maximum() > 0 else 0
         self.current_cache_index = max(0, min(max_frame, self.current_cache_index))
 
         if self.current_cache_index not in getattr(self, 'cached_frame_dict', {}):
-            # pyrefly: ignore [missing-attribute]
+            
             self.loadingOverlay.show()
-            # pyrefly: ignore [missing-attribute]
+            
             self.request_frame_extraction(self.current_cache_index, force=True)
             return
 
         self.update_pixmap_from_cache()
-        # pyrefly: ignore [missing-attribute]
+        
         self.check_sliding_window()
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_chronometer()
 
         if not getattr(self, '_block_broadcast', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.broadcast_sync_event("step", direction)
 
     # ------------------------------------------------------------------ #
@@ -556,26 +555,26 @@ class PlaybackMixin(PlaybackMixinBase):
     def update_play_icons(self):
         if self.is_playing:
             if self.isForward:
-                # pyrefly: ignore [missing-attribute]
+                
                 self.playButton.setIcon(self.pauseIcon)
-                # pyrefly: ignore [missing-attribute]
+                
                 self.playBackwardButton.setIcon(self.flippedPlayIcon)
             else:
-                # pyrefly: ignore [missing-attribute]
+                
                 self.playButton.setIcon(self.normalPlayIcon)
-                # pyrefly: ignore [missing-attribute]
+                
                 self.playBackwardButton.setIcon(self.pauseIcon)
         else:
-            # pyrefly: ignore [missing-attribute]
+            
             self.playButton.setIcon(self.normalPlayIcon)
-            # pyrefly: ignore [missing-attribute]
+            
             self.playBackwardButton.setIcon(self.flippedPlayIcon)
 
     def handle_state_change(self, state):
         is_paused_or_stopped = not self.is_playing
         if hasattr(self, 'stepBackButton'):
             self.stepBackButton.setEnabled(is_paused_or_stopped)
-            # pyrefly: ignore [missing-attribute]
+            
             self.stepForwardButton.setEnabled(is_paused_or_stopped)
         self.update_play_icons()
 
@@ -596,15 +595,15 @@ class PlaybackMixin(PlaybackMixinBase):
         elif self.fps > 0:
             self.total_frames = int((duration / 1000.0) * self.fps)
             
-        # pyrefly: ignore [missing-attribute]
+        
         self.totalTimeLabel.setText(format_time(duration))
         self.sync_progress_bar()
 
         last_valid_frame = max(0, self.total_frames - 1)
         self.markers = [m for m in self.markers if m <= last_valid_frame]
-        # pyrefly: ignore [missing-attribute]
+        
         self.progressBar.update_markers(self.markers)
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_loop_frames_label()
 
     def handle_status_change(self, status):
@@ -618,7 +617,7 @@ class PlaybackMixin(PlaybackMixinBase):
                 speed_val = speed_slider.value()
                 self.mediaPlayer.setPlaybackRate(speed_val / 100.0)
 
-            # pyrefly: ignore [missing-attribute]
+            
             if self.view and self.pixmapItem and self.last_transform_state is None:
                 self.apply_transformations(fit=True)
                 if hasattr(self, '_apply_file_saved_zoom'):
@@ -630,7 +629,7 @@ class PlaybackMixin(PlaybackMixinBase):
     def on_speed_slider_changed(self, value):
         snapped = round(value / 5) * 5
         if snapped != value:
-            # pyrefly: ignore [missing-attribute]
+            
             self.speedSlider.setValue(snapped)
             return
         rate = snapped / 100.0
@@ -644,7 +643,7 @@ class PlaybackMixin(PlaybackMixinBase):
                 self.speedValueLabel.setText(f"{snapped}%")
 
         if not getattr(self, '_block_broadcast', False):
-            # pyrefly: ignore [missing-attribute]
+            
             self.broadcast_sync_event("speed", snapped)
 
     # ------------------------------------------------------------------ #
@@ -667,7 +666,7 @@ class PlaybackMixin(PlaybackMixinBase):
     def _apply_file_saved_zoom(self):
         if not self.currentFilePath:
             return
-        # pyrefly: ignore [missing-attribute]
+        
         data = self.playlistData.get(self.currentFilePath, {})
         zoom = data.get('zoom', 100)
         center_x = data.get('centerX', data.get('scrollX', None))
@@ -683,7 +682,7 @@ class PlaybackMixin(PlaybackMixinBase):
             return
             
         val = int(zoom * 100) if zoom < 10 else int(zoom)
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_zoom(val)
         
         if hasattr(self, 'view') and self.view:
@@ -697,5 +696,5 @@ class PlaybackMixin(PlaybackMixinBase):
     def on_user_zoom_changed(self, zoom_level):
         if self.is_loading_video:
             return
-        # pyrefly: ignore [missing-attribute]
+        
         self.sync_zoom_ui(zoom_level)

@@ -47,7 +47,7 @@ class FrameExtractionThread(QThread):
         frame_idx = self.start_number
         
         while not self._is_cancelled:
-            # pyrefly: ignore [missing-attribute]
+            
             chunk = self.process.stdout.read(65536)
             if not chunk:
                 break

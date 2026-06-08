@@ -76,7 +76,7 @@ class DrawingMixin(DrawingMixinBase):
             self.chronoPositionLabel.setText("")
             return
 
-        # pyrefly: ignore [missing-attribute]
+        
         current_frame = self.current_cache_index
 
         # Get the most recent marker/section boundary before or at the current frame
@@ -129,9 +129,9 @@ class DrawingMixin(DrawingMixinBase):
         self.view.drawing_tool = tool_id
         for btn in self.toolGroup.buttons():
             btn.setProperty('checked', btn.isChecked())
-            # pyrefly: ignore [missing-attribute]
+            
             btn.style().unpolish(btn)
-            # pyrefly: ignore [missing-attribute]
+            
             btn.style().polish(btn)
 
         if tool_id in ['obj_eraser', 'area_eraser']:
@@ -162,7 +162,7 @@ class DrawingMixin(DrawingMixinBase):
 
     def select_palette_color(self):
         btn = self.sender()
-        # pyrefly: ignore [missing-attribute]
+        
         idx = btn.property('color_idx')
         palette = self.config.get('palette', [])
         if 0 <= idx < len(palette):

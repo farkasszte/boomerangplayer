@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 else:
     UIMixinBase = object
 
-# pyrefly: ignore [inconsistent-inheritance]
+ ignore [inconsistent-inheritance]
 class UIMixin(
     PlaylistSidebarUIMixin,
     DrawingSidebarUIMixin,
@@ -57,7 +57,7 @@ class UIMixin(
         config: Configuration
         audioOutput: QAudioOutput
         pixmapItem: GPUPixmapItem | None
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         update_ui_texts: callable
 
     def init_ui(self):
@@ -73,23 +73,23 @@ class UIMixin(
 
         self.scene = QGraphicsScene()
         self.view = ZoomView(self.scene, self.playerInterface)
-        # pyrefly: ignore [missing-attribute]
+        
         self.view.filesDropped.connect(self.handle_view_drop)
-        # pyrefly: ignore [missing-attribute]
+        
         self.view.zoomChanged.connect(self.on_user_zoom_changed)
         self.view.setStyleSheet("border: none; background: black;")
 
         # Build all sidebars (mixin methods)
-        # pyrefly: ignore [missing-attribute]
+        
         self.init_global_settings_sidebar()
-        # pyrefly: ignore [missing-attribute]
+        
         self.init_video_settings_sidebar()
         self._init_playlist_sidebar()
         self._init_drawing_sidebar()
 
-        # pyrefly: ignore [missing-attribute]
+        
         self.mainSplitter.addWidget(self.globalSettingsContainer)
-        # pyrefly: ignore [missing-attribute]
+        
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.playlistContainer)
@@ -100,7 +100,7 @@ class UIMixin(
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
 
         # Pen preview (needs to happen after drawing sidebar is built)
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_pen_preview()
 
         self.pixmapItem = GPUPixmapItem()
@@ -131,7 +131,7 @@ class UIMixin(
                 self.update_loading_overlay_geometry()
                 
         self.loadingOverlay.show = custom_show
-        # pyrefly: ignore [bad-assignment]
+         ignore [bad-assignment]
         self.loadingOverlay.setText = custom_setText
 
         # Chronometer Overlay
@@ -160,7 +160,7 @@ class UIMixin(
         # Premium drag feature
         def overlayMousePressEvent(event):
             if event.button() == Qt.MouseButton.LeftButton:
-                # pyrefly: ignore [missing-attribute]
+                
                 self.chronometerOverlay._drag_start_pos = event.globalPosition().toPoint() - self.chronometerOverlay.pos()
                 event.accept()
                 
@@ -172,9 +172,9 @@ class UIMixin(
                 self.chronometerOverlay.move(vx, vy)
                 event.accept()
 
-        # pyrefly: ignore [bad-assignment]
+         ignore [bad-assignment]
         self.chronometerOverlay.mousePressEvent = overlayMousePressEvent
-        # pyrefly: ignore [bad-assignment]
+         ignore [bad-assignment]
         self.chronometerOverlay.mouseMoveEvent = overlayMouseMoveEvent
 
         # Controls card

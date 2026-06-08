@@ -57,9 +57,9 @@ class SettingsMixin(SettingsMixinBase):
         saturationSlider: QSlider
         is_motion_photo: bool
         
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         update_zoom: callable
-        # pyrefly: ignore [not-a-type]
+         ignore [not-a-type]
         update_pixmap_from_cache: callable
 
     def init_video_settings_sidebar(self):
@@ -175,7 +175,7 @@ class SettingsMixin(SettingsMixinBase):
             if hasattr(self, 'mediaPlayer') and self.mediaPlayer is not None:
                 self.mediaPlayer.setPlaybackRate(rate)
             if not getattr(self, '_block_broadcast', False) and hasattr(self, 'broadcast_sync_event'):
-                # pyrefly: ignore [missing-attribute]
+                
                 self.broadcast_sync_event("speed", rounded_val)
 
         self.speedSlider.valueChanged.connect(update_speed)
@@ -281,7 +281,7 @@ class SettingsMixin(SettingsMixinBase):
             self._cache_debounce_timer = QTimer()
             self._cache_debounce_timer.setSingleShot(True)
             self._cache_debounce_timer.timeout.connect(
-                # pyrefly: ignore [missing-attribute]
+                
                 lambda: self.request_frame_extraction(self.current_cache_index, force=True)
                         if getattr(self, 'currentFilePath', None) else None
             )
@@ -332,7 +332,7 @@ class SettingsMixin(SettingsMixinBase):
             self._qv_debounce_timer = QTimer()
             self._qv_debounce_timer.setSingleShot(True)
             self._qv_debounce_timer.timeout.connect(
-                # pyrefly: ignore [missing-attribute]
+                
                 lambda: self.request_frame_extraction(self.current_cache_index, force=True)
                         if getattr(self, 'currentFilePath', None) else None
             )
@@ -406,20 +406,20 @@ class SettingsMixin(SettingsMixinBase):
         # Mirror and Rotate buttons (placed BEFORE the Alaphelyzet button)
         self.mirrorButton = PushButton(tr('mirror_h'))
         self.mirrorButton.setToolTip(tr('tip_mirror_h'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.mirrorButton.clicked.connect(self.toggle_mirror)
         self.mirrorVerticalButton = PushButton(tr('mirror_v'))
         self.mirrorVerticalButton.setToolTip(tr('tip_mirror_v'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.mirrorVerticalButton.clicked.connect(self.toggle_vertical_mirror)
         
         self.rotateLeftButton = PushButton(tr('rotate_left'))
         self.rotateLeftButton.setToolTip(tr('tip_rotate_left'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.rotateLeftButton.clicked.connect(self.rotate_video_left)
         self.rotateRightButton = PushButton(tr('rotate_right'))
         self.rotateRightButton.setToolTip(tr('tip_rotate_right'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.rotateRightButton.clicked.connect(self.rotate_video_right)
 
         for btn in [self.mirrorButton, self.mirrorVerticalButton, self.rotateLeftButton, self.rotateRightButton]:
@@ -442,11 +442,11 @@ class SettingsMixin(SettingsMixinBase):
         footerLayout.setSpacing(6)
         self.resetAdjButton = PushButton(tr('reset_image'))
         self.resetAdjButton.setToolTip(tr('tip_reset_image'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.resetAdjButton.clicked.connect(self.reset_adjustments)
         self.infoButton = PushButton(tr('file_info'))
         self.infoButton.setToolTip(tr('tip_file_info'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.infoButton.clicked.connect(self.show_file_info)
         for btn in [self.resetAdjButton, self.infoButton]:
             btn.setStyleSheet(ACTION_BTN_STYLE)
@@ -479,7 +479,7 @@ class SettingsMixin(SettingsMixinBase):
 
         def toggle_nav_mode(checked):
             self.is_zoomed_nav = checked
-            # pyrefly: ignore [missing-attribute]
+            
             self.sync_progress_bar()
 
         self.navToggle.checkedChanged.connect(toggle_nav_mode)
@@ -493,18 +493,18 @@ class SettingsMixin(SettingsMixinBase):
         self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
         self.loopCombo.setCurrentIndex(3)
         self.loopCombo.setToolTip(tr('tip_loop_mode'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
         loopGroup.addWidget(self.loopCombo)
 
         # Save loop and Save frame buttons inside the Hurok section
         self.saveLoopButton = PushButton(tr('save_loop'))
         self.saveLoopButton.setToolTip(tr('tip_save_loop'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.saveLoopButton.clicked.connect(self.save_loop_segment)
         self.saveFrameButton = PushButton(tr('save_frame'))
         self.saveFrameButton.setToolTip(tr('tip_save_frame'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.saveFrameButton.clicked.connect(self.save_current_frame)
 
         for btn in [self.saveLoopButton, self.saveFrameButton]:
@@ -544,13 +544,13 @@ class SettingsMixin(SettingsMixinBase):
 
         for btn in [self.smartMarkButton, self.manageMarkersButton, self.deleteMarkerButton, self.clearMarkersButton]:
             btn.setStyleSheet(ACTION_BTN_STYLE)
-            # pyrefly: ignore [missing-attribute]
+            
             btn.clicked.connect(self.add_smart_marker if btn == self.smartMarkButton else
-                                # pyrefly: ignore [missing-attribute]
+                                
                                 self.show_markers_dialog if btn == self.manageMarkersButton else
-                                # pyrefly: ignore [missing-attribute]
+                                
                                 self.delete_nearest_marker if btn == self.deleteMarkerButton else
-                                # pyrefly: ignore [missing-attribute]
+                                
                                 self.clear_loop_markers)
 
         # Mark and Manage Markers in row 1
@@ -588,12 +588,12 @@ class SettingsMixin(SettingsMixinBase):
         syncLockRow = QHBoxLayout()
         self.syncLockLabel = CaptionLabel(tr('sync_lock'))
         self.lockSyncToggle = SwitchButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.lockSyncToggle.setChecked(self.isSyncLocked)
         self.lockSyncToggle.setOnText(tr('on'))
         self.lockSyncToggle.setOffText(tr('off'))
         self.lockSyncToggle.setToolTip(tr('tip_sync_lock'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.lockSyncToggle.checkedChanged.connect(self.toggle_sync_lock)
         syncLockRow.addWidget(self.syncLockLabel)
         syncLockRow.addStretch(1)
@@ -603,7 +603,7 @@ class SettingsMixin(SettingsMixinBase):
         # Force sync frame button
         self.syncFrameButton = PushButton(tr('sync_frame'))
         self.syncFrameButton.setToolTip(tr('tip_sync_frame'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.syncFrameButton.clicked.connect(self.force_frame_sync_broadcast)
         self.syncFrameButton.setEnabled(True)
         self.syncFrameButton.setStyleSheet(ACTION_BTN_STYLE)

@@ -25,7 +25,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
         mediaPlayer: QMediaPlayer
 
     def show_file_info(self):
-        # pyrefly: ignore [bad-argument-type, missing-attribute]
+         ignore [bad-argument-type, missing-attribute]
         if not self.currentFilePath or not os.path.exists(self.currentFilePath):
             return
 
@@ -42,7 +42,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
             ]
 
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            # pyrefly: ignore [no-matching-overload]
+             ignore [no-matching-overload]
             result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
             data = json.loads(result)
 
@@ -59,7 +59,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
             container = fmt.get('format_name', 'unknown').split(',')[0]
 
             video_text = (
-                # pyrefly: ignore [missing-attribute]
+                
                 f"<b>{tr('video')}</b><br>"
                 f"<b>{tr('resolution')}:</b> {res}<br>"
                 f"<b>{tr('codec')}:</b> {codec} ({pix_fmt})<br>"
@@ -103,9 +103,9 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                 audio_text = f"<p style='margin-top:6px; margin-bottom:0px;'><b>{tr('audio')}</b></p>"
 
             # Determine active Qt audio track index
-            # pyrefly: ignore [missing-attribute]
+            
             qt_tracks = self.mediaPlayer.audioTracks() if hasattr(self, 'mediaPlayer') else []
-            # pyrefly: ignore [missing-attribute]
+            
             active_qt_idx = self.mediaPlayer.activeAudioTrack() if hasattr(self, 'mediaPlayer') else 0
             multiple_audio = len(audio_streams) > 1
 
@@ -122,11 +122,11 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                 info_text += f"<br><br><font color='#888'>{self.currentFilePath}</font>"
 
             # Build the popup menu
-            # pyrefly: ignore [no-matching-overload]
+             ignore [no-matching-overload]
             menu = QMenu(self)
-            # pyrefly: ignore [missing-attribute]
+            
             inverse_text = self.config.get('inverse_text', False)
-            # pyrefly: ignore [missing-attribute]
+            
             accent = self.config.get('accent_color', '#00f2ff')
             fg_color = "#1c1c1c" if inverse_text else "#ffffff"
             menu.setStyleSheet(MENU_STYLE)
@@ -157,7 +157,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
 
                     def make_switch(idx):
                         def switch():
-                            # pyrefly: ignore [missing-attribute]
+                            
                             self.mediaPlayer.setActiveAudioTrack(idx)
                         return switch
 
@@ -179,7 +179,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                 pass  # path already in info_text above
 
             # Show menu next to the info button
-            # pyrefly: ignore [missing-attribute]
+            
             pos = self.infoButton.mapToGlobal(QPoint(0, self.infoButton.height() + 5))
             menu.exec(pos)
 

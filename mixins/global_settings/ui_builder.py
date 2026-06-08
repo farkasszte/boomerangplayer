@@ -14,11 +14,11 @@ class GlobalSettingsUiBuilderMixin:
         self.globalSettingsLayout.setContentsMargins(10, 10, 4, 10)
         self.globalSettingsLayout.setSpacing(6)
 
-        # pyrefly: ignore [missing-attribute]
+        
         self.pending_accent_color = self.config.get('accent_color', '#00f2ff')
-        # pyrefly: ignore [missing-attribute]
+        
         self.pending_bg_color = self.config.get('bg_color', '#202020')
-        # pyrefly: ignore [missing-attribute]
+        
         self.pending_panel_opacity = self.config.get('panel_opacity', 100)
 
         self.globalSettingsTitle = CaptionLabel(tr('settings'))
@@ -42,33 +42,33 @@ class GlobalSettingsUiBuilderMixin:
         self.gsInnerLayout.addWidget(self.gsGeneralLabel)
 
         self.gsLangBtn = PushButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.gsLangBtn.clicked.connect(self.show_language_menu)
         self.gsInnerLayout.addWidget(self.gsLangBtn)
 
         self.gsAudioBtn = PushButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.gsAudioBtn.clicked.connect(self.show_audio_menu)
         self.gsInnerLayout.addWidget(self.gsAudioBtn)
 
         self.gsAccentBtn = PushButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.gsAccentBtn.clicked.connect(self.choose_accent_color)
         self.gsInnerLayout.addWidget(self.gsAccentBtn)
 
         self.gsBgBtn = PushButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.gsBgBtn.clicked.connect(self.choose_bg_color)
         self.gsInnerLayout.addWidget(self.gsBgBtn)
 
         inverseTextRow = QHBoxLayout()
         self.inverseTextLabel = CaptionLabel(tr('inverse_text'))
         self.inverseTextToggle = SwitchButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.inverseTextToggle.setChecked(self.config.get('inverse_text', False))
         self.inverseTextToggle.setOnText(tr('on'))
         self.inverseTextToggle.setOffText(tr('off'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.inverseTextToggle.checkedChanged.connect(self.on_inverse_text_changed)
         inverseTextRow.addWidget(self.inverseTextLabel)
         inverseTextRow.addStretch(1)
@@ -88,7 +88,7 @@ class GlobalSettingsUiBuilderMixin:
         self.opacitySlider.setRange(20, 100)
         self.opacitySlider.setValue(self.pending_panel_opacity)
         self.opacitySlider.setToolTip(tr('tip_panel_opacity'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.opacitySlider.valueChanged.connect(self.on_panel_opacity_changed)
         self.gsInnerLayout.addWidget(self.opacitySlider)
 
@@ -106,11 +106,11 @@ class GlobalSettingsUiBuilderMixin:
         thumbRow = QHBoxLayout()
         self.thumbLabel = CaptionLabel(tr('show_thumbnails'))
         self.thumbToggle = SwitchButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.thumbToggle.setChecked(self.config.get('show_thumbnails', True))
         self.thumbToggle.setOnText(tr('on'))
         self.thumbToggle.setOffText(tr('off'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.thumbToggle.checkedChanged.connect(self.on_thumb_toggle_changed)
         thumbRow.addWidget(self.thumbLabel)
         thumbRow.addStretch(1)
@@ -120,11 +120,11 @@ class GlobalSettingsUiBuilderMixin:
         fileNameRow = QHBoxLayout()
         self.fileNameLabel = CaptionLabel(tr('show_filenames'))
         self.fileNameToggle = SwitchButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.fileNameToggle.setChecked(self.config.get('show_filenames', True))
         self.fileNameToggle.setOnText(tr('on'))
         self.fileNameToggle.setOffText(tr('off'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.fileNameToggle.checkedChanged.connect(self.on_filename_toggle_changed)
         fileNameRow.addWidget(self.fileNameLabel)
         fileNameRow.addStretch(1)
@@ -134,14 +134,14 @@ class GlobalSettingsUiBuilderMixin:
         sizeRow = QHBoxLayout()
         self.thumbSizeLabel = CaptionLabel(tr('thumbnail_size'))
         self.thumbSizeBtn = PushButton()
-        # pyrefly: ignore [missing-attribute]
+        
         self.thumbSizeBtn.clicked.connect(self.show_thumb_size_menu)
         sizeRow.addWidget(self.thumbSizeLabel)
         sizeRow.addStretch(1)
         sizeRow.addWidget(self.thumbSizeBtn)
         self.gsInnerLayout.addLayout(sizeRow)
 
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_thumb_size_btn_text()
 
         # (Reset defaults button moved to bottom next to save button)
@@ -175,14 +175,14 @@ class GlobalSettingsUiBuilderMixin:
         for i, (act, label_key) in enumerate(actions):
             lbl = BodyLabel(tr(label_key))
             lbl.setWordWrap(True)
-            # pyrefly: ignore [missing-attribute]
+            
             lbl._label_key = label_key
             self.shortcutLabels.append(lbl)
             self.shortcutGrid.addWidget(lbl, i, 0)
-            # pyrefly: ignore [missing-attribute]
+            
             btn = ShortcutButton(self.config['shortcuts'].get(act, 0))
             btn.setFixedWidth(80)
-            # pyrefly: ignore [missing-attribute]
+            
             btn.keyChanged.connect(lambda k, a=act: self.update_shortcut_sidebar(a, k))
             self.shortcutGrid.addWidget(btn, i, 1)
 
@@ -202,7 +202,7 @@ class GlobalSettingsUiBuilderMixin:
         self.gsResetDefaultsBtn.setStyleSheet(ACTION_BTN_STYLE)
 
         self.gsSaveBtn = PushButton(tr('save'))
-        # pyrefly: ignore [missing-attribute]
+        
         self.gsSaveBtn.clicked.connect(self.save_global_settings)
         self.gsSaveBtn.setStyleSheet(ACTION_BTN_STYLE)
 
@@ -215,21 +215,21 @@ class GlobalSettingsUiBuilderMixin:
     def show_global_settings(self):
         is_visible = self.globalSettingsContainer.isVisible()
         if not is_visible:
-            # pyrefly: ignore [missing-attribute]
+            
             self.settingsContainer.hide()
         self.globalSettingsContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
-            # pyrefly: ignore [missing-attribute]
+            
             sizes = self.mainSplitter.sizes()
             if len(sizes) > 0 and sizes[0] < 250:
                 sizes[0] = 250
-                # pyrefly: ignore [missing-attribute]
+                
                 self.mainSplitter.setSizes(sizes)
 
-            # pyrefly: ignore [missing-attribute]
+            
             device_id = self.config.get('audio_device', '')
             if device_id:
                 from PyQt6.QtMultimedia import QMediaDevices
@@ -237,11 +237,11 @@ class GlobalSettingsUiBuilderMixin:
                     d_id = (device.id().data().decode()
                             if hasattr(device.id(), 'data') else str(device.id()))
                     if d_id == device_id:
-                        # pyrefly: ignore [missing-attribute]
+                        
                         self.audioOutput.setDevice(device)
                         break
 
-            # pyrefly: ignore [missing-attribute]
+            
             self.update_ui_texts()
 
     def reset_all_defaults(self):
@@ -266,7 +266,7 @@ class GlobalSettingsUiBuilderMixin:
         }
 
         for key, val in factories.items():
-            # pyrefly: ignore [missing-attribute]
+            
             self.config[key] = val
 
         self.pending_accent_color = factories['accent_color']
@@ -279,7 +279,7 @@ class GlobalSettingsUiBuilderMixin:
         if hasattr(self, 'gsAudioBtn'):
             self.gsAudioBtn.setText(tr('default'))
         if hasattr(self, 'gsAccentBtn'):
-            # pyrefly: ignore [missing-attribute]
+            
             self.apply_accent_color(factories['accent_color'])
         if hasattr(self, 'opacitySlider'):
             self.opacitySlider.blockSignals(True)
@@ -308,7 +308,7 @@ class GlobalSettingsUiBuilderMixin:
             self.fileNameToggle.blockSignals(True)
             self.fileNameToggle.setChecked(True)
             self.fileNameToggle.blockSignals(False)
-        # pyrefly: ignore [missing-attribute]
+        
         self.update_thumb_size_btn_text()
         if hasattr(self, 'update_playlist_layout'):
             self.update_playlist_layout(force_reload_thumbs=True)
@@ -327,7 +327,7 @@ class GlobalSettingsUiBuilderMixin:
             ('act_full_screen','act_full_screen'),
         ]):
             default_key = DEFAULT_CONFIG['shortcuts'].get(act, 0)
-            # pyrefly: ignore [missing-attribute]
+            
             self.config['shortcuts'][act] = default_key
             grid_item = self.shortcutGrid.itemAtPosition(i, 1)
             if grid_item:
@@ -361,19 +361,19 @@ class GlobalSettingsUiBuilderMixin:
         )
 
     def toggle_settings(self):
-        # pyrefly: ignore [missing-attribute]
+        
         is_visible = self.settingsContainer.isVisible()
         if not is_visible:
             self.globalSettingsContainer.hide()
-        # pyrefly: ignore [missing-attribute]
+        
         self.settingsContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
-            # pyrefly: ignore [missing-attribute]
+            
             sizes = self.mainSplitter.sizes()
             if len(sizes) > 1 and sizes[1] < 250:
                 sizes[1] = 250
-                # pyrefly: ignore [missing-attribute]
+                
                 self.mainSplitter.setSizes(sizes)

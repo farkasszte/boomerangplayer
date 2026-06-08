@@ -4,13 +4,13 @@ class StyleUIMixin:
     def refresh_custom_styles(self, accent_color=None, bg_color=None):
         """Updates all custom styled components when accent or background color changes."""
         if not accent_color:
-            # pyrefly: ignore [missing-attribute]
+            
             accent_color = self.config.get('accent_color', '#00f2ff')
         if not bg_color:
-            # pyrefly: ignore [missing-attribute]
+            
             bg_color = self.config.get('bg_color', '#202020')
 
-        # pyrefly: ignore [missing-attribute]
+        
         inverse_text = self.config.get('inverse_text', False)
         s = get_styles(accent_color, bg_color, inverse_text)
         fg_color = "#1c1c1c" if inverse_text else "#ffffff"
@@ -122,10 +122,10 @@ class StyleUIMixin:
             
             if hasattr(self, 'volumeButton'):
                 if getattr(self, 'userMutedIntent', False):
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.volumeButton.setIcon(FluentIcon.MUTE)
                 else:
-                    # pyrefly: ignore [missing-attribute]
+                    
                     self.volumeButton.setIcon(FluentIcon.VOLUME)
 
         # Update palette border in drawing mixin if it exists
@@ -198,16 +198,16 @@ class StyleUIMixin:
             hex_color = hex_color.lstrip('#')
             return ",".join([str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4)])
 
-        # pyrefly: ignore [missing-attribute]
+        
         opacity = getattr(self, 'pending_panel_opacity', self.config.get('panel_opacity', 100))
-        # pyrefly: ignore [unsupported-operation]
+         ignore [unsupported-operation]
         opacity_float = opacity / 100.0
         rgb_bg = hex_to_rgb(bg_color)
         transparent_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"
 
         # Update Background Colors
         # Main window (PlayerWindow)
-        # pyrefly: ignore [missing-attribute]
+        
         self.setStyleSheet(f"PlayerWindow {{ background-color: {bg_color}; }}")
         
         # Title bar
