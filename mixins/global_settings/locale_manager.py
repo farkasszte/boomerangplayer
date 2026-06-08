@@ -155,14 +155,7 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.loopCombo.setCurrentIndex(idx)
 
-        
-        self.addMenu.clear()
-        
-        self.addMenu.addAction(tr('add_videos'), lambda: self.open_media(media_type="video"))
-        
-        self.addMenu.addAction(tr('add_images'), lambda: self.open_media(media_type="image"))
 
-        
         self.sortMenu.clear()
         
         self.sortMenu.addAction(tr('sort_name_asc'),    lambda: self.sort_playlist_by("name_asc"))

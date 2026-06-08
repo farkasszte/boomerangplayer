@@ -55,30 +55,31 @@ class PlaybackMixin(PlaybackMixinBase):
     # File / video loading                                                 #
     # ------------------------------------------------------------------ #
 
-    def open_media(self, media_type="video"):
+    def open_media(self):
         """
         Unified smart file/folder picker.
         • Selecting one or more files  → adds those files directly.
         • Clicking a folder and pressing Open (non-native dialog) → adds ALL
           matching files from that folder automatically.
-        Supports playlist files (.json / .bpl) in video mode.
+        Supports playlist files (.json / .bpl) as well.
         """
         from PyQt6.QtWidgets import QFileDialog
 
-        if media_type == "video":
-            exts_tuple = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v')
-            name_filters = [
-                f"{tr('video_files')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v)",
-                f"{tr('json_files')} (*.json)",
-                f"{tr('bpl_files')} (*.bpl)",
-            ]
-            title = tr('add_videos_title')
-        else:
-            exts_tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
-            name_filters = [
-                f"{tr('image_files')} (*.jpg *.jpeg *.png *.bmp *.webp *.tiff)",
-            ]
-            title = tr('add_images_title')
+        video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v')
+        image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+        audio_exts = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
+        playlist_exts = ('.json', '.bpl')
+        
+        all_exts = video_exts + image_exts + audio_exts + playlist_exts
+
+        name_filters = [
+            f"{tr('all_media')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v *.jpg *.jpeg *.png *.bmp *.webp *.tiff *.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma *.json *.bpl)",
+            f"{tr('video_files')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v)",
+            f"{tr('image_files')} (*.jpg *.jpeg *.png *.bmp *.webp *.tiff)",
+            f"{tr('audio_files')} (*.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma)",
+            f"{tr('playlist')} (*.bpl *.json)",
+        ]
+        title = tr('add_files_title')
 
         dialog = QFileDialog(self, title)
         dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
@@ -87,49 +88,295 @@ class PlaybackMixin(PlaybackMixinBase):
         dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
         dialog.setNameFilters(name_filters)
 
-        # --- Dark palette: toolbar arrows render as white icons on dark bg ---
+        # --- Dynamic palette based on theme mode (light/dark) ---
+        inverse_text = self.config.get('inverse_text', False)
+        accent_color = self.config.get('accent_color', '#00f2ff')
+        bg_color = self.config.get('bg_color', '#202020')
+
         from PyQt6.QtGui import QPalette, QColor
         pal = QPalette()
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Window,          QColor('#2a2a2a'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.WindowText,      QColor('#ffffff'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Base,            QColor('#1e1e1e'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.AlternateBase,   QColor('#252525'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Text,            QColor('#ffffff'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Button,          QColor('#3a3a3a'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ButtonText,      QColor('#ffffff'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.BrightText,      QColor('#ffffff'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipBase,     QColor('#3a3a3a'))
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipText,     QColor('#ffffff'))
-        accent = QColor(self.config.get('accent_color', '#00f2ff'))
+        if inverse_text:
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Window,          QColor(bg_color))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.WindowText,      QColor('#1c1c1c'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Base,            QColor('#ffffff'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.AlternateBase,   QColor('#f9f9f9'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Text,            QColor('#1c1c1c'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Button,          QColor('#eaeaea'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ButtonText,      QColor('#1c1c1c'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.BrightText,      QColor('#1c1c1c'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipBase,     QColor('#ffffff'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipText,     QColor('#1c1c1c'))
+        else:
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Window,          QColor(bg_color))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.WindowText,      QColor('#ffffff'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Base,            QColor('#1a1a1a'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.AlternateBase,   QColor('#252525'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Text,            QColor('#ffffff'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Button,          QColor('#3a3a3a'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ButtonText,      QColor('#ffffff'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.BrightText,      QColor('#ffffff'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipBase,     QColor('#3a3a3a'))
+            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipText,     QColor('#ffffff'))
+        
+        accent = QColor(accent_color)
         pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Highlight,       accent)
         pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.HighlightedText, QColor('#000000'))
         dialog.setPalette(pal)
+
+        # Style the dialog with custom CSS stylesheet
+        fg_color = "#1c1c1c" if inverse_text else "#ffffff"
+        widget_bg = "#ffffff" if inverse_text else "#1a1a1a"
+        widget_border = "rgba(0, 0, 0, 0.15)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+        widget_border_bottom = "rgba(0, 0, 0, 0.25)" if inverse_text else "rgba(255, 255, 255, 0.2)"
+        
+        bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
+        bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+        
+        header_bg = "#eaeaea" if inverse_text else "#252525"
+        
+        dialog_style = f"""
+            QFileDialog {{
+                background-color: {bg_color};
+            }}
+            QLabel {{
+                color: {fg_color};
+                font-size: 13px;
+            }}
+            QLineEdit {{
+                background-color: {widget_bg};
+                border: 1px solid {widget_border};
+                border-bottom: 1px solid {widget_border_bottom};
+                border-radius: 4px;
+                padding: 5px;
+                color: {fg_color};
+                font-size: 13px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {accent_color};
+            }}
+            QComboBox {{
+                background-color: {widget_bg};
+                border: 1px solid {widget_border};
+                border-radius: 4px;
+                padding: 4px 8px;
+                color: {fg_color};
+                font-size: 13px;
+            }}
+            QComboBox:hover {{
+                background-color: {bg_hover};
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 15px;
+                border-left-width: 0px;
+                border-style: solid;
+            }}
+            QPushButton {{
+                background-color: {bg_translucent};
+                border: 1px solid {widget_border};
+                border-radius: 4px;
+                color: {fg_color};
+                font-size: 13px;
+                font-weight: 500;
+                padding: 6px 12px;
+                min-width: 75px;
+            }}
+            QPushButton:hover {{
+                background-color: {bg_hover};
+            }}
+            QPushButton:pressed {{
+                background-color: {bg_pressed};
+            }}
+            QTreeView, QListView {{
+                background-color: {widget_bg};
+                color: {fg_color};
+                border: 1px solid {widget_border};
+                border-radius: 4px;
+                font-size: 13px;
+            }}
+            QTreeView::item:hover, QListView::item:hover {{
+                background-color: {bg_hover};
+            }}
+            QTreeView::item:selected, QListView::item:selected {{
+                background-color: {accent_color};
+                color: #000000;
+            }}
+            QHeaderView::section {{
+                background-color: {header_bg};
+                color: {fg_color};
+                padding: 4px;
+                border: none;
+                font-size: 12px;
+            }}
+            QToolButton {{
+                background-color: transparent;
+                border: none;
+                border-radius: 4px;
+                padding: 5px;
+                color: {fg_color};
+            }}
+            QToolButton:hover {{
+                background-color: {bg_hover};
+            }}
+        """
+        dialog.setStyleSheet(dialog_style)
+
+        # Apply Windows 11 title bar styling using DWM API
+        import sys
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                hwnd = int(dialog.winId())
+                
+                def qcolor_to_colorref(qcolor):
+                    return qcolor.red() | (qcolor.green() << 8) | (qcolor.blue() << 16)
+                
+                from PyQt6.QtGui import QColor
+                bg_color_ref = qcolor_to_colorref(QColor(bg_color))
+                fg_color_ref = qcolor_to_colorref(QColor(fg_color))
+                
+                # DWMWA_CAPTION_COLOR = 35 (Windows 11 Build 22000+)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    35,
+                    ctypes.byref(ctypes.c_int(bg_color_ref)),
+                    4
+                )
+                # DWMWA_TEXT_COLOR = 36 (Windows 11 Build 22000+)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    36,
+                    ctypes.byref(ctypes.c_int(fg_color_ref)),
+                    4
+                )
+            except Exception as e:
+                print(f"[DWM] Failed to set custom title bar colors: {e}")
 
         # --- Sidebar: list all available drives directly (no "My Computer" step) ---
         from PyQt6.QtCore import QDir, QUrl
         drive_urls = [QUrl.fromLocalFile(d.absolutePath()) for d in QDir.drives()]
         dialog.setSidebarUrls(drive_urls)
 
+        # Add custom "Add folder" button next to Open/Cancel
+        from PyQt6.QtWidgets import QDialogButtonBox, QPushButton, QWidget, QHBoxLayout, QLabel, QToolButton
+        
+        # Translate default dialog labels ("File name:", "Files of type:")
+        for label in dialog.findChildren(QLabel):
+            text_clean = label.text().replace('&', '')
+            if "File name" in text_clean:
+                label.setText(tr('file_name'))
+            elif "Files of type" in text_clean:
+                label.setText(tr('file_types'))
+
+        # Tint only the first 3 navigation arrow icons (Back, Forward, Up) to be highly visible,
+        # leaving the multi-color icons (New Folder, Grid/List view) with their original textures.
+        from PyQt6.QtGui import QPixmap, QIcon, QPainter
+        from PyQt6.QtCore import Qt, QSize
+        tool_btns = dialog.findChildren(QToolButton)
+        tool_btns = sorted(tool_btns, key=lambda b: b.x())
+        for idx, btn in enumerate(tool_btns):
+            if idx >= 3:
+                continue
+            icon = btn.icon()
+            if not icon.isNull():
+                sz = btn.iconSize()
+                if sz.width() <= 0 or sz.height() <= 0:
+                    sz = QSize(16, 16)
+                pixmap = icon.pixmap(sz)
+                if not pixmap.isNull():
+                    tinted = QPixmap(pixmap.size())
+                    tinted.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(tinted)
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+                    painter.drawPixmap(0, 0, pixmap)
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                    painter.fillRect(tinted.rect(), QColor(fg_color))
+                    painter.end()
+                    btn.setIcon(QIcon(tinted))
+
+        button_box = dialog.findChild(QDialogButtonBox)
+        if button_box:
+            add_folder_btn = QPushButton(tr('add_folder'))
+            
+            # Find the OK/Open button (AcceptRole) and translate buttons
+            open_btn = None
+            for btn in button_box.buttons():
+                role = button_box.buttonRole(btn)
+                if role == QDialogButtonBox.ButtonRole.AcceptRole:
+                    open_btn = btn
+                    btn.setText(tr('open'))
+                elif role == QDialogButtonBox.ButtonRole.RejectRole:
+                    btn.setText(tr('cancel'))
+            
+            def on_add_folder_clicked():
+                current_dir = dialog.directory().absolutePath()
+                dialog.setProperty("selected_folder", current_dir)
+                dialog.done(1) # Bypass QFileDialog validation cleanly
+            add_folder_btn.clicked.connect(on_add_folder_clicked)
+            
+            layout = button_box.layout()
+            if layout and open_btn:
+                idx = layout.indexOf(open_btn)
+                if idx != -1:
+                    # Create a horizontal container for Open and Add folder
+                    container = QWidget()
+                    h_layout = QHBoxLayout(container)
+                    h_layout.setContentsMargins(0, 0, 0, 0)
+                    h_layout.setSpacing(6)
+                    
+                    # Reparent and layout buttons side-by-side
+                    layout.removeWidget(open_btn)
+                    h_layout.addWidget(open_btn)
+                    h_layout.addWidget(add_folder_btn)
+                    
+                    # Insert the container at the original Open button index
+                    layout.insertWidget(idx, container)
+                else:
+                    button_box.addButton(add_folder_btn, QDialogButtonBox.ButtonRole.ActionRole)
+            else:
+                button_box.addButton(add_folder_btn, QDialogButtonBox.ButtonRole.ActionRole)
+
         if not dialog.exec():
             return
 
-        selected = dialog.selectedFiles()
+        folder_path = dialog.property("selected_folder")
+        if folder_path:
+            selected = [folder_path]
+        else:
+            selected = dialog.selectedFiles()
+
         if not selected:
             return
 
         files_to_add = []
         playlist_files = []
 
+        selected_filter = dialog.selectedNameFilter()
+        if tr('video_files') in selected_filter:
+            folder_exts = video_exts
+        elif tr('image_files') in selected_filter:
+            folder_exts = image_exts
+        elif tr('audio_files') in selected_filter:
+            folder_exts = audio_exts
+        elif tr('playlist') in selected_filter:
+            folder_exts = playlist_exts
+        else:
+            folder_exts = all_exts
+
         for path in selected:
             if os.path.isdir(path):
-                # Folder selected → expand to all matching files, sorted
-                files_to_add.extend(sorted(
-                    os.path.join(path, f)
-                    for f in os.listdir(path)
-                    if f.lower().endswith(exts_tuple)
-                ))
+                # Folder selected → expand to all matching files, sorted by active filter
+                for f in sorted(os.listdir(path)):
+                    if f.lower().endswith(folder_exts):
+                        fpath = os.path.join(path, f)
+                        if f.lower().endswith(playlist_exts):
+                            playlist_files.append(fpath)
+                        else:
+                            files_to_add.append(fpath)
             elif os.path.isfile(path):
-                if path.lower().endswith(('.json', '.bpl')):
+                if path.lower().endswith(playlist_exts):
                     playlist_files.append(path)
                 else:
                     files_to_add.append(path)
@@ -162,6 +409,7 @@ class PlaybackMixin(PlaybackMixinBase):
             self.last_transform_state = None
             self.is_motion_photo = False
             self.motion_photo_original_path = None
+            self.is_audio_only = False
             if hasattr(self, 'initial_fit_done'):
                 delattr(self, 'initial_fit_done')
 
@@ -224,11 +472,12 @@ class PlaybackMixin(PlaybackMixinBase):
                     self.cached_frame_dict = {}
 
                 self.current_cache_index = 0
-                self.update_pixmap_from_cache()
 
                 self.mediaPlayer.setSource(QUrl.fromLocalFile(self.currentVideoPath))
                 if self.is_motion_photo:
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - [Motion Photo] {os.path.basename(filePath)}")
+                elif self.is_audio_only:
+                    self.setWindowTitle(f"Boomerang Player v{VERSION} - [Audio] {os.path.basename(filePath)}")
                 else:
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
 
@@ -245,7 +494,14 @@ class PlaybackMixin(PlaybackMixinBase):
                 self.playButton.setIcon(FluentIcon.PLAY)
                 self.playButton.setEnabled(True)
 
-                self.start_full_extraction()
+                if self.is_audio_only:
+                    self.generate_audio_placeholder()
+                    self.update_pixmap_from_cache()
+                    # Apply fitting so placeholder draws nicely
+                    self.apply_transformations(fit=True)
+                else:
+                    self.update_pixmap_from_cache()
+                    self.start_full_extraction()
 
             self.load_markers_for_current()
 
@@ -268,7 +524,7 @@ class PlaybackMixin(PlaybackMixinBase):
                 self.is_loading_video = False
 
     def get_video_info(self, file_path):
-        """Get FPS and duration using ffprobe."""
+        """Get FPS and duration using ffprobe, supporting both video and audio-only files."""
         try:
             ffprobe_path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
             if not os.path.exists(ffprobe_path):
@@ -276,8 +532,7 @@ class PlaybackMixin(PlaybackMixinBase):
 
             cmd = [
                 ffprobe_path, "-v", "error",
-                "-select_streams", "v:0",
-                "-show_entries", "stream=codec_name,avg_frame_rate,duration,nb_frames:format=duration",
+                "-show_entries", "stream=codec_type,codec_name,avg_frame_rate,duration,nb_frames:format=duration",
                 "-of", "json", file_path
             ]
 
@@ -287,19 +542,29 @@ class PlaybackMixin(PlaybackMixinBase):
 
             result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
             data = json.loads(result)
-            if not data.get('streams'):
+            streams = data.get('streams', [])
+            
+            video_stream = next((s for s in streams if s.get('codec_type') == 'video'), None)
+            audio_stream = next((s for s in streams if s.get('codec_type') == 'audio'), None)
+            
+            self.is_audio_only = (video_stream is None and audio_stream is not None)
+            
+            stream = video_stream if video_stream is not None else audio_stream
+            if not stream:
                 return 30.0, 0, 0
 
-            stream = data['streams'][0]
             fmt = data.get('format', {})
             
             # 1. Get FPS
-            fps_str = stream.get('r_frame_rate', stream.get('avg_frame_rate', '30/1'))
-            if '/' in fps_str:
-                num, den = map(int, fps_str.split('/'))
-                fps = num / den if den != 0 else 30.0
+            if self.is_audio_only:
+                fps = 30.0
             else:
-                fps = float(fps_str)
+                fps_str = stream.get('r_frame_rate', stream.get('avg_frame_rate', '30/1'))
+                if '/' in fps_str:
+                    num, den = map(int, fps_str.split('/'))
+                    fps = num / den if den != 0 else 30.0
+                else:
+                    fps = float(fps_str)
                 
             # 2. Get Duration
             s_dur = stream.get('duration')
@@ -314,7 +579,7 @@ class PlaybackMixin(PlaybackMixinBase):
             codec = stream.get('codec_name', 'unknown')
             self.video_codec = codec
             
-            print(f"[get_video_info] {os.path.basename(file_path)}: codec={codec}, fps={fps}, duration={duration}s, nb_frames={nb_frames}")
+            print(f"[get_video_info] {os.path.basename(file_path)}: codec={codec}, is_audio_only={self.is_audio_only}, fps={fps}, duration={duration}s, nb_frames={nb_frames}")
             return fps, duration * 1000, nb_frames
         except Exception as e:
             print(f"ffprobe error: {e}")
@@ -483,7 +748,7 @@ class PlaybackMixin(PlaybackMixinBase):
 
         self.current_cache_index = max(0, min(max(0, self.total_frames - 1), self.current_cache_index))
 
-        if self.current_cache_index not in self.cached_frame_dict:
+        if self.current_cache_index not in self.cached_frame_dict and not getattr(self, 'is_audio_only', False):
             # Restore state so we don't skip the missing frame once playback resumes
             self.current_cache_index = old_index
             self.isForward = old_forward
@@ -527,7 +792,7 @@ class PlaybackMixin(PlaybackMixinBase):
         self.needs_range_update = True
         self.isForward = True
 
-        if index not in getattr(self, 'cached_frame_dict', {}):
+        if index not in getattr(self, 'cached_frame_dict', {}) and not getattr(self, 'is_audio_only', False):
             
             self.loadingOverlay.show()
             
@@ -566,7 +831,7 @@ class PlaybackMixin(PlaybackMixinBase):
         max_frame = self.progressBar.maximum() if self.progressBar.maximum() > 0 else 0
         self.current_cache_index = max(0, min(max_frame, self.current_cache_index))
 
-        if self.current_cache_index not in getattr(self, 'cached_frame_dict', {}):
+        if self.current_cache_index not in getattr(self, 'cached_frame_dict', {}) and not getattr(self, 'is_audio_only', False):
             
             self.loadingOverlay.show()
             

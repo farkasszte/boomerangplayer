@@ -7,16 +7,17 @@ from translations import tr
 
 class PlaylistPersistenceMixin:
     def save_playlist_to_file(self):
-        filters = f"{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl)"
+        filters = f"{tr('bpl_files')} (*.bpl);;{tr('json_files')} (*.json)"
         fileName, selectedFilter = QFileDialog.getSaveFileName(
             self, tr('save_project_title'), "", filters
         )
         if fileName:
-            is_bpl = fileName.lower().endswith('.bpl') or 'bpl_files' in selectedFilter
-            if is_bpl and not fileName.lower().endswith('.bpl'):
-                fileName += '.bpl'
-            elif not is_bpl and not fileName.lower().endswith('.json'):
+            is_json = fileName.lower().endswith('.json') or 'json_files' in selectedFilter
+            if is_json and not fileName.lower().endswith('.json'):
                 fileName += '.json'
+            elif not is_json and not fileName.lower().endswith('.bpl'):
+                fileName += '.bpl'
+            is_bpl = fileName.lower().endswith('.bpl')
 
             data = {'files': [], 'markers': self.playlistData}
             
@@ -84,7 +85,7 @@ class PlaylistPersistenceMixin:
                 )
 
     def load_playlist_from_file(self):
-        filters = f"{tr('json_files')} (*.json);;{tr('bpl_files')} (*.bpl);;{tr('all_files')} (*)"
+        filters = f"{tr('playlist')} (*.bpl *.json);;{tr('all_files')} (*)"
         fileName, _ = QFileDialog.getOpenFileName(
             self, tr('open_project_title'), "", filters
         )

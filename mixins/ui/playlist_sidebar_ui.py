@@ -110,14 +110,7 @@ class PlaylistSidebarUIMixin:
 
         self.btn_add = PushButton(tr('add'))
         self.btn_add.setToolTip(tr('tip_add'))
-        self.addMenu = QMenu(self)
-        self.addMenu.setStyleSheet(MENU_STYLE)
-        
-        self.addMenu.addAction(tr('add_videos'), lambda: self.open_media(media_type="video"))
-        
-        self.addMenu.addAction(tr('add_images'), lambda: self.open_media(media_type="image"))
-        
-        self.btn_add.clicked.connect(self.show_add_menu)
+        self.btn_add.clicked.connect(self.open_media)
 
         self.btn_sort = PushButton(tr('sort'))
         self.btn_sort.setToolTip(tr('tip_sort'))

@@ -541,9 +541,56 @@ class CacheMixin(CacheMixinBase):
         self._last_adj_params = params
         return self._adj_lut
 
+    def generate_audio_placeholder(self):
+        """Generates a simple flat grey audio placeholder image with text labels."""
+        from PyQt6.QtGui import QImage, QPainter, QColor, QFont
+        from PyQt6.QtCore import QRectF
+        
+        # Dimensions
+        width, height = 1920, 1080
+        img = QImage(width, height, QImage.Format.Format_ARGB32)
+        img.fill(QColor("#2a2a2a"))
+        
+        painter = QPainter(img)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw "AUDIO" text
+        font_sub = QFont("Segoe UI", 24, QFont.Weight.DemiBold)
+        font_sub.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 6)
+        painter.setFont(font_sub)
+        painter.setPen(QColor("#aaaaaa"))
+        
+        # Translate to current language
+        from translations import tr
+        audio_text = tr('audio').upper()
+        
+        rect_sub = QRectF(0, height / 2 - 100, width, 60)
+        painter.drawText(rect_sub, Qt.AlignmentFlag.AlignCenter, audio_text)
+        
+        # Draw file name
+        font_title = QFont("Segoe UI", 36, QFont.Weight.Bold)
+        painter.setFont(font_title)
+        painter.setPen(QColor("#ffffff"))
+        
+        filename = os.path.basename(self.currentFilePath) if self.currentFilePath else ""
+        rect_title = QRectF(100, height / 2 + 10, width - 200, 200)
+        painter.drawText(rect_title, Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap, filename)
+        
+        painter.end()
+        
+        # Cache it as frame 0 bytes
+        from PyQt6.QtCore import QBuffer, QIODevice
+        buffer = QBuffer()
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        img.save(buffer, "PNG")
+        self.cached_frame_dict = {0: buffer.data().data()}
+
     def update_pixmap_from_cache(self):
-        if self.current_cache_index in getattr(self, 'cached_frame_dict', {}):
-            data = self.cached_frame_dict[self.current_cache_index]
+        is_audio = getattr(self, 'is_audio_only', False)
+        target_index = 0 if is_audio else self.current_cache_index
+
+        if target_index in getattr(self, 'cached_frame_dict', {}):
+            data = self.cached_frame_dict[target_index]
 
             b = self.brightnessSlider.value()
             c = self.contrastSlider.value() / 100.0
@@ -553,7 +600,7 @@ class CacheMixin(CacheMixinBase):
             gpu_enabled = self.config.get('gpu_acceleration', False)
             if gpu_enabled:
                 if self.pixmapItem is not None:
-                    if self.current_cache_index == getattr(self, '_last_rendered_index', -1):
+                    if target_index == getattr(self, '_last_rendered_index', -1):
                         self.pixmapItem.update_params(b, c, g, s)
                     else:
                         image = QImage()
@@ -568,15 +615,15 @@ class CacheMixin(CacheMixinBase):
                         fit_val = False
                         if getattr(self, 'is_motion_photo', False):
                             last_idx = getattr(self, '_last_rendered_index', -1)
-                            if self.current_cache_index == 0 or last_idx == 0:
+                            if target_index == 0 or last_idx == 0:
                                 fit_val = True
                         
                         
                         self.apply_transformations(fit=fit_val)
-                        self._last_rendered_index = self.current_cache_index
+                        self._last_rendered_index = target_index
             else:
                 # Software rendering path
-                if (hasattr(self, '_last_base_index') and self._last_base_index == self.current_cache_index 
+                if (hasattr(self, '_last_base_index') and self._last_base_index == target_index 
                         and hasattr(self, '_current_base_image') and not self._current_base_image.isNull()):
                     img = self._current_base_image.copy()
                 else:
@@ -587,7 +634,7 @@ class CacheMixin(CacheMixinBase):
                         pixmap.load(data)
                     img = pixmap.toImage()
                     self._current_base_image = img
-                    self._last_base_index = self.current_cache_index
+                    self._last_base_index = target_index
 
                 if b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
                     img = img.convertToFormat(QImage.Format.Format_ARGB32)
@@ -620,17 +667,20 @@ class CacheMixin(CacheMixinBase):
                     fit_val = False
                     if getattr(self, 'is_motion_photo', False):
                         last_idx = getattr(self, '_last_rendered_index', -1)
-                        if self.current_cache_index == 0 or last_idx == 0:
+                        if target_index == 0 or last_idx == 0:
                             fit_val = True
                     
                     
                     self.apply_transformations(fit=fit_val)
-                    self._last_rendered_index = self.current_cache_index
+                    self._last_rendered_index = target_index
 
             if hasattr(self, 'frameLabel'):
-                self.frameLabel.setText(
-                    f" [F: {self.current_cache_index + 1} / {self.total_frames}]"
-                )
+                if is_audio:
+                    self.frameLabel.setText(" [Audio]")
+                else:
+                    self.frameLabel.setText(
+                        f" [F: {self.current_cache_index + 1} / {self.total_frames}]"
+                    )
 
         if not self.is_scrubbing and not self.is_playing:
             self.sync_progress_bar()

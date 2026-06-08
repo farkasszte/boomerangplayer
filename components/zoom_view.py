@@ -611,7 +611,9 @@ class ZoomView(QGraphicsView):
         
         # 3. Clamp zoom level
         if new_zoom > 10.0:
-            return
+            if self.zoomLevel == 10.0: return
+            actual_factor = 10.0 / self.zoomLevel
+            self.zoomLevel = 10.0
         elif new_zoom < 1.0:
             if self.zoomLevel == 1.0: return
             actual_factor = 1.0 / self.zoomLevel
