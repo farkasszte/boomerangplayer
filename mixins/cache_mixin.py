@@ -689,3 +689,6 @@ class CacheMixin(CacheMixinBase):
             pos = int((self.current_cache_index * 1000) / self.fps)
             from utils import format_time
             self.currentTimeLabel.setText(format_time(pos))
+
+        if hasattr(self, 'update_subtitles_for_current_time'):
+            self.update_subtitles_for_current_time()

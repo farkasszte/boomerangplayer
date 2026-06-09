@@ -195,13 +195,22 @@ class PlaybackMixin(PlaybackMixinBase):
                 border: 1px solid {widget_border};
                 border-radius: 4px;
                 font-size: 13px;
+                outline: none;
+            }}
+            QTreeView::item, QListView::item {{
+                outline: none;
+                border: none;
             }}
             QTreeView::item:hover, QListView::item:hover {{
                 background-color: {bg_hover};
+                border: none;
+                outline: none;
             }}
             QTreeView::item:selected, QListView::item:selected {{
                 background-color: {accent_color};
                 color: #000000;
+                border: none;
+                outline: none;
             }}
             QHeaderView::section {{
                 background-color: {header_bg};
@@ -502,6 +511,15 @@ class PlaybackMixin(PlaybackMixinBase):
                 else:
                     self.update_pixmap_from_cache()
                     self.start_full_extraction()
+
+            if hasattr(self, 'subtitles'):
+                self.subtitles = []
+                self.subtitleFilePath = None
+                if hasattr(self, 'subtitleLabel'):
+                    self.subtitleLabel.hide()
+            if not is_image:
+                if hasattr(self, 'auto_load_subtitles_for_video'):
+                    self.auto_load_subtitles_for_video(filePath)
 
             self.load_markers_for_current()
 

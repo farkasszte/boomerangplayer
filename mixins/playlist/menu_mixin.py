@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtWidgets import QMenu
 from styles import MENU_STYLE
 from translations import tr
@@ -59,14 +59,12 @@ class PlaylistMenuMixin:
                 menu.addAction(f"{tr('export_photo')} ({len(mjpeg_items)})", lambda: self.bulk_export_motion_jpg_photos(mjpeg_items))
                 menu.addAction(f"{tr('export_video')} ({len(mjpeg_items)})", lambda: self.bulk_export_motion_jpg_videos(mjpeg_items))
             
-            
-            menu.addAction(f"{tr('delete_file')} ({selected_count})", self.delete_selected_playlist_items)
-            
+            menu.addAction(f"{tr('delete_file')} ({selected_count})", lambda: QTimer.singleShot(0, self.delete_selected_playlist_items))
             menu.addAction(f"{tr('remove_selected')} ({selected_count})", self.remove_from_playlist)
         else:
             # Single item: full context menu
             
-            menu.addAction(tr('rename'), lambda: self.rename_playlist_item(item))
+            menu.addAction(tr('rename'), lambda: QTimer.singleShot(0, lambda: self.rename_playlist_item(item)))
             
             menu.addAction(tr('open_in_new_window'), lambda: self.open_in_new_window(item))
 
@@ -81,7 +79,7 @@ class PlaylistMenuMixin:
             
             menu.addAction(tr('remove_selected'), self.remove_from_playlist)
             
-            menu.addAction(tr('delete_file'), lambda: self.delete_playlist_item(item))
+            menu.addAction(tr('delete_file'), lambda: QTimer.singleShot(0, lambda: self.delete_playlist_item(item)))
 
         menu.exec(pos)
 

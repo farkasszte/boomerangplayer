@@ -62,6 +62,11 @@ class ControlsCardUIMixin:
         self.globalSettingsButton.clicked.connect(self.show_global_settings)
         buttonsLayout.addWidget(self.globalSettingsButton)
 
+        self.toggleSubtitlePanelButton = ToolButton(FluentIcon.CHAT)
+        self.toggleSubtitlePanelButton.setToolTip(tr('subtitles'))
+        self.toggleSubtitlePanelButton.clicked.connect(self.toggle_subtitle_panel)
+        buttonsLayout.addWidget(self.toggleSubtitlePanelButton)
+
         buttonsLayout.addSpacing(20)
         buttonsLayout.addSpacing(10)
         buttonsLayout.addSpacing(10)
@@ -216,6 +221,8 @@ class ControlsCardUIMixin:
                 self.drawingContainer.show()
             if hidden_sidebars.get('settings') and hasattr(self, 'settingsContainer'):
                 self.settingsContainer.show()
+            if hidden_sidebars.get('subtitle') and hasattr(self, 'subtitleContainer'):
+                self.subtitleContainer.show()
             if hidden_sidebars.get('global_settings') and hasattr(self, 'globalSettingsContainer'):
                 self.globalSettingsContainer.show()
             self.sidebars_hidden_by_controls = None
@@ -247,7 +254,8 @@ class ControlsCardUIMixin:
                 'playlist': hasattr(self, 'playlistContainer') and self.playlistContainer.isVisible(),
                 'drawing': hasattr(self, 'drawingContainer') and self.drawingContainer.isVisible(),
                 'settings': hasattr(self, 'settingsContainer') and self.settingsContainer.isVisible(),
-                'global_settings': hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible()
+                'global_settings': hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible(),
+                'subtitle': hasattr(self, 'subtitleContainer') and self.subtitleContainer.isVisible()
             }
             
             # Hide the controlsCard and all sidebars in fullscreen
@@ -258,6 +266,8 @@ class ControlsCardUIMixin:
                 self.drawingContainer.hide()
             if hasattr(self, 'settingsContainer'):
                 self.settingsContainer.hide()
+            if hasattr(self, 'subtitleContainer'):
+                self.subtitleContainer.hide()
             if hasattr(self, 'globalSettingsContainer'):
                 self.globalSettingsContainer.hide()
             

@@ -1,0 +1,306 @@
+import os
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QLabel, QFileDialog
+from translations import tr
+from utils import parse_subtitle_file, get_embedded_subtitles_info, extract_embedded_subtitle, parse_srt
+
+class SubtitleMixin:
+    def init_subtitle_state(self):
+        self.subtitles = []
+        self.subtitleFilePath = None
+        
+        # Subtitle overlay label
+        self.subtitleLabel = QLabel(self.view)
+        self.subtitleLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.subtitleLabel.setWordWrap(True)
+        self.subtitleLabel.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.subtitleLabel.hide()
+        
+        self.update_sub_style()
+
+    def update_sub_style(self):
+        if not hasattr(self, 'subtitleLabel'):
+            return
+            
+        font_family = self.config.get('subtitle_font_family', 'Segoe UI')
+        font_size = self.config.get('subtitle_font_size', 24)
+        text_color_name = self.config.get('subtitle_text_color', 'White')
+        bg_color_name = self.config.get('subtitle_bg_color', 'Black')
+        opacity = self.config.get('subtitle_bg_opacity', 60)
+
+        color_map = {
+            'White': '#ffffff', 'Yellow': '#ffff00', 'Cyan': '#00ffff',
+            'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000'
+        }
+        bg_map = {
+            'Black': '0, 0, 0', 'Dark Grey': '34, 34, 34', 'Navy Blue': '0, 0, 128'
+        }
+
+        color_hex = color_map.get(text_color_name, '#ffffff')
+        
+        if bg_color_name == 'None':
+            bg_style = "background-color: transparent;"
+        else:
+            rgb = bg_map.get(bg_color_name, '0, 0, 0')
+            bg_style = f"background-color: rgba({rgb}, {opacity / 100.0});"
+
+        style = f"""
+            QLabel {{
+                color: {color_hex};
+                font-family: '{font_family}';
+                font-size: {font_size}px;
+                font-weight: bold;
+                {bg_style}
+                border-radius: 6px;
+                padding: 6px 16px;
+            }}
+        """
+        self.subtitleLabel.setStyleSheet(style)
+        self.position_subtitle_label()
+
+    def position_subtitle_label(self):
+        if not hasattr(self, 'subtitleLabel') or not self.subtitleLabel.isVisible():
+            return
+            
+        view_w = self.view.width()
+        view_h = self.view.height()
+        
+        # Reset minimum/maximum sizes to let the label compute naturally
+        self.subtitleLabel.setMinimumSize(0, 0)
+        self.subtitleLabel.setMaximumSize(view_w - 40, view_h - 40)
+        
+        # Adjust size based on content and constraints
+        self.subtitleLabel.adjustSize()
+        
+        lbl_w = self.subtitleLabel.width()
+        lbl_h = self.subtitleLabel.height()
+        
+        x = (view_w - lbl_w) // 2
+        y = view_h - lbl_h - 20
+        
+        self.subtitleLabel.move(x, y)
+
+    def on_enable_subtitles_changed(self, checked):
+        self.config['enable_subtitles'] = checked
+        self.config.save()
+        if not checked:
+            self.subtitleLabel.hide()
+        else:
+            self.update_subtitles_for_current_time()
+
+    def browse_subtitle_file(self):
+        title = tr('load_subtitle_file')
+        filter_str = f"{tr('subtitle_files')} (*.srt *.vtt *.ass *.ssa *.sub)"
+        filepath, _ = QFileDialog.getOpenFileName(self, title, "", filter_str)
+        if filepath:
+            self.load_subtitles(filepath)
+
+    def load_subtitles(self, filepath):
+        if not os.path.exists(filepath):
+            return
+            
+        self.subtitleFilePath = filepath
+        self.subtitles = parse_subtitle_file(filepath, fps=getattr(self, 'fps', 30.0))
+        print(f"[Subtitles] Loaded {len(self.subtitles)} cues from {filepath}")
+        
+        # Update combo to show External File is active
+        self.subTrackCombo.blockSignals(True)
+        ext_idx = -1
+        for i in range(self.subTrackCombo.count()):
+            if self.subTrackCombo.itemData(i) == -2:
+                ext_idx = i
+                break
+        if ext_idx == -1:
+            self.subTrackCombo.addItem(tr('load_subtitle_file'), -2)
+            ext_idx = self.subTrackCombo.count() - 1
+        self.subTrackCombo.setCurrentIndex(ext_idx)
+        self.subTrackCombo.blockSignals(False)
+        
+        self.update_subtitles_for_current_time()
+
+    def populate_subtitle_tracks(self, video_path):
+        if not hasattr(self, 'subTrackCombo'):
+            return
+        self.subTrackCombo.blockSignals(True)
+        self.subTrackCombo.clear()
+        self.subTrackCombo.addItem(tr('off'), -1)
+        
+        tracks = get_embedded_subtitles_info(video_path)
+        for t in tracks:
+            idx = t['index']
+            lang = t['language']
+            codec = t['codec']
+            title = t['title']
+            
+            label = f"Track {idx}: {lang.upper()} ({codec})"
+            if title:
+                label += f" - {title}"
+            self.subTrackCombo.addItem(label, idx)
+        self.subTrackCombo.blockSignals(False)
+
+    def on_sub_track_changed(self, idx):
+        if idx < 0 or idx >= self.subTrackCombo.count():
+            return
+            
+        stream_index = self.subTrackCombo.itemData(idx)
+        if stream_index == -1: # Off
+            self.subtitleLabel.hide()
+            self.subtitles = []
+        elif stream_index == -2: # External file
+            pass
+        else: # Embedded
+            if self.currentFilePath and os.path.exists(self.currentFilePath):
+                srt_content = extract_embedded_subtitle(self.currentFilePath, stream_index)
+                self.subtitles = parse_srt(srt_content)
+                print(f"[Subtitles] Extracted and loaded {len(self.subtitles)} embedded cues from stream {stream_index}")
+                self.update_subtitles_for_current_time()
+
+    def auto_load_subtitles_for_video(self, video_path):
+        if not video_path:
+            return
+            
+        self.populate_subtitle_tracks(video_path)
+            
+        dir_name = os.path.dirname(video_path)
+        base_name, _ = os.path.splitext(os.path.basename(video_path))
+        
+        sub_exts = ['.srt', '.vtt', '.sub', '.ass', '.ssa']
+        for ext in sub_exts:
+            sub_path = os.path.join(dir_name, base_name + ext)
+            if os.path.exists(sub_path):
+                self.load_subtitles(sub_path)
+                return
+            sub_path_lower = os.path.join(dir_name, base_name + ext.upper())
+            if os.path.exists(sub_path_lower):
+                self.load_subtitles(sub_path_lower)
+                return
+
+        # If no external file is found, but there are embedded tracks, load the first one!
+        if self.subTrackCombo.count() > 1:
+            self.subTrackCombo.setCurrentIndex(1)
+
+    def update_subtitles_for_current_time(self):
+        if not hasattr(self, 'subtitleLabel') or not self.subtitles:
+            if hasattr(self, 'subtitleLabel'):
+                self.subtitleLabel.hide()
+            return
+            
+        if not self.config.get('enable_subtitles', True):
+            self.subtitleLabel.hide()
+            return
+
+        # Calculate current time in ms
+        fps = getattr(self, 'fps', 30.0)
+        if fps <= 0:
+            fps = 30.0
+        current_time = int((self.current_cache_index * 1000) / fps)
+        
+        # Apply offset delay
+        offset = self.config.get('subtitle_offset', 0)
+        adjusted_time = current_time + offset
+
+        # Find matching subtitle
+        active_text = ""
+        for cue in self.subtitles:
+            if cue['start'] <= adjusted_time <= cue['end']:
+                active_text = cue['text']
+                break
+
+        if active_text:
+            self.subtitleLabel.setText(active_text)
+            self.subtitleLabel.show()
+            self.position_subtitle_label()
+        else:
+            self.subtitleLabel.hide()
+
+    # --- UI adjustment slots ---
+    def on_sub_font_changed(self, idx):
+        font = self.subFontCombo.itemText(idx)
+        self.config['subtitle_font_family'] = font
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_size_slider_changed(self, val):
+        self.subFontSizeSpin.blockSignals(True)
+        self.subFontSizeSpin.setValue(val)
+        self.subFontSizeSpin.blockSignals(False)
+        self.config['subtitle_font_size'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_size_spin_changed(self, val):
+        self.subFontSizeSlider.blockSignals(True)
+        self.subFontSizeSlider.setValue(val)
+        self.subFontSizeSlider.blockSignals(False)
+        self.config['subtitle_font_size'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_text_color_changed(self, idx):
+        color = self.subTextColorCombo.itemText(idx)
+        self.config['subtitle_text_color'] = color
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_bg_color_changed(self, idx):
+        color = self.subBgColorCombo.itemText(idx)
+        self.config['subtitle_bg_color'] = color
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_opacity_slider_changed(self, val):
+        self.subBgOpacitySpin.blockSignals(True)
+        self.subBgOpacitySpin.setValue(val)
+        self.subBgOpacitySpin.blockSignals(False)
+        self.config['subtitle_bg_opacity'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_opacity_spin_changed(self, val):
+        self.subBgOpacitySlider.blockSignals(True)
+        self.subBgOpacitySlider.setValue(val)
+        self.subBgOpacitySlider.blockSignals(False)
+        self.config['subtitle_bg_opacity'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_offset_slider_changed(self, val):
+        self.subOffsetSpin.blockSignals(True)
+        self.subOffsetSpin.setValue(val)
+        self.subOffsetSpin.blockSignals(False)
+        self.config['subtitle_offset'] = val
+        self.config.save()
+        self.update_subtitles_for_current_time()
+
+    def on_sub_offset_spin_changed(self, val):
+        self.subOffsetSlider.blockSignals(True)
+        self.subOffsetSlider.setValue(val)
+        self.subOffsetSlider.blockSignals(False)
+        self.config['subtitle_offset'] = val
+        self.config.save()
+        self.update_subtitles_for_current_time()
+
+    def toggle_subtitle_panel(self):
+        if not hasattr(self, 'subtitleContainer'):
+            return
+        is_visible = self.subtitleContainer.isVisible()
+        
+        # Enforce mutual exclusivity with settings panel on the left
+        if not is_visible:
+            if hasattr(self, 'settingsContainer') and self.settingsContainer.isVisible():
+                self.settingsContainer.hide()
+            if hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible():
+                self.globalSettingsContainer.hide()
+                
+        self.subtitleContainer.setVisible(not is_visible)
+        
+        if hasattr(self, 'update_sidebar_fullscreen_state'):
+            self.update_sidebar_fullscreen_state()
+        if hasattr(self, 'update_sidebar_margins'):
+            self.update_sidebar_margins()
+
+        if not is_visible and not getattr(self, 'is_full_screen', False):
+            sizes = self.mainSplitter.sizes()
+            if len(sizes) > 2 and sizes[2] < 250:
+                sizes[2] = 250
+                self.mainSplitter.setSizes(sizes)

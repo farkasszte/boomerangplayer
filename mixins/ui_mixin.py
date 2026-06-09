@@ -28,6 +28,7 @@ from mixins.ui.controls_card_ui import ControlsCardUIMixin
 from mixins.ui.style_mixin import StyleUIMixin
 from mixins.ui.shortcut_mixin import ShortcutUIMixin
 from mixins.ui.fullscreen_mixin import FullscreenUIMixin
+from mixins.ui.subtitle_sidebar_ui import SubtitleSidebarUIMixin
 
 from typing import TYPE_CHECKING
 
@@ -47,6 +48,7 @@ class UIMixin(
     StyleUIMixin,
     ShortcutUIMixin,
     FullscreenUIMixin,
+    SubtitleSidebarUIMixin,
     UIMixinBase
 ):
     if TYPE_CHECKING:
@@ -82,6 +84,7 @@ class UIMixin(
         self.init_global_settings_sidebar()
         
         self.init_video_settings_sidebar()
+        self.init_subtitle_sidebar()
         self._init_playlist_sidebar()
         self._init_drawing_sidebar()
 
@@ -89,11 +92,12 @@ class UIMixin(
         self.mainSplitter.addWidget(self.globalSettingsContainer)
         
         self.mainSplitter.addWidget(self.settingsContainer)
+        self.mainSplitter.addWidget(self.subtitleContainer)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.playlistContainer)
         self.mainSplitter.addWidget(self.drawingContainer)
-        self.mainSplitter.setStretchFactor(2, 1)
-        self.mainSplitter.setSizes([0, 0, 10000, 250, 0])
+        self.mainSplitter.setStretchFactor(3, 1)
+        self.mainSplitter.setSizes([0, 0, 0, 10000, 250, 0])
 
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
 
@@ -242,6 +246,8 @@ class UIMixin(
             self.globalSettingsLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'settingsLayout'):
             self.settingsLayout.setContentsMargins(10, 10, 4, bottom_margin)
+        if hasattr(self, 'subtitleLayout'):
+            self.subtitleLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'drawingSidebarLayout'):
             self.drawingSidebarLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'playlistLayout'):
@@ -258,8 +264,9 @@ class UIMixin(
         sidebars = [
             ('global_settings', self.globalSettingsContainer, 'left', 0),
             ('settings', self.settingsContainer, 'left', 1),
-            ('playlist', self.playlistContainer, 'right', 3),
-            ('drawing', self.drawingContainer, 'right', 4)
+            ('subtitle', self.subtitleContainer, 'left', 2),
+            ('playlist', self.playlistContainer, 'right', 4),
+            ('drawing', self.drawingContainer, 'right', 5)
         ]
         
         if is_fs:
@@ -293,6 +300,11 @@ class UIMixin(
             # Enforce mutual exclusivity on the same side in windowed mode
             if self.globalSettingsContainer.isVisible() and self.settingsContainer.isVisible():
                 self.globalSettingsContainer.hide()
+            if self.subtitleContainer.isVisible():
+                if self.settingsContainer.isVisible():
+                    self.settingsContainer.hide()
+                if self.globalSettingsContainer.isVisible():
+                    self.globalSettingsContainer.hide()
             if self.playlistContainer.isVisible() and self.drawingContainer.isVisible():
                 self.drawingContainer.hide()
             
@@ -300,6 +312,7 @@ class UIMixin(
             sizes = [
                 250 if self.globalSettingsContainer.isVisible() else 0,
                 250 if self.settingsContainer.isVisible() else 0,
+                250 if self.subtitleContainer.isVisible() else 0,
                 10000,
                 250 if self.playlistContainer.isVisible() else 0,
                 250 if self.drawingContainer.isVisible() else 0

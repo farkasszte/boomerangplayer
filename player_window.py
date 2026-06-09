@@ -40,6 +40,7 @@ from mixins.settings_mixin import SettingsMixin
 from mixins.global_settings_mixin import GlobalSettingsMixin
 from mixins.ipc_sync_mixin import IPCSyncMixin
 from mixins.ui_mixin import UIMixin
+from mixins.subtitle_mixin import SubtitleMixin
 
 qInstallMessageHandler(qt_message_handler)
 
@@ -48,6 +49,7 @@ class PlayerWindow(
     CacheMixin, PlaybackMixin, TransformMixin, VolumeMixin,
     MarkerMixin, PlaylistMixin, DrawingMixin,
     SettingsMixin, GlobalSettingsMixin, IPCSyncMixin, UIMixin,
+    SubtitleMixin,
     FluentWindow
 ):
     def __init__(self):
@@ -192,6 +194,7 @@ class PlayerWindow(
 
         # ---- Build UI (UIMixin) ----------------------------------------
         self.init_ui()
+        self.init_subtitle_state()
         if hasattr(self, 'refresh_custom_styles'):
             self.refresh_custom_styles()
         
@@ -271,4 +274,6 @@ class PlayerWindow(
             self.update_sidebar_fullscreen_state()
         if hasattr(self, 'update_sidebar_margins'):
             self.update_sidebar_margins()
+        if hasattr(self, 'position_subtitle_label'):
+            self.position_subtitle_label()
 

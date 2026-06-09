@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
-VERSION = "2.6"
+VERSION = "2.7"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -219,16 +219,25 @@ def cleanup_nvidia_dxcache():
     thread.start()
 
 
+def log_debug(msg):
+    # Debug logging to file is muted for production/release.
+    # Uncomment print below if console debug logs are needed:
+    # print(f"[DEBUG] {msg}", flush=True)
+    pass
+
 def send_to_recycle_bin(path):
     """ Moves the specified file to the Windows Recycle Bin (Lomtár) using ctypes SHFileOperationW.
     Returns True if successful, False otherwise.
     """
+    log_debug(f"send_to_recycle_bin called for path: {path}")
     if os.name != 'nt':
         try:
             if os.path.exists(path):
                 os.remove(path)
+                log_debug("Non-Windows deletion succeeded")
                 return True
         except Exception as e:
+            log_debug(f"Non-Windows deletion failed: {e}")
             print(f"Error deleting file: {e}")
             return False
         return False
@@ -256,26 +265,53 @@ def send_to_recycle_bin(path):
     if not os.path.exists(path):
         return False
 
-    try:
-        abs_path = os.path.abspath(path)
-        p_from = abs_path + "\0\0"
+    import time
+    for attempt in range(30):
+        try:
+            abs_path = os.path.abspath(path)
+            p_from = abs_path + "\0\0"
 
-        fileop = SHFILEOPSTRUCTW()
-        fileop.hwnd = None
-        fileop.wFunc = FO_DELETE
-        fileop.pFrom = p_from
-        fileop.pTo = None
-        fileop.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION
-        fileop.fAnyOperationsAborted = False
-        fileop.hNameMappings = None
-        fileop.lpszProgressTitle = None
-
-        shell32 = ctypes.windll.shell32
-        result = shell32.SHFileOperationW(ctypes.byref(fileop))
-        return result == 0 and not fileop.fAnyOperationsAborted
-    except Exception as e:
-        print(f"Error in send_to_recycle_bin: {e}")
-        return False
+            fileop = SHFILEOPSTRUCTW()
+            fileop.hwnd = None
+            fileop.wFunc = FO_DELETE
+            fileop.pFrom = p_from
+            fileop.pTo = None
+            fileop.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION
+            fileop.fAnyOperationsAborted = False
+            fileop.hNameMappings = None
+            fileop.lpszProgressTitle = None
+            shell32 = ctypes.windll.shell32
+            result = shell32.SHFileOperationW(ctypes.byref(fileop))
+            if result == 0 and not fileop.fAnyOperationsAborted:
+                log_debug(f"ctypes SHFileOperationW succeeded on attempt {attempt}")
+                return True
+            else:
+                log_debug(f"ctypes SHFileOperationW failed on attempt {attempt} with code {result} (aborted: {fileop.fAnyOperationsAborted})")
+                print(f"[send_to_recycle_bin] (attempt {attempt}) SHFileOperationW returned code {result} (aborted: {fileop.fAnyOperationsAborted})")
+                
+                # Robust fallback: use PowerShell COM Shell.Application object to move the file to the Recycle Bin
+                try:
+                    ps_cmd = [
+                        "powershell", "-NoProfile", "-Command",
+                        f'(New-Object -ComObject Shell.Application).NameSpace(10).MoveHere("{abs_path}")'
+                    ]
+                    creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                    res = subprocess.run(ps_cmd, creationflags=creationflags, capture_output=True, text=True, timeout=5)
+                    if not os.path.exists(abs_path):
+                        log_debug(f"PowerShell fallback succeeded on attempt {attempt}")
+                        print(f"[send_to_recycle_bin] PowerShell fallback succeeded on attempt {attempt}")
+                        return True
+                    else:
+                        log_debug(f"PowerShell fallback run but file still exists. stdout: {res.stdout.strip()}, stderr: {res.stderr.strip()}")
+                except Exception as ex:
+                    log_debug(f"PowerShell fallback failed: {ex}")
+                    print(f"[send_to_recycle_bin] PowerShell fallback failed: {ex}")
+        except Exception as e:
+            log_debug(f"Error in send_to_recycle_bin try-except: {e}")
+            print(f"Error in send_to_recycle_bin (attempt {attempt}): {e}")
+        time.sleep(0.1)
+    log_debug("All 30 attempts to delete failed")
+    return False
 
 
 def get_embedded_video_offset(file_path):
@@ -301,6 +337,201 @@ def get_embedded_video_offset(file_path):
     except Exception as e:
         print(f"Error checking embedded video: {e}")
     return None
+
+
+import re
+
+def parse_subtitle_file(filepath, fps=30.0):
+    """
+    Parses SRT, VTT, SUB, or ASS/SSA files.
+    Returns a list of dicts: [{'start': ms, 'end': ms, 'text': '...'}]
+    """
+    if not os.path.exists(filepath):
+        return []
+
+    ext = os.path.splitext(filepath)[1].lower()
+    
+    content = ""
+    for enc in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1250']:
+        try:
+            with open(filepath, 'r', encoding=enc) as f:
+                content = f.read()
+            break
+        except Exception:
+            continue
+            
+    if not content:
+        return []
+
+    if ext == '.srt':
+        return parse_srt(content)
+    elif ext == '.vtt':
+        return parse_vtt(content)
+    elif ext == '.sub':
+        return parse_sub(content, fps)
+    elif ext in ('.ssa', '.ass'):
+        return parse_ass(content)
+        
+    return []
+
+def time_to_ms(h, m, s, ms):
+    return int(h) * 3600000 + int(m) * 60000 + int(s) * 1000 + int(ms)
+
+def parse_srt(content):
+    subtitles = []
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
+    pattern = re.compile(
+        r'(?:\d+\n)?(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})\n([\s\S]*?)(?=\n\n|\n*$)'
+    )
+    for match in pattern.finditer(content):
+        sh, sm, ss, sms, eh, em, es, ems, text = match.groups()
+        start = time_to_ms(sh, sm, ss, sms)
+        end = time_to_ms(eh, em, es, ems)
+        text_clean = text.strip()
+        if text_clean:
+            subtitles.append({'start': start, 'end': end, 'text': text_clean})
+    return subtitles
+
+def parse_vtt(content):
+    subtitles = []
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
+    timestamp_pattern = re.compile(
+        r'(\d{2}:\d{2}:\d{2}\.\d{3}|\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3}|\d{2}:\d{2}\.\d{3})\n([\s\S]*?)(?=\n\n|\n*$)'
+    )
+    
+    def parse_vtt_timestamp(ts):
+        parts = ts.split(':')
+        if len(parts) == 3:
+            h, m, s_ms = parts
+            s, ms = s_ms.split('.')
+            return time_to_ms(h, m, s, ms)
+        elif len(parts) == 2:
+            m, s_ms = parts
+            s, ms = s_ms.split('.')
+            return time_to_ms(0, m, s, ms)
+        return 0
+
+    for match in timestamp_pattern.finditer(content):
+        start_ts, end_ts, text = match.groups()
+        start = parse_vtt_timestamp(start_ts)
+        end = parse_vtt_timestamp(end_ts)
+        text_clean = text.strip()
+        if text_clean:
+            subtitles.append({'start': start, 'end': end, 'text': text_clean})
+    return subtitles
+
+def parse_sub(content, fps=30.0):
+    subtitles = []
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
+    pattern = re.compile(r'^\{(\d+)\}\{(\d+)\}(.*)$', re.MULTILINE)
+    if fps <= 0:
+        fps = 30.0
+    for match in pattern.finditer(content):
+        start_frame, end_frame, text = match.groups()
+        start = int(int(start_frame) * 1000 / fps)
+        end = int(int(end_frame) * 1000 / fps)
+        text_clean = text.replace('|', '\n').strip()
+        if text_clean:
+            subtitles.append({'start': start, 'end': end, 'text': text_clean})
+    return subtitles
+
+def parse_ass(content):
+    subtitles = []
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
+    lines = content.split('\n')
+    dialogue_pattern = re.compile(r'^Dialogue:\s*[^,]*,([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([\s\S]*)$')
+    
+    def parse_ass_timestamp(ts):
+        parts = ts.split(':')
+        if len(parts) == 3:
+            h, m, s_cs = parts
+            s, cs = s_cs.split('.')
+            return int(h) * 3600000 + int(m) * 60000 + int(s) * 1000 + int(cs) * 10
+        return 0
+
+    for line in lines:
+        match = dialogue_pattern.match(line)
+        if match:
+            start_ts, end_ts, _, _, _, _, _, _, text = match.groups()
+            start = parse_ass_timestamp(start_ts)
+            end = parse_ass_timestamp(end_ts)
+            clean_text = re.sub(r'\{[^}]*\}', '', text)
+            clean_text = clean_text.replace('\\N', '\n').replace('\\n', '\n').strip()
+            if clean_text:
+                subtitles.append({'start': start, 'end': end, 'text': clean_text})
+    return subtitles
+
+
+def get_embedded_subtitles_info(filepath):
+    """
+    Scans a file using ffprobe for subtitle streams.
+    Returns a list of dicts: [{'index': int, 'codec': str, 'language': str, 'title': str}]
+    """
+    try:
+        ffprobe_path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
+        if not os.path.exists(ffprobe_path):
+            ffprobe_path = "ffprobe"
+
+        import subprocess
+        cmd = [
+            ffprobe_path, "-v", "error",
+            "-show_entries", "stream=index,codec_type,codec_name:stream_tags=language,title",
+            "-of", "json", filepath
+        ]
+
+        creationflags = 0
+        if os.name == 'nt':
+            creationflags = subprocess.CREATE_NO_WINDOW
+
+        result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8', errors='ignore')
+        data = json.loads(result)
+        streams = data.get('streams', [])
+        
+        subtitle_streams = []
+        for s in streams:
+            if s.get('codec_type') == 'subtitle':
+                tags = s.get('tags', {})
+                lang = tags.get('language', 'und')
+                title = tags.get('title', '')
+                codec = s.get('codec_name', 'unknown')
+                subtitle_streams.append({
+                    'index': s.get('index'),
+                    'codec': codec,
+                    'language': lang,
+                    'title': title
+                })
+        return subtitle_streams
+    except Exception as e:
+        print(f"Error querying embedded subtitles: {e}")
+        return []
+
+def extract_embedded_subtitle(filepath, stream_index):
+    """
+    Extracts subtitle stream from video to SRT format text using ffmpeg.
+    """
+    try:
+        ffmpeg_path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
+        if not os.path.exists(ffmpeg_path):
+            ffmpeg_path = "ffmpeg"
+
+        import subprocess
+        cmd = [
+            ffmpeg_path, "-y", "-i", filepath,
+            "-map", f"0:{stream_index}",
+            "-f", "srt", "-"
+        ]
+
+        creationflags = 0
+        if os.name == 'nt':
+            creationflags = subprocess.CREATE_NO_WINDOW
+
+        result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8', errors='ignore')
+        return result
+    except Exception as e:
+        print(f"Error extracting embedded subtitle stream {stream_index}: {e}")
+        return ""
+
+
 
 
 

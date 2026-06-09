@@ -215,21 +215,19 @@ class GlobalSettingsUiBuilderMixin:
     def show_global_settings(self):
         is_visible = self.globalSettingsContainer.isVisible()
         if not is_visible:
-            
             self.settingsContainer.hide()
+            if hasattr(self, 'subtitleContainer'):
+                self.subtitleContainer.hide()
         self.globalSettingsContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
-            
             sizes = self.mainSplitter.sizes()
             if len(sizes) > 0 and sizes[0] < 250:
                 sizes[0] = 250
-                
                 self.mainSplitter.setSizes(sizes)
 
-            
             device_id = self.config.get('audio_device', '')
             if device_id:
                 from PyQt6.QtMultimedia import QMediaDevices
@@ -237,11 +235,9 @@ class GlobalSettingsUiBuilderMixin:
                     d_id = (device.id().data().decode()
                             if hasattr(device.id(), 'data') else str(device.id()))
                     if d_id == device_id:
-                        
                         self.audioOutput.setDevice(device)
                         break
 
-            
             self.update_ui_texts()
 
     def reset_all_defaults(self):
@@ -266,7 +262,6 @@ class GlobalSettingsUiBuilderMixin:
         }
 
         for key, val in factories.items():
-            
             self.config[key] = val
 
         self.pending_accent_color = factories['accent_color']
@@ -279,7 +274,6 @@ class GlobalSettingsUiBuilderMixin:
         if hasattr(self, 'gsAudioBtn'):
             self.gsAudioBtn.setText(tr('default'))
         if hasattr(self, 'gsAccentBtn'):
-            
             self.apply_accent_color(factories['accent_color'])
         if hasattr(self, 'opacitySlider'):
             self.opacitySlider.blockSignals(True)
@@ -327,7 +321,6 @@ class GlobalSettingsUiBuilderMixin:
             ('act_full_screen','act_full_screen'),
         ]):
             default_key = DEFAULT_CONFIG['shortcuts'].get(act, 0)
-            
             self.config['shortcuts'][act] = default_key
             grid_item = self.shortcutGrid.itemAtPosition(i, 1)
             if grid_item:
@@ -361,19 +354,18 @@ class GlobalSettingsUiBuilderMixin:
         )
 
     def toggle_settings(self):
-        
         is_visible = self.settingsContainer.isVisible()
         if not is_visible:
             self.globalSettingsContainer.hide()
+            if hasattr(self, 'subtitleContainer'):
+                self.subtitleContainer.hide()
         
         self.settingsContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
-            
             sizes = self.mainSplitter.sizes()
             if len(sizes) > 1 and sizes[1] < 250:
                 sizes[1] = 250
-                
                 self.mainSplitter.setSizes(sizes)

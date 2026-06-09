@@ -226,6 +226,7 @@ TRANSLATIONS = {
         'delete_success': 'Successfully moved to Recycle Bin.',
         'delete_multiple_confirm_msg': 'Are you sure you want to move these {count} files to the Recycle Bin?\n\n{file_list}',
         'delete_multiple_success': 'Successfully moved {count} files to Recycle Bin.',
+        'and_more_files': '... and {count} more file(s)',
         'save_settings': 'Save settings',
         'default': 'Default',
         'accent_color': 'Accent color',
@@ -235,7 +236,27 @@ TRANSLATIONS = {
         'tip_panel_opacity': 'Adjust background opacity of side and bottom panels',
         'select_audio_track': 'Select audio track',
         'active': 'Active',
-        'track': 'Track'
+        'track': 'Track',
+        
+        # Subtitles
+        'subtitles': 'Subtitles',
+        'enable_subtitles': 'Enable subtitles',
+        'load_subtitle_file': 'Load subtitle file...',
+        'font_family': 'Font family',
+        'font_size': 'Font size',
+        'text_color': 'Text color',
+        'bg_color_sub': 'Background color',
+        'bg_opacity': 'Background opacity',
+        'subtitle_offset': 'Subtitle offset',
+        'tip_enable_subtitles': 'Toggle subtitles visibility',
+        'tip_load_subtitle': 'Browse and load subtitle file (.srt, .vtt, .ass, .ssa, .sub)',
+        'tip_font_family': 'Select font family for subtitles',
+        'tip_font_size': 'Adjust subtitle text size in pixels',
+        'tip_text_color': 'Select text color',
+        'tip_bg_color_sub': 'Select background color',
+        'tip_bg_opacity': 'Adjust background opacity of subtitles',
+        'tip_subtitle_offset': 'Delay subtitles (milliseconds)',
+        'subtitle_files': 'Subtitle files (*.srt *.vtt *.ass *.ssa *.sub)'
     },
     'hu': {
         # Navigation/UI
@@ -465,6 +486,7 @@ TRANSLATIONS = {
         'delete_success': 'Sikeresen áthelyezve a Lomtárba.',
         'delete_multiple_confirm_msg': 'Biztosan a Lomtárba szeretné helyezni ezt a(z) {count} fájlt?\n\n{file_list}',
         'delete_multiple_success': 'Sikeresen áthelyezve {count} fájl a Lomtárba.',
+        'and_more_files': '... és további {count} fájl',
         'save_settings': 'Beállítások mentése',
         'default': 'Alapértelmezett',
         'accent_color': 'Kiemelő szín',
@@ -474,7 +496,27 @@ TRANSLATIONS = {
         'tip_panel_opacity': 'Az oldalsó és alsó panelek háttér-átlátszóságának beállítása',
         'select_audio_track': 'Audió sáv kiválasztása',
         'active': 'Aktív',
-        'track': 'Sáv'
+        'track': 'Sáv',
+        
+        # Subtitles
+        'subtitles': 'Feliratok',
+        'enable_subtitles': 'Feliratok engedélyezése',
+        'load_subtitle_file': 'Felirat betöltése...',
+        'font_family': 'Betűtípus',
+        'font_size': 'Betűméret',
+        'text_color': 'Szöveg színe',
+        'bg_color_sub': 'Háttérszín',
+        'bg_opacity': 'Háttér átlátszósága',
+        'subtitle_offset': 'Felirat késleltetés',
+        'tip_enable_subtitles': 'Feliratok megjelenítésének ki/be kapcsolása',
+        'tip_load_subtitle': 'Feliratfájl betöltése (.srt, .vtt, .ass, .ssa, .sub)',
+        'tip_font_family': 'Felirat betűtípusának kiválasztása',
+        'tip_font_size': 'Felirat méretének beállítása pixelben',
+        'tip_text_color': 'Szöveg színének kiválasztása',
+        'tip_bg_color_sub': 'Háttérszín kiválasztása',
+        'tip_bg_opacity': 'Felirat hátterének átlátszósága',
+        'tip_subtitle_offset': 'Felirat eltolása (ezredmásodperc)',
+        'subtitle_files': 'Felirat fájlok (*.srt *.vtt *.ass *.ssa *.sub)'
     }
 }
 
