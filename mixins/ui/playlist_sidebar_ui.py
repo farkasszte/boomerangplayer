@@ -99,6 +99,7 @@ class PlaylistSidebarUIMixin:
         self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
         
         self.playlistList.filesDropped.connect(self.add_files_to_playlist)
+        self.playlistList.deleteRequested.connect(self.delete_selected_playlist_items)
         self.playlistLayout.addWidget(self.playlistList)
 
         self.thumb_threads = []

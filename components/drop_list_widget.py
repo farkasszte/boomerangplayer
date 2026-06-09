@@ -4,11 +4,19 @@ from PyQt6.QtWidgets import QAbstractItemView, QListWidget
 class DropListWidget(QListWidget):
     filesDropped = pyqtSignal(list)
     itemRightClicked = pyqtSignal(object, QPoint)
+    deleteRequested = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Delete:
+            self.deleteRequested.emit()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def contextMenuEvent(self, event):
         item = self.itemAt(event.pos())

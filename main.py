@@ -18,6 +18,40 @@ def main():
     from PyQt6.QtGui import QFont
     app.setFont(QFont("Segoe UI", 10))
     
+    # Monkeypatch qfluentwidgets MaskDialogBase to fix PyQt6 animation garbage collection bug
+    try:
+        from qfluentwidgets.components.dialog_box.mask_dialog_base import MaskDialogBase
+        from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
+        from PyQt6.QtWidgets import QGraphicsOpacityEffect
+
+        def patched_done(self, code):
+            self.widget.setGraphicsEffect(None)
+            opacityEffect = QGraphicsOpacityEffect(self)
+            self.setGraphicsEffect(opacityEffect)
+            self.opacityAni = QPropertyAnimation(opacityEffect, b'opacity', self)
+            self.opacityAni.setStartValue(1)
+            self.opacityAni.setEndValue(0)
+            self.opacityAni.setDuration(100)
+            self.opacityAni.finished.connect(lambda: self._onDone(code))
+            self.opacityAni.start()
+
+        def patched_showEvent(self, e):
+            opacityEffect = QGraphicsOpacityEffect(self)
+            self.setGraphicsEffect(opacityEffect)
+            self.showOpacityAni = QPropertyAnimation(opacityEffect, b'opacity', self)
+            self.showOpacityAni.setStartValue(0)
+            self.showOpacityAni.setEndValue(1)
+            self.showOpacityAni.setDuration(200)
+            self.showOpacityAni.setEasingCurve(QEasingCurve.Type.InSine)
+            self.showOpacityAni.finished.connect(lambda: self.setGraphicsEffect(None))
+            self.showOpacityAni.start()
+            super(MaskDialogBase, self).showEvent(e)
+
+        MaskDialogBase.done = patched_done
+        MaskDialogBase.showEvent = patched_showEvent
+    except Exception as e:
+        print(f"Failed to patch MaskDialogBase: {e}")
+
     from player_window import PlayerWindow
     window = PlayerWindow()
     window.show()
