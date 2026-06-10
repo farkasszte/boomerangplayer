@@ -1,16 +1,60 @@
 import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QFileDialog
+from PyQt6.QtGui import QColor, QPainter
 from translations import tr
 from utils import parse_subtitle_file, get_embedded_subtitles_info, extract_embedded_subtitle, parse_srt
+
+class OutlineLabel(QLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.outline_color = QColor(0, 0, 0)
+        self.outline_width = 2
+        self.outline_enabled = False
+
+    def setOutline(self, enabled, color=QColor(0, 0, 0), width=2):
+        self.outline_enabled = enabled
+        self.outline_color = color
+        self.outline_width = width
+        self.update()
+
+    def paintEvent(self, event):
+        if not self.outline_enabled or self.outline_width <= 0:
+            super().paintEvent(event)
+            return
+        
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Save original color
+        original_color = self.palette().color(self.foregroundRole())
+        
+        # Draw background outline in multiple directions
+        w = self.outline_width
+        palette = self.palette()
+        palette.setColor(self.foregroundRole(), self.outline_color)
+        self.setPalette(palette)
+        
+        for dx in range(-w, w + 1):
+            for dy in range(-w, w + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                painter.translate(dx, dy)
+                super().paintEvent(event)
+                painter.translate(-dx, -dy)
+                
+        # Draw foreground text
+        palette.setColor(self.foregroundRole(), original_color)
+        self.setPalette(palette)
+        super().paintEvent(event)
 
 class SubtitleMixin:
     def init_subtitle_state(self):
         self.subtitles = []
         self.subtitleFilePath = None
         
-        # Subtitle overlay label
-        self.subtitleLabel = QLabel(self.view)
+        # Subtitle overlay label using our custom OutlineLabel
+        self.subtitleLabel = OutlineLabel(self.view)
         self.subtitleLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.subtitleLabel.setWordWrap(True)
         self.subtitleLabel.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -30,7 +74,8 @@ class SubtitleMixin:
 
         color_map = {
             'White': '#ffffff', 'Yellow': '#ffff00', 'Cyan': '#00ffff',
-            'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000'
+            'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000',
+            'Black': '#000000', 'Dark Grey': '#222222', 'Navy Blue': '#000080'
         }
         bg_map = {
             'Black': '0, 0, 0', 'Dark Grey': '34, 34, 34', 'Navy Blue': '0, 0, 128'
@@ -56,6 +101,32 @@ class SubtitleMixin:
             }}
         """
         self.subtitleLabel.setStyleSheet(style)
+        
+        # Apply outline styling
+        outline_enabled = self.config.get('subtitle_outline_enabled', False)
+        outline_width = self.config.get('subtitle_outline_width', 2)
+        outline_color_name = self.config.get('subtitle_outline_color', 'Black')
+        outline_color_hex = color_map.get(outline_color_name, '#000000')
+        self.subtitleLabel.setOutline(outline_enabled, QColor(outline_color_hex), outline_width)
+        
+        # Apply drop shadow graphics effect
+        shadow_enabled = self.config.get('subtitle_shadow_enabled', False)
+        if shadow_enabled:
+            from PyQt6.QtWidgets import QGraphicsDropShadowEffect
+            shadow_blur = self.config.get('subtitle_shadow_blur', 5)
+            shadow_dx = self.config.get('subtitle_shadow_dx', 2)
+            shadow_dy = self.config.get('subtitle_shadow_dy', 2)
+            shadow_color_name = self.config.get('subtitle_shadow_color', 'Black')
+            shadow_color_hex = color_map.get(shadow_color_name, '#000000')
+            
+            effect = QGraphicsDropShadowEffect(self)
+            effect.setBlurRadius(shadow_blur)
+            effect.setOffset(shadow_dx, shadow_dy)
+            effect.setColor(QColor(shadow_color_hex))
+            self.subtitleLabel.setGraphicsEffect(effect)
+        else:
+            self.subtitleLabel.setGraphicsEffect(None)
+            
         self.position_subtitle_label()
 
     def position_subtitle_label(self):
@@ -75,9 +146,13 @@ class SubtitleMixin:
         lbl_w = self.subtitleLabel.width()
         lbl_h = self.subtitleLabel.height()
         
-        x = (view_w - lbl_w) // 2
+        # Center horizontally, with horizontal offset
+        h_offset = self.config.get('subtitle_h_offset', 0)
+        x = (view_w - lbl_w) // 2 + h_offset
         
-        margin_bottom = 20
+        # Offset from bottom
+        v_offset = self.config.get('subtitle_v_offset', 20)
+        margin_bottom = v_offset
         if getattr(self, 'is_full_screen', False) and hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
             margin_bottom += self.controlsCard.height()
         y = view_h - lbl_h - margin_bottom
@@ -348,3 +423,59 @@ class SubtitleMixin:
             duration=1500,
             parent=self
         )
+
+    def on_sub_outline_changed(self, checked):
+        self.config['subtitle_outline_enabled'] = checked
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_outline_width_changed(self, val):
+        self.config['subtitle_outline_width'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_outline_color_changed(self, idx):
+        color = self.subOutlineColorCombo.itemData(idx)
+        if not color:
+            color = self.subOutlineColorCombo.itemText(idx)
+        self.config['subtitle_outline_color'] = color
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_shadow_changed(self, checked):
+        self.config['subtitle_shadow_enabled'] = checked
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_shadow_blur_changed(self, val):
+        self.config['subtitle_shadow_blur'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_shadow_dx_changed(self, val):
+        self.config['subtitle_shadow_dx'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_shadow_dy_changed(self, val):
+        self.config['subtitle_shadow_dy'] = val
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_shadow_color_changed(self, idx):
+        color = self.subShadowColorCombo.itemData(idx)
+        if not color:
+            color = self.subShadowColorCombo.itemText(idx)
+        self.config['subtitle_shadow_color'] = color
+        self.config.save()
+        self.update_sub_style()
+
+    def on_sub_v_offset_changed(self, val):
+        self.config['subtitle_v_offset'] = val
+        self.config.save()
+        self.position_subtitle_label()
+
+    def on_sub_h_offset_changed(self, val):
+        self.config['subtitle_h_offset'] = val
+        self.config.save()
+        self.position_subtitle_label()

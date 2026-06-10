@@ -1,8 +1,9 @@
 import os
 import sys
 import json
+import subprocess
 from PyQt6.QtCore import Qt
-VERSION = "2.8"
+VERSION = "2.9"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -14,11 +15,94 @@ def get_resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
+
+def get_ffmpeg_path():
+    path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
+    if os.path.exists(path):
+        return os.path.normpath(path)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base_dir, "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
+    if os.path.exists(path):
+        return os.path.normpath(path)
+    return "ffmpeg"
+
+def get_ffprobe_path():
+    path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
+    if os.path.exists(path):
+        return os.path.normpath(path)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base_dir, "ffprobe.exe" if os.name == 'nt' else "ffprobe")
+    if os.path.exists(path):
+        return os.path.normpath(path)
+    return "ffprobe"
+
+def detect_best_hwaccel_async(config):
+    """
+    Detects the best hardware decoding method supported by the system ffmpeg
+    by generating a tiny video in the temp folder and trying to decode it.
+    """
+    import threading
+    import tempfile
+    import subprocess
+    
+    def worker():
+        try:
+            ffmpeg_path = get_ffmpeg_path()
+            dummy_file = os.path.join(tempfile.gettempdir(), "boomerang_dummy.mp4")
+            
+            if os.path.exists(dummy_file):
+                try:
+                    os.remove(dummy_file)
+                except OSError:
+                    pass
+            
+            creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            gen_cmd = [
+                ffmpeg_path, "-y", "-f", "lavfi", "-i", "testsrc=size=64x64:rate=1",
+                "-t", "1", "-pix_fmt", "yuv420p", dummy_file
+            ]
+            
+            res = subprocess.run(gen_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creationflags, timeout=5)
+            if res.returncode != 0 or not os.path.exists(dummy_file):
+                print("[GPU Detect] Failed to generate dummy video for testing.")
+                return
+            
+            hwaccels_to_test = ['cuda', 'd3d11va', 'dxva2']
+            best_accel = 'auto'
+            
+            for accel in hwaccels_to_test:
+                test_cmd = [
+                    ffmpeg_path, "-y", "-hwaccel", accel, "-i", dummy_file, "-f", "null", "-"
+                ]
+                try:
+                    res_test = subprocess.run(test_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creationflags, timeout=3)
+                    if res_test.returncode == 0:
+                        best_accel = accel
+                        print(f"[GPU Detect] Hardware acceleration '{accel}' is verified and working.")
+                        break
+                except Exception:
+                    continue
+            
+            try:
+                os.remove(dummy_file)
+            except OSError:
+                pass
+            
+            config['detected_hwaccel'] = best_accel
+            try:
+                from utils import save_config
+                save_config(config)
+            except Exception:
+                pass
+                
+        except Exception as e:
+            print(f"[GPU Detect] Error during detection: {e}")
+            
+    threading.Thread(target=worker, daemon=True).start()
 
 def format_time(ms):
     if ms is None: return "0:00"
@@ -75,7 +159,18 @@ DEFAULT_CONFIG = {
     'active_color_index': 2, # Default to Red
     'audio_eq_enabled': False,
     'audio_eq_preset': 'Flat',
-    'audio_eq_gains': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    'audio_eq_gains': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    'subtitle_outline_enabled': False,
+    'subtitle_outline_width': 2,
+    'subtitle_outline_color': 'Black',
+    'subtitle_shadow_enabled': False,
+    'subtitle_shadow_blur': 5,
+    'subtitle_shadow_dx': 2,
+    'subtitle_shadow_dy': 2,
+    'subtitle_shadow_color': 'Black',
+    'subtitle_v_offset': 20,
+    'subtitle_h_offset': 0,
+    'detected_hwaccel': 'auto'
 }
 
 def get_config_path():
@@ -482,11 +577,7 @@ def get_embedded_subtitles_info(filepath):
     Returns a list of dicts: [{'index': int, 'codec': str, 'language': str, 'title': str}]
     """
     try:
-        ffprobe_path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
-        if not os.path.exists(ffprobe_path):
-            ffprobe_path = "ffprobe"
-
-        import subprocess
+        ffprobe_path = get_ffprobe_path()
         cmd = [
             ffprobe_path, "-v", "error",
             "-show_entries", "stream=index,codec_type,codec_name:stream_tags=language,title",
@@ -524,11 +615,7 @@ def extract_embedded_subtitle(filepath, stream_index):
     Extracts subtitle stream from video to SRT format text using ffmpeg.
     """
     try:
-        ffmpeg_path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
-        if not os.path.exists(ffmpeg_path):
-            ffmpeg_path = "ffmpeg"
-
-        import subprocess
+        ffmpeg_path = get_ffmpeg_path()
         cmd = [
             ffmpeg_path, "-y", "-i", filepath,
             "-map", f"0:{stream_index}",

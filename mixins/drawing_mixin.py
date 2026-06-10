@@ -286,3 +286,12 @@ class DrawingMixin(DrawingMixinBase):
         )
         if filePath:
             out_pixmap.save(filePath)
+
+    def save_drawings_to_markers(self):
+        if getattr(self, 'is_loading_video', False) or not self.currentFilePath:
+            return
+        if self.currentFilePath not in self.playlistData:
+            self.playlistData[self.currentFilePath] = {}
+        
+        self.playlistData[self.currentFilePath]['drawings'] = self.view.serialize_strokes()
+        self.save_current_markers()

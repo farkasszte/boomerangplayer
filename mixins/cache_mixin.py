@@ -317,22 +317,41 @@ class CacheMixin(CacheMixinBase):
         if self.extraction_thread and self.extraction_thread.isRunning():
             return
 
+        is_forward = getattr(self, 'isForward', True)
 
-        max_cache_ahead = self.cache_window_half * 2
-        target_end = min(self.total_frames - 1, self.current_cache_index + max_cache_ahead)
+        if is_forward:
+            max_cache_ahead = self.cache_window_half * 2
+            target_end = min(self.total_frames - 1, self.current_cache_index + max_cache_ahead)
 
-        first_missing = -1
-        for i in range(self.current_cache_index, target_end + 1):
-            if i not in self.cached_frame_dict:
-                first_missing = i
-                break
+            first_missing = -1
+            for i in range(self.current_cache_index, target_end + 1):
+                if i not in self.cached_frame_dict:
+                    first_missing = i
+                    break
 
-        if first_missing == -1:
-            return
+            if first_missing == -1:
+                return
 
-        chunk_size = self.cache_window_half
-        start_frame = first_missing
-        end_frame = min(self.total_frames - 1, start_frame + chunk_size - 1)
+            chunk_size = self.cache_window_half
+            start_frame = first_missing
+            end_frame = min(self.total_frames - 1, start_frame + chunk_size - 1)
+        else:
+            max_cache_behind = self.cache_window_half * 2
+            target_start = max(0, self.current_cache_index - max_cache_behind)
+
+            first_missing = -1
+            for i in range(self.current_cache_index, target_start - 1, -1):
+                if i not in self.cached_frame_dict:
+                    first_missing = i
+                    break
+
+            if first_missing == -1:
+                return
+
+            chunk_size = self.cache_window_half
+            end_frame = first_missing
+            start_frame = max(0, end_frame - chunk_size + 1)
+
         num_frames = end_frame - start_frame + 1
 
         if num_frames <= 0:
@@ -370,7 +389,7 @@ class CacheMixin(CacheMixinBase):
         from mixins.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         qv_value = self.config.get('qv_value', 2)
-        print(f"[check_proactive_cache] Starting proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_end={target_end}, qv_value={qv_value}")
+        print(f"[check_proactive_cache] Starting {'forward' if is_forward else 'backward'} proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_missing={first_missing}, qv_value={qv_value}")
         
         self.last_extracted_center = start_frame + num_frames // 2
 
@@ -419,8 +438,13 @@ class CacheMixin(CacheMixinBase):
         # Prune old/future frames to save RAM (skip for short videos that fit entirely in cache)
         if self.total_frames > self.cache_window_half * 2:
             playhead = self.current_cache_index
-            prune_behind = self.cache_window_half
-            prune_ahead = int(self.cache_window_half * 2.5)
+            is_forward = getattr(self, 'isForward', True)
+            if is_forward:
+                prune_behind = self.cache_window_half
+                prune_ahead = int(self.cache_window_half * 2.5)
+            else:
+                prune_behind = int(self.cache_window_half * 2.5)
+                prune_ahead = self.cache_window_half
 
             keys_to_delete = []
             for k in new_dict:

@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtGui import QPixmap, QPainter, QColor
-from utils import get_resource_path
+from utils import get_resource_path, get_ffmpeg_path
 
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
@@ -83,11 +83,7 @@ class FrameExtractionThread(QThread):
 
     def run(self):
         try:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            ffmpeg_path = os.path.join(base_dir, "..", "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
-            ffmpeg_path = os.path.normpath(ffmpeg_path)
-            if not os.path.exists(ffmpeg_path):
-                ffmpeg_path = "ffmpeg"
+            ffmpeg_path = get_ffmpeg_path()
                 
             start_time = self.start_frame / self.fps
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
@@ -118,7 +114,10 @@ class FrameExtractionThread(QThread):
                         use_cuvid = True
                 
                 if gpu and not use_cuvid:
-                    c.extend(["-hwaccel", "auto"])
+                    hwaccel = 'auto'
+                    if self.parent() and hasattr(self.parent(), 'config'):
+                        hwaccel = self.parent().config.get('detected_hwaccel', 'auto')
+                    c.extend(["-hwaccel", hwaccel])
                 
                 # Use all available CPU threads for decoding/encoding
                 c.extend(["-threads", "0"])
@@ -209,9 +208,7 @@ class ThumbnailThread(QThread):
             thumb_name = f"thumb_{uuid.uuid4().hex}.jpg"
             thumb_path = os.path.join(temp_dir, thumb_name)
             
-            ffmpeg_path = get_resource_path("ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
-            if not os.path.exists(ffmpeg_path):
-                ffmpeg_path = "ffmpeg"
+            ffmpeg_path = get_ffmpeg_path()
 
             cmd = [
                 ffmpeg_path, "-y",

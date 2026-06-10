@@ -59,6 +59,10 @@ class PlayerWindow(
         from config import Configuration
         self.config = Configuration()
         set_lang(self.config.get('language', 'en'))
+        
+        # Asynchronously detect best hardware decoder at startup
+        from utils import detect_best_hwaccel_async
+        detect_best_hwaccel_async(self.config)
 
         # Attributes that must exist before super().__init__() (triggers resize)
         self.videoItem = None
@@ -111,6 +115,7 @@ class PlayerWindow(
 
         # ---- Media player ---------------------------------------------
         self.mediaPlayer = QMediaPlayer()
+        self.mediaPlayer.setPitchCompensation(True)
         self.audioOutput = QAudioOutput()
         self.mediaPlayer.setAudioOutput(self.audioOutput)
 
@@ -196,6 +201,8 @@ class PlayerWindow(
 
         # ---- Build UI (UIMixin) ----------------------------------------
         self.init_ui()
+        if hasattr(self, 'view') and self.view:
+            self.view.strokesChanged.connect(self.save_drawings_to_markers)
         self.init_subtitle_state()
         self.init_audio_state()
         if hasattr(self, 'refresh_custom_styles'):

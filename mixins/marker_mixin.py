@@ -427,6 +427,8 @@ class MarkerMixin(MarkerMixinBase):
                 center = self.view.mapToScene(self.view.viewport().rect().center())
                 data['centerX'] = center.x()
                 data['centerY'] = center.y()
+                # Save serialized drawing strokes
+                data['drawings'] = self.view.serialize_strokes()
             
             from utils import save_markers
             save_markers(self.playlistData)
@@ -482,11 +484,14 @@ class MarkerMixin(MarkerMixinBase):
             self.apply_transformations(fit=True)
             
             # Restore position
-            # Restore position
             last_pos = data.get('lastPosition', 0)
             if last_pos > 0:
                 
                 self.set_position(last_pos)
+
+            # Restore drawings
+            if hasattr(self, 'view') and self.view:
+                self.view.deserialize_strokes(data.get('drawings', []))
         else:
             self.markers = []
             
@@ -521,6 +526,10 @@ class MarkerMixin(MarkerMixinBase):
             self.reset_adjustments()
             
             self.apply_transformations(fit=True)
+
+            # Clear drawings
+            if hasattr(self, 'view') and self.view:
+                self.view.clear_strokes()
 
         self.update_loop_frames_label()
 
