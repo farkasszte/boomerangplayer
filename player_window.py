@@ -41,11 +41,13 @@ from mixins.global_settings_mixin import GlobalSettingsMixin
 from mixins.ipc_sync_mixin import IPCSyncMixin
 from mixins.ui_mixin import UIMixin
 from mixins.subtitle_mixin import SubtitleMixin
+from mixins.audio_mixin import AudioMixin
 
 qInstallMessageHandler(qt_message_handler)
 
 
 class PlayerWindow(
+    AudioMixin,
     CacheMixin, PlaybackMixin, TransformMixin, VolumeMixin,
     MarkerMixin, PlaylistMixin, DrawingMixin,
     SettingsMixin, GlobalSettingsMixin, IPCSyncMixin, UIMixin,
@@ -195,6 +197,7 @@ class PlayerWindow(
         # ---- Build UI (UIMixin) ----------------------------------------
         self.init_ui()
         self.init_subtitle_state()
+        self.init_audio_state()
         if hasattr(self, 'refresh_custom_styles'):
             self.refresh_custom_styles()
         

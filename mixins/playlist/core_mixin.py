@@ -132,17 +132,17 @@ class PlaylistCoreMixin:
         
         is_visible = self.playlistContainer.isVisible()
         if not is_visible:
-            
             self.drawingContainer.hide()
+            if hasattr(self, 'audioContainer'):
+                self.audioContainer.hide()
         
         self.playlistContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
-            
             sizes = self.mainSplitter.sizes()
-            if len(sizes) > 3 and sizes[3] < 250:
-                sizes[3] = 250
-                
+            # Under new layout: index 5 is playlistContainer
+            if len(sizes) > 5 and sizes[5] < 250:
+                sizes[5] = 250
                 self.mainSplitter.setSizes(sizes)

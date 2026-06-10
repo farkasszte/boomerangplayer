@@ -214,6 +214,8 @@ TRANSLATIONS = {
         'act_prev_frame': 'Prev Frame',
         'act_toggle_mute': 'Toggle Mute',
         'act_full_screen': 'Toggle full screen',
+        'act_sub_delay_minus': 'Decrease subtitle delay',
+        'act_sub_delay_plus': 'Increase subtitle delay',
         'rename': 'Rename',
         'enter_new_name': 'Enter new name:',
         'rename_file_title': 'Rename File',
@@ -256,7 +258,36 @@ TRANSLATIONS = {
         'tip_bg_color_sub': 'Select background color',
         'tip_bg_opacity': 'Adjust background opacity of subtitles',
         'tip_subtitle_offset': 'Delay subtitles (milliseconds)',
-        'subtitle_files': 'Subtitle files (*.srt *.vtt *.ass *.ssa *.sub)'
+        'subtitle_files': 'Subtitle files (*.srt *.vtt *.ass *.ssa *.sub)',
+        
+        # Audio / Equalizer
+        'audio_settings': 'Audio Settings',
+        'audio_eq_enable': 'Equalizer',
+        'audio_eq_preset': 'Preset',
+        'reset_eq': 'Reset EQ',
+        'audio_track_label': 'Audio Track',
+        
+        # Subtitle Colors
+        'color_white': 'White',
+        'color_yellow': 'Yellow',
+        'color_cyan': 'Cyan',
+        'color_green': 'Green',
+        'color_magenta': 'Magenta',
+        'color_red': 'Red',
+        'color_black': 'Black',
+        'color_dark_grey': 'Dark Grey',
+        'color_navy_blue': 'Navy Blue',
+        'color_none': 'None',
+        
+        # Audio Presets
+        'preset_flat': 'Flat',
+        'preset_bass_boost': 'Bass Boost',
+        'preset_treble_boost': 'Treble Boost',
+        'preset_vocal': 'Vocal',
+        'preset_pop': 'Pop',
+        'preset_rock': 'Rock',
+        'preset_jazz': 'Jazz',
+        'preset_classical': 'Classical'
     },
     'hu': {
         # Navigation/UI
@@ -474,6 +505,8 @@ TRANSLATIONS = {
         'act_prev_frame': 'Előző képkocka',
         'act_toggle_mute': 'Némítás ki/be',
         'act_full_screen': 'Teljes képernyő ki/be',
+        'act_sub_delay_minus': 'Felirat késleltetés csökkentése',
+        'act_sub_delay_plus': 'Felirat késleltetés növelése',
         'rename': 'Átnevezés',
         'enter_new_name': 'Adj meg új nevet:',
         'rename_file_title': 'Fájl átnevezése',
@@ -516,7 +549,36 @@ TRANSLATIONS = {
         'tip_bg_color_sub': 'Háttérszín kiválasztása',
         'tip_bg_opacity': 'Felirat hátterének átlátszósága',
         'tip_subtitle_offset': 'Felirat eltolása (ezredmásodperc)',
-        'subtitle_files': 'Felirat fájlok (*.srt *.vtt *.ass *.ssa *.sub)'
+        'subtitle_files': 'Felirat fájlok (*.srt *.vtt *.ass *.ssa *.sub)',
+        
+        # Audio / Equalizer
+        'audio_settings': 'Hangbeállítások',
+        'audio_eq_enable': 'Hangszínszabályzó',
+        'audio_eq_preset': 'Profil',
+        'reset_eq': 'EQ nullázása',
+        'audio_track_label': 'Hangsáv',
+        
+        # Subtitle Colors
+        'color_white': 'Fehér',
+        'color_yellow': 'Sárga',
+        'color_cyan': 'Cián',
+        'color_green': 'Zöld',
+        'color_magenta': 'Bíbor',
+        'color_red': 'Piros',
+        'color_black': 'Fekete',
+        'color_dark_grey': 'Sötétszürke',
+        'color_navy_blue': 'Sötétkék',
+        'color_none': 'Nincs',
+        
+        # Audio Presets
+        'preset_flat': 'Lapos',
+        'preset_bass_boost': 'Mély kiemelés',
+        'preset_treble_boost': 'Magas kiemelés',
+        'preset_vocal': 'Ének',
+        'preset_pop': 'Pop',
+        'preset_rock': 'Rock',
+        'preset_jazz': 'Jazz',
+        'preset_classical': 'Klasszikus'
     }
 }
 

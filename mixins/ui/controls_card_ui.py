@@ -49,27 +49,25 @@ class ControlsCardUIMixin:
 
         # Buttons row
         buttonsLayout = QHBoxLayout()
+        buttonsLayout.setSpacing(8)
 
         self.toggleSettingsButton = ToolButton(FluentIcon.VIDEO)
         self.toggleSettingsButton.setToolTip(tr('video_settings'))
-        
+        self.toggleSettingsButton.setFixedSize(32, 32)
         self.toggleSettingsButton.clicked.connect(self.toggle_settings)
         buttonsLayout.addWidget(self.toggleSettingsButton)
 
         self.globalSettingsButton = ToolButton(FluentIcon.SETTING)
         self.globalSettingsButton.setToolTip(tr('tip_settings'))
-        
+        self.globalSettingsButton.setFixedSize(32, 32)
         self.globalSettingsButton.clicked.connect(self.show_global_settings)
         buttonsLayout.addWidget(self.globalSettingsButton)
 
         self.toggleSubtitlePanelButton = ToolButton(FluentIcon.CHAT)
         self.toggleSubtitlePanelButton.setToolTip(tr('subtitles'))
+        self.toggleSubtitlePanelButton.setFixedSize(32, 32)
         self.toggleSubtitlePanelButton.clicked.connect(self.toggle_subtitle_panel)
         buttonsLayout.addWidget(self.toggleSubtitlePanelButton)
-
-        buttonsLayout.addSpacing(20)
-        buttonsLayout.addSpacing(10)
-        buttonsLayout.addSpacing(10)
 
         # Playback buttons (center)
         playbackButtonsLayout = QHBoxLayout()
@@ -122,8 +120,18 @@ class ControlsCardUIMixin:
               "border-top-right-radius: 4px; border-bottom-right-radius: 4px; }"
         )
 
+        self.fullScreenButton = ToolButton(FluentIcon.FULL_SCREEN)
+        self.fullScreenButton.setToolTip(tr('tip_full_screen'))
+        self.fullScreenButton.setIconSize(QSize(24, 24))
+        self.fullScreenButton.setFixedSize(32, 32)
+        self.fullScreenButton.setStyleSheet(
+            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
+        )
+        self.fullScreenButton.clicked.connect(self.toggle_full_screen)
+
         playbackButtonsLayout.addWidget(self.stepBackButton)
         playbackButtonsLayout.addWidget(self.playBackwardButton)
+        playbackButtonsLayout.addWidget(self.fullScreenButton)
         playbackButtonsLayout.addWidget(self.playButton)
         playbackButtonsLayout.addWidget(self.stepForwardButton)
 
@@ -131,19 +139,14 @@ class ControlsCardUIMixin:
         buttonsLayout.addLayout(playbackButtonsLayout)
         buttonsLayout.addStretch(1)
 
-        self.fullScreenButton = ToolButton(FluentIcon.FULL_SCREEN)
-        self.fullScreenButton.setToolTip(tr('tip_full_screen'))
-        
-        self.fullScreenButton.clicked.connect(self.toggle_full_screen)
-        buttonsLayout.addWidget(self.fullScreenButton)
-
         # Volume
         volumeContainer = QWidget()
         volumeContainerLayout = QHBoxLayout(volumeContainer)
         volumeContainerLayout.setContentsMargins(0, 0, 0, 0)
-        volumeContainerLayout.setSpacing(5)
+        volumeContainerLayout.setSpacing(8)
 
         self.volumeButton = ToolButton(FluentIcon.VOLUME)
+        self.volumeButton.setFixedSize(32, 32)
         if self.userMutedIntent:
             self.volumeButton.setIcon(FluentIcon.MUTE)
         
@@ -159,21 +162,26 @@ class ControlsCardUIMixin:
         self.volumeValueLabel.setCursor(Qt.CursorShape.PointingHandCursor)
         self.volumeValueLabel.mousePressEvent = lambda e: self.show_volume_flyout()
 
-        volumeContainerLayout.addWidget(self.volumeButton)
         volumeContainerLayout.addWidget(self.volumeValueLabel)
+        volumeContainerLayout.addWidget(self.volumeButton)
         buttonsLayout.addWidget(volumeContainer)
 
-        buttonsLayout.addSpacing(20)
+        # Audio Button (moved from left side)
+        self.toggleAudioButton = ToolButton(FluentIcon.MUSIC)
+        self.toggleAudioButton.setToolTip(tr('audio_settings'))
+        self.toggleAudioButton.setFixedSize(32, 32)
+        self.toggleAudioButton.clicked.connect(self.toggle_audio_panel)
+        buttonsLayout.addWidget(self.toggleAudioButton)
 
         self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
         self.togglePlaylistButton.setToolTip(tr('tip_playlist'))
-        
+        self.togglePlaylistButton.setFixedSize(32, 32)
         self.togglePlaylistButton.clicked.connect(self.toggle_playlist)
         buttonsLayout.addWidget(self.togglePlaylistButton)
 
         self.toggleDrawingButton = ToolButton(FluentIcon.EDIT)
         self.toggleDrawingButton.setToolTip(tr('tip_drawing'))
-        
+        self.toggleDrawingButton.setFixedSize(32, 32)
         self.toggleDrawingButton.clicked.connect(self.toggle_drawing_panel)
         buttonsLayout.addWidget(self.toggleDrawingButton)
 
@@ -211,6 +219,8 @@ class ControlsCardUIMixin:
             
         if not self.controlsCard.isVisible():
             self.controlsCard.show()
+            if hasattr(self, 'position_subtitle_label'):
+                self.position_subtitle_label()
             
         # Restore any sidebars that were hidden by the controls auto-hide in fullscreen
         hidden_sidebars = getattr(self, 'sidebars_hidden_by_controls', None)
@@ -223,6 +233,8 @@ class ControlsCardUIMixin:
                 self.settingsContainer.show()
             if hidden_sidebars.get('subtitle') and hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.show()
+            if hidden_sidebars.get('audio') and hasattr(self, 'audioContainer'):
+                self.audioContainer.show()
             if hidden_sidebars.get('global_settings') and hasattr(self, 'globalSettingsContainer'):
                 self.globalSettingsContainer.show()
             self.sidebars_hidden_by_controls = None
@@ -255,11 +267,15 @@ class ControlsCardUIMixin:
                 'drawing': hasattr(self, 'drawingContainer') and self.drawingContainer.isVisible(),
                 'settings': hasattr(self, 'settingsContainer') and self.settingsContainer.isVisible(),
                 'global_settings': hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible(),
-                'subtitle': hasattr(self, 'subtitleContainer') and self.subtitleContainer.isVisible()
+                'subtitle': hasattr(self, 'subtitleContainer') and self.subtitleContainer.isVisible(),
+                'audio': hasattr(self, 'audioContainer') and self.audioContainer.isVisible()
             }
             
             # Hide the controlsCard and all sidebars in fullscreen
             self.controlsCard.hide()
+            if hasattr(self, 'position_subtitle_label'):
+                self.position_subtitle_label()
+                
             if hasattr(self, 'playlistContainer'):
                 self.playlistContainer.hide()
             if hasattr(self, 'drawingContainer'):
@@ -268,6 +284,8 @@ class ControlsCardUIMixin:
                 self.settingsContainer.hide()
             if hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.hide()
+            if hasattr(self, 'audioContainer'):
+                self.audioContainer.hide()
             if hasattr(self, 'globalSettingsContainer'):
                 self.globalSettingsContainer.hide()
             

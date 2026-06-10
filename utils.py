@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from PyQt6.QtCore import Qt
-VERSION = "2.7"
+VERSION = "2.8"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -67,10 +67,15 @@ DEFAULT_CONFIG = {
         'next_frame': Qt.Key.Key_Period,
         'prev_frame': Qt.Key.Key_Comma,
         'toggle_mute': Qt.Key.Key_M,
-        'act_full_screen': Qt.Key.Key_F
+        'act_full_screen': Qt.Key.Key_F,
+        'sub_delay_minus': Qt.Key.Key_BracketLeft,
+        'sub_delay_plus': Qt.Key.Key_BracketRight
     },
     'palette': ['#000000', '#FFFFFF', '#FF0000', '#FFFF00', '#00FF00', '#0000FF'],
-    'active_color_index': 2 # Default to Red
+    'active_color_index': 2, # Default to Red
+    'audio_eq_enabled': False,
+    'audio_eq_preset': 'Flat',
+    'audio_eq_gains': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 }
 
 def get_config_path():
@@ -341,6 +346,16 @@ def get_embedded_video_offset(file_path):
 
 import re
 
+def clean_subtitle_text(text):
+    """
+    Cleans subtitle text by removing HTML-like tags (<...>) and curly-brace style tags ({...}).
+    """
+    # Remove HTML-like tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Remove curly-brace styles (MicroDVD, ASS styles, etc.)
+    text = re.sub(r'\{[^}]*\}', '', text)
+    return text.strip()
+
 def parse_subtitle_file(filepath, fps=30.0):
     """
     Parses SRT, VTT, SUB, or ASS/SSA files.
@@ -352,7 +367,7 @@ def parse_subtitle_file(filepath, fps=30.0):
     ext = os.path.splitext(filepath)[1].lower()
     
     content = ""
-    for enc in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1250']:
+    for enc in ['utf-8', 'utf-8-sig', 'cp1250', 'iso-8859-2', 'latin-1']:
         try:
             with open(filepath, 'r', encoding=enc) as f:
                 content = f.read()
@@ -387,7 +402,7 @@ def parse_srt(content):
         sh, sm, ss, sms, eh, em, es, ems, text = match.groups()
         start = time_to_ms(sh, sm, ss, sms)
         end = time_to_ms(eh, em, es, ems)
-        text_clean = text.strip()
+        text_clean = clean_subtitle_text(text)
         if text_clean:
             subtitles.append({'start': start, 'end': end, 'text': text_clean})
     return subtitles
@@ -415,7 +430,7 @@ def parse_vtt(content):
         start_ts, end_ts, text = match.groups()
         start = parse_vtt_timestamp(start_ts)
         end = parse_vtt_timestamp(end_ts)
-        text_clean = text.strip()
+        text_clean = clean_subtitle_text(text)
         if text_clean:
             subtitles.append({'start': start, 'end': end, 'text': text_clean})
     return subtitles
@@ -430,7 +445,7 @@ def parse_sub(content, fps=30.0):
         start_frame, end_frame, text = match.groups()
         start = int(int(start_frame) * 1000 / fps)
         end = int(int(end_frame) * 1000 / fps)
-        text_clean = text.replace('|', '\n').strip()
+        text_clean = clean_subtitle_text(text.replace('|', '\n'))
         if text_clean:
             subtitles.append({'start': start, 'end': end, 'text': text_clean})
     return subtitles
@@ -455,8 +470,7 @@ def parse_ass(content):
             start_ts, end_ts, _, _, _, _, _, _, text = match.groups()
             start = parse_ass_timestamp(start_ts)
             end = parse_ass_timestamp(end_ts)
-            clean_text = re.sub(r'\{[^}]*\}', '', text)
-            clean_text = clean_text.replace('\\N', '\n').replace('\\n', '\n').strip()
+            clean_text = clean_subtitle_text(text.replace('\\N', '\n').replace('\\n', '\n'))
             if clean_text:
                 subtitles.append({'start': start, 'end': end, 'text': clean_text})
     return subtitles

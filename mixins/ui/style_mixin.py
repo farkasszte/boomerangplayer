@@ -54,7 +54,7 @@ class StyleUIMixin:
                 menu.setStyleSheet(s['MENU_STYLE'])
 
         # Playback buttons
-        pb_btns = ['stepBackButton', 'playBackwardButton', 'playButton', 'stepForwardButton']
+        pb_btns = ['stepBackButton', 'playBackwardButton', 'fullScreenButton', 'playButton', 'stepForwardButton']
         for btn_name in pb_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -67,8 +67,10 @@ class StyleUIMixin:
                 btn.setStyleSheet(style)
 
         # Controls card bottom row tool buttons styling
-        cc_btns = ['toggleSettingsButton', 'globalSettingsButton', 'fullScreenButton', 
-                   'volumeButton', 'togglePlaylistButton', 'toggleDrawingButton']
+        cc_btns = [
+            'toggleSettingsButton', 'globalSettingsButton', 'toggleSubtitlePanelButton',
+            'volumeButton', 'toggleAudioButton', 'togglePlaylistButton', 'toggleDrawingButton'
+        ]
         for btn_name in cc_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -110,6 +112,8 @@ class StyleUIMixin:
             icons_map = {
                 'toggleSettingsButton': FluentIcon.VIDEO,
                 'globalSettingsButton': FluentIcon.SETTING,
+                'toggleSubtitlePanelButton': FluentIcon.CHAT,
+                'toggleAudioButton': FluentIcon.MUSIC,
                 'stepBackButton': FluentIcon.LEFT_ARROW,
                 'stepForwardButton': FluentIcon.RIGHT_ARROW,
                 'fullScreenButton': FluentIcon.FULL_SCREEN,

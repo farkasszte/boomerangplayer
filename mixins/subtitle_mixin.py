@@ -76,7 +76,11 @@ class SubtitleMixin:
         lbl_h = self.subtitleLabel.height()
         
         x = (view_w - lbl_w) // 2
-        y = view_h - lbl_h - 20
+        
+        margin_bottom = 20
+        if getattr(self, 'is_full_screen', False) and hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
+            margin_bottom += self.controlsCard.height()
+        y = view_h - lbl_h - margin_bottom
         
         self.subtitleLabel.move(x, y)
 
@@ -237,13 +241,17 @@ class SubtitleMixin:
         self.update_sub_style()
 
     def on_sub_text_color_changed(self, idx):
-        color = self.subTextColorCombo.itemText(idx)
+        color = self.subTextColorCombo.itemData(idx)
+        if not color:
+            color = self.subTextColorCombo.itemText(idx)
         self.config['subtitle_text_color'] = color
         self.config.save()
         self.update_sub_style()
 
     def on_sub_bg_color_changed(self, idx):
-        color = self.subBgColorCombo.itemText(idx)
+        color = self.subBgColorCombo.itemData(idx)
+        if not color:
+            color = self.subBgColorCombo.itemText(idx)
         self.config['subtitle_bg_color'] = color
         self.config.save()
         self.update_sub_style()
@@ -304,3 +312,39 @@ class SubtitleMixin:
             if len(sizes) > 2 and sizes[2] < 250:
                 sizes[2] = 250
                 self.mainSplitter.setSizes(sizes)
+
+    def adjust_subtitle_delay(self, ms):
+        current = self.config.get('subtitle_offset', 0)
+        new_val = max(-10000, min(10000, current + ms))
+        self.config['subtitle_offset'] = new_val
+        self.config.save()
+
+        # Update UI controls
+        if hasattr(self, 'subOffsetSpin'):
+            self.subOffsetSpin.blockSignals(True)
+            self.subOffsetSpin.setValue(new_val)
+            self.subOffsetSpin.blockSignals(False)
+        if hasattr(self, 'subOffsetSlider'):
+            self.subOffsetSlider.blockSignals(True)
+            self.subOffsetSlider.setValue(new_val)
+            self.subOffsetSlider.blockSignals(False)
+
+        # Update subtitles for current time
+        self.update_subtitles_for_current_time()
+
+        # Show on-screen notification using InfoBar
+        from qfluentwidgets import InfoBar, InfoBarPosition
+        from translations import tr
+        
+        sign = "+" if new_val > 0 else ""
+        content_text = f"{tr('subtitle_offset')}: {sign}{new_val} ms"
+        
+        InfoBar.info(
+            title=tr('subtitles'),
+            content=content_text,
+            orient=Qt.Orientation.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=1500,
+            parent=self
+        )

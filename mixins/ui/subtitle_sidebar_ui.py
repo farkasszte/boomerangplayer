@@ -123,9 +123,19 @@ class SubtitleSidebarUIMixin:
         textColorLayout.setSpacing(4)
         textColorLayout.addWidget(CaptionLabel(tr('text_color')))
         self.subTextColorCombo = QComboBox()
-        self.subTextColorCombo.addItems(['White', 'Yellow', 'Cyan', 'Green', 'Magenta', 'Red'])
+        colors = [
+            ('color_white', 'White'),
+            ('color_yellow', 'Yellow'),
+            ('color_cyan', 'Cyan'),
+            ('color_green', 'Green'),
+            ('color_magenta', 'Magenta'),
+            ('color_red', 'Red')
+        ]
+        for key, val in colors:
+            self.subTextColorCombo.addItem(tr(key), val)
+        
         default_text_color = self.config.get('subtitle_text_color', 'White')
-        idx = self.subTextColorCombo.findText(default_text_color)
+        idx = self.subTextColorCombo.findData(default_text_color)
         if idx != -1:
             self.subTextColorCombo.setCurrentIndex(idx)
         self.subTextColorCombo.currentIndexChanged.connect(self.on_sub_text_color_changed)
@@ -137,9 +147,17 @@ class SubtitleSidebarUIMixin:
         bgColorLayout.setSpacing(4)
         bgColorLayout.addWidget(CaptionLabel(tr('bg_color_sub')))
         self.subBgColorCombo = QComboBox()
-        self.subBgColorCombo.addItems(['Black', 'Dark Grey', 'Navy Blue', 'None'])
+        bg_colors = [
+            ('color_black', 'Black'),
+            ('color_dark_grey', 'Dark Grey'),
+            ('color_navy_blue', 'Navy Blue'),
+            ('color_none', 'None')
+        ]
+        for key, val in bg_colors:
+            self.subBgColorCombo.addItem(tr(key), val)
+        
         default_bg_color = self.config.get('subtitle_bg_color', 'Black')
-        idx = self.subBgColorCombo.findText(default_bg_color)
+        idx = self.subBgColorCombo.findData(default_bg_color)
         if idx != -1:
             self.subBgColorCombo.setCurrentIndex(idx)
         self.subBgColorCombo.currentIndexChanged.connect(self.on_sub_bg_color_changed)

@@ -111,14 +111,17 @@ class DrawingMixin(DrawingMixinBase):
         is_visible = self.drawingContainer.isVisible()
         if not is_visible:
             self.playlistContainer.hide()
+            if hasattr(self, 'audioContainer'):
+                self.audioContainer.hide()
         self.drawingContainer.setVisible(not is_visible)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
-            if len(sizes) > 4 and sizes[4] < 250:
-                sizes[4] = 250
+            # Under new layout: index 6 is drawingContainer
+            if len(sizes) > 6 and sizes[6] < 250:
+                sizes[6] = 250
                 self.mainSplitter.setSizes(sizes)
 
     # ------------------------------------------------------------------ #

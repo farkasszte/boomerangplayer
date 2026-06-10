@@ -94,6 +94,9 @@ class PlaylistCrudMixin:
         self.mediaPlayer.mediaStatusChanged.connect(self.handle_status_change)
         self.mediaPlayer.metaDataChanged.connect(self.handle_metadata_change)
 
+        if hasattr(self, 'setup_media_player_intercept'):
+            self.setup_media_player_intercept()
+
     def open_in_new_window(self, item):
         path = item.data(Qt.ItemDataRole.UserRole)
         if path and os.path.exists(path):

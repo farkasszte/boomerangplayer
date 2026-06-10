@@ -18,19 +18,15 @@ class ShortcutUIMixin:
         self._shortcut_objects = []
         
         handled_actions = {
-            
             'play_pause': self.play_pause,
-            
             'smart_mark': self.add_smart_marker,
             'toggle_loop': self.toggle_shortcut_loop,
-            
             'next_frame': lambda: self.step_frame(1),
-            
             'prev_frame': lambda: self.step_frame(-1),
-            
             'toggle_mute': self.toggle_mute,
-            
-            'act_full_screen': self.toggle_full_screen
+            'act_full_screen': self.toggle_full_screen,
+            'sub_delay_minus': lambda: self.adjust_subtitle_delay(-100) if hasattr(self, 'adjust_subtitle_delay') else None,
+            'sub_delay_plus': lambda: self.adjust_subtitle_delay(100) if hasattr(self, 'adjust_subtitle_delay') else None
         }
         
         for act, slot in handled_actions.items():

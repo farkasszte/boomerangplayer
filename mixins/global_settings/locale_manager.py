@@ -380,3 +380,60 @@ class GlobalSettingsLocaleManagerMixin:
 
         for lbl in getattr(self, 'shortcutLabels', []):
             lbl.setText(tr(lbl._label_key))
+
+        # Update Subtitle Panel UI Texts
+        if hasattr(self, 'subtitleTitle'):
+            self.subtitleTitle.setText(tr('subtitles'))
+        if hasattr(self, 'subEnableLabel'):
+            self.subEnableLabel.setText(tr('enable_subtitles'))
+        if hasattr(self, 'subEnableToggle'):
+            self.subEnableToggle.setOnText(tr('on'))
+            self.subEnableToggle.setOffText(tr('off'))
+            self.subEnableToggle.setToolTip(tr('tip_enable_subtitles'))
+        if hasattr(self, 'loadSubBtn'):
+            self.loadSubBtn.setText(tr('load_subtitle_file'))
+            self.loadSubBtn.setToolTip(tr('tip_load_subtitle'))
+        if hasattr(self, 'subTrackCombo'):
+            self.subTrackCombo.setItemText(0, tr('off'))
+            for i in range(self.subTrackCombo.count()):
+                if self.subTrackCombo.itemData(i) == -2:
+                    self.subTrackCombo.setItemText(i, tr('load_subtitle_file'))
+                    break
+        if hasattr(self, 'styleTitleLabel'):
+            self.styleTitleLabel.setText(tr('drawing_settings'))
+        if hasattr(self, 'timingTitleLabel'):
+            self.timingTitleLabel.setText(tr('sync_title'))
+        if hasattr(self, 'subTextColorCombo'):
+            color_keys = ['color_white', 'color_yellow', 'color_cyan', 'color_green', 'color_magenta', 'color_red']
+            for i, key in enumerate(color_keys):
+                if i < self.subTextColorCombo.count():
+                    self.subTextColorCombo.setItemText(i, tr(key))
+        if hasattr(self, 'subBgColorCombo'):
+            bg_keys = ['color_black', 'color_dark_grey', 'color_navy_blue', 'color_none']
+            for i, key in enumerate(bg_keys):
+                if i < self.subBgColorCombo.count():
+                    self.subBgColorCombo.setItemText(i, tr(key))
+
+        # Update Audio Panel UI Texts
+        if hasattr(self, 'audioTitle'):
+            self.audioTitle.setText(tr('audio_settings'))
+        if hasattr(self, 'audioEqLabel'):
+            self.audioEqLabel.setText(tr('audio_eq_enable'))
+        if hasattr(self, 'audioEqToggle'):
+            self.audioEqToggle.setOnText(tr('on'))
+            self.audioEqToggle.setOffText(tr('off'))
+        if hasattr(self, 'audioEqPresetCombo'):
+            preset_keys = [
+                'preset_flat', 'preset_bass_boost', 'preset_treble_boost',
+                'preset_vocal', 'preset_pop', 'preset_rock', 'preset_jazz', 'preset_classical'
+            ]
+            for i, key in enumerate(preset_keys):
+                if i < self.audioEqPresetCombo.count():
+                    self.audioEqPresetCombo.setItemText(i, tr(key))
+        if hasattr(self, 'resetEqBtn'):
+            self.resetEqBtn.setText(tr('reset_eq'))
+        if hasattr(self, 'audioTrackCombo') and self.audioTrackCombo.count() > 0:
+            if self.audioTrackCombo.itemData(0) == 0:
+                self.audioTrackCombo.setItemText(0, tr('default'))
+            elif self.audioTrackCombo.itemData(0) == -1:
+                self.audioTrackCombo.setItemText(0, tr('off'))

@@ -170,6 +170,8 @@ class GlobalSettingsUiBuilderMixin:
             ('prev_frame',   'act_prev_frame'),
             ('toggle_mute',  'act_toggle_mute'),
             ('act_full_screen', 'act_full_screen'),
+            ('sub_delay_minus', 'act_sub_delay_minus'),
+            ('sub_delay_plus',  'act_sub_delay_plus'),
         ]
 
         for i, (act, label_key) in enumerate(actions):
@@ -319,6 +321,8 @@ class GlobalSettingsUiBuilderMixin:
             ('prev_frame',     'act_prev_frame'),
             ('toggle_mute',    'act_toggle_mute'),
             ('act_full_screen','act_full_screen'),
+            ('sub_delay_minus','act_sub_delay_minus'),
+            ('sub_delay_plus', 'act_sub_delay_plus'),
         ]):
             default_key = DEFAULT_CONFIG['shortcuts'].get(act, 0)
             self.config['shortcuts'][act] = default_key

@@ -29,6 +29,7 @@ from mixins.ui.style_mixin import StyleUIMixin
 from mixins.ui.shortcut_mixin import ShortcutUIMixin
 from mixins.ui.fullscreen_mixin import FullscreenUIMixin
 from mixins.ui.subtitle_sidebar_ui import SubtitleSidebarUIMixin
+from mixins.ui.audio_sidebar_ui import AudioSidebarUIMixin
 
 from typing import TYPE_CHECKING
 
@@ -49,6 +50,7 @@ class UIMixin(
     ShortcutUIMixin,
     FullscreenUIMixin,
     SubtitleSidebarUIMixin,
+    AudioSidebarUIMixin,
     UIMixinBase
 ):
     if TYPE_CHECKING:
@@ -82,22 +84,21 @@ class UIMixin(
         # Build all sidebars (mixin methods)
         
         self.init_global_settings_sidebar()
-        
         self.init_video_settings_sidebar()
         self.init_subtitle_sidebar()
+        self.init_audio_sidebar()
         self._init_playlist_sidebar()
         self._init_drawing_sidebar()
 
-        
         self.mainSplitter.addWidget(self.globalSettingsContainer)
-        
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.subtitleContainer)
         self.mainSplitter.addWidget(self.view)
+        self.mainSplitter.addWidget(self.audioContainer)
         self.mainSplitter.addWidget(self.playlistContainer)
         self.mainSplitter.addWidget(self.drawingContainer)
         self.mainSplitter.setStretchFactor(3, 1)
-        self.mainSplitter.setSizes([0, 0, 0, 10000, 250, 0])
+        self.mainSplitter.setSizes([0, 0, 0, 10000, 0, 250, 0])
 
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
 
@@ -248,6 +249,8 @@ class UIMixin(
             self.settingsLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'subtitleLayout'):
             self.subtitleLayout.setContentsMargins(10, 10, 4, bottom_margin)
+        if hasattr(self, 'audioLayout'):
+            self.audioLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'drawingSidebarLayout'):
             self.drawingSidebarLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'playlistLayout'):
@@ -265,8 +268,9 @@ class UIMixin(
             ('global_settings', self.globalSettingsContainer, 'left', 0),
             ('settings', self.settingsContainer, 'left', 1),
             ('subtitle', self.subtitleContainer, 'left', 2),
-            ('playlist', self.playlistContainer, 'right', 4),
-            ('drawing', self.drawingContainer, 'right', 5)
+            ('audio', self.audioContainer, 'right', 4),
+            ('playlist', self.playlistContainer, 'right', 5),
+            ('drawing', self.drawingContainer, 'right', 6)
         ]
         
         if is_fs:
@@ -305,6 +309,11 @@ class UIMixin(
                     self.settingsContainer.hide()
                 if self.globalSettingsContainer.isVisible():
                     self.globalSettingsContainer.hide()
+            if hasattr(self, 'audioContainer') and self.audioContainer.isVisible():
+                if self.playlistContainer.isVisible():
+                    self.playlistContainer.hide()
+                if self.drawingContainer.isVisible():
+                    self.drawingContainer.hide()
             if self.playlistContainer.isVisible() and self.drawingContainer.isVisible():
                 self.drawingContainer.hide()
             
@@ -314,6 +323,7 @@ class UIMixin(
                 250 if self.settingsContainer.isVisible() else 0,
                 250 if self.subtitleContainer.isVisible() else 0,
                 10000,
+                250 if hasattr(self, 'audioContainer') and self.audioContainer.isVisible() else 0,
                 250 if self.playlistContainer.isVisible() else 0,
                 250 if self.drawingContainer.isVisible() else 0
             ]

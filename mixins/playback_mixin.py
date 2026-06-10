@@ -550,7 +550,7 @@ class PlaybackMixin(PlaybackMixinBase):
 
             cmd = [
                 ffprobe_path, "-v", "error",
-                "-show_entries", "stream=codec_type,codec_name,avg_frame_rate,duration,nb_frames:format=duration",
+                "-show_entries", "stream=index,codec_type,codec_name,avg_frame_rate,duration,nb_frames,channels:stream_tags=language,title:format=duration",
                 "-of", "json", file_path
             ]
 
@@ -561,6 +561,26 @@ class PlaybackMixin(PlaybackMixinBase):
             result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
             data = json.loads(result)
             streams = data.get('streams', [])
+            
+            # Extract audio tracks metadata
+            self.audio_tracks_info = []
+            audio_idx = 0
+            for s in streams:
+                if s.get('codec_type') == 'audio':
+                    tags = s.get('tags', {})
+                    lang = tags.get('language', 'und')
+                    title = tags.get('title', '')
+                    codec = s.get('codec_name', 'unknown')
+                    channels = s.get('channels', 2)
+                    self.audio_tracks_info.append({
+                        'index': audio_idx,
+                        'stream_index': s.get('index'),
+                        'codec': codec,
+                        'language': lang,
+                        'title': title,
+                        'channels': channels
+                    })
+                    audio_idx += 1
             
             video_stream = next((s for s in streams if s.get('codec_type') == 'video'), None)
             audio_stream = next((s for s in streams if s.get('codec_type') == 'audio'), None)
