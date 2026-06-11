@@ -69,6 +69,12 @@ class ControlsCardUIMixin:
         self.toggleSubtitlePanelButton.clicked.connect(self.toggle_subtitle_panel)
         buttonsLayout.addWidget(self.toggleSubtitlePanelButton)
 
+        self.aboutButton = ToolButton(FluentIcon.INFO)
+        self.aboutButton.setToolTip(tr('about'))
+        self.aboutButton.setFixedSize(32, 32)
+        self.aboutButton.clicked.connect(self.show_about_dialog)
+        buttonsLayout.addWidget(self.aboutButton)
+
         # Playback buttons (center)
         playbackButtonsLayout = QHBoxLayout()
         playbackButtonsLayout.setSpacing(0)
@@ -308,3 +314,74 @@ class ControlsCardUIMixin:
             return super().eventFilter(watched, event)
         except AttributeError:
             return False
+
+    def show_about_dialog(self):
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+        from PyQt6.QtCore import Qt
+        from utils import VERSION
+        
+        dialog = QDialog(self)
+        if hasattr(self, 'style_dialog'):
+            self.style_dialog(dialog)
+            
+        dialog.setWindowTitle(tr('about_title'))
+        dialog.setFixedSize(380, 240)
+        
+        # Apply Windows 11 title bar styling using DWM API
+        import sys
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                hwnd = int(dialog.winId())
+                bg_color = self.config.get('bg_color', '#202020')
+                from PyQt6.QtGui import QColor
+                def qcolor_to_colorref(qcolor):
+                    return qcolor.red() | (qcolor.green() << 8) | (qcolor.blue() << 16)
+                bg_color_ref = qcolor_to_colorref(QColor(bg_color))
+                # DWMWA_CAPTION_COLOR = 35 (Windows 11 Build 22000+)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    35,
+                    ctypes.byref(ctypes.c_int(bg_color_ref)),
+                    4
+                )
+            except Exception as e:
+                print(f"[DWM] Failed to set about dialog title bar color: {e}")
+                
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(12)
+        
+        # Title
+        title_lbl = QLabel(f"Boomerang Player v{VERSION}")
+        title_lbl.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 2px;")
+        title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_lbl)
+        
+        # Description
+        desc_lbl = QLabel(tr('about_desc'))
+        desc_lbl.setWordWrap(True)
+        desc_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(desc_lbl)
+        
+        # Github Link
+        accent = self.config.get('accent_color', '#00f2ff')
+        link_html = f'<a href="https://github.com/farkasszte/boomerangplayer" style="color: {accent}; text-decoration: none; font-weight: bold;">github.com/farkasszte/boomerangplayer</a>'
+        link_lbl = QLabel(link_html)
+        link_lbl.setOpenExternalLinks(True)
+        link_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        link_lbl.setStyleSheet("font-size: 13px;")
+        layout.addWidget(link_lbl)
+        
+        layout.addStretch()
+        
+        # Close button
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        close_btn = QPushButton(tr('close'))
+        close_btn.clicked.connect(dialog.accept)
+        btn_layout.addWidget(close_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+        
+        dialog.exec()

@@ -68,7 +68,7 @@ class StyleUIMixin:
 
         # Controls card bottom row tool buttons styling
         cc_btns = [
-            'toggleSettingsButton', 'globalSettingsButton', 'toggleSubtitlePanelButton',
+            'toggleSettingsButton', 'globalSettingsButton', 'toggleSubtitlePanelButton', 'aboutButton',
             'volumeButton', 'toggleAudioButton', 'togglePlaylistButton', 'toggleDrawingButton'
         ]
         for btn_name in cc_btns:
@@ -113,6 +113,7 @@ class StyleUIMixin:
                 'toggleSettingsButton': FluentIcon.VIDEO,
                 'globalSettingsButton': FluentIcon.SETTING,
                 'toggleSubtitlePanelButton': FluentIcon.CHAT,
+                'aboutButton': FluentIcon.INFO,
                 'toggleAudioButton': FluentIcon.MUSIC,
                 'stepBackButton': FluentIcon.LEFT_ARROW,
                 'stepForwardButton': FluentIcon.RIGHT_ARROW,

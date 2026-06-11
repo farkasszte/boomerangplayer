@@ -144,6 +144,8 @@ class GlobalSettingsLocaleManagerMixin:
             self.rotateRightButton.setText(tr('rotate_right'))
         
         self.globalSettingsButton.setToolTip(tr('settings'))
+        if hasattr(self, 'aboutButton'):
+            self.aboutButton.setToolTip(tr('about'))
         
         self.toggleSettingsButton.setToolTip(tr('video_settings'))
         
@@ -323,6 +325,8 @@ class GlobalSettingsLocaleManagerMixin:
         self.toggleDrawingButton.setToolTip(tr('tip_drawing'))
         
         self.globalSettingsButton.setToolTip(tr('tip_settings'))
+        if hasattr(self, 'aboutButton'):
+            self.aboutButton.setToolTip(tr('about'))
         
         self.toggleSettingsButton.setToolTip(tr('video_settings'))
         
