@@ -188,7 +188,9 @@ class CacheMixin(CacheMixinBase):
             gpu_enabled=gpu_enabled,
             start_number=start_number,
             video_codec=self.video_codec,
-            qv_value=qv_value
+            qv_value=qv_value,
+            is_hdr=getattr(self, 'is_hdr', False),
+            color_transfer=getattr(self, 'color_transfer', "")
         )
         
         self.extraction_thread.player_start = player_range_start
@@ -251,7 +253,9 @@ class CacheMixin(CacheMixinBase):
             gpu_enabled=gpu_enabled,
             start_number=start_number,
             video_codec=self.video_codec,
-            qv_value=qv_value
+            qv_value=qv_value,
+            is_hdr=getattr(self, 'is_hdr', False),
+            color_transfer=getattr(self, 'color_transfer', "")
         )
         
         self.extraction_thread.player_start = start_pos
@@ -403,7 +407,9 @@ class CacheMixin(CacheMixinBase):
             gpu_enabled=gpu_enabled,
             start_number=start_number,
             video_codec=self.video_codec,
-            qv_value=qv_value
+            qv_value=qv_value,
+            is_hdr=getattr(self, 'is_hdr', False),
+            color_transfer=getattr(self, 'color_transfer', "")
         )
         
         self.extraction_thread.player_start = player_range_start

@@ -1,7 +1,7 @@
 import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QFileDialog
-from PyQt6.QtGui import QColor, QPainter
+from PyQt6.QtGui import QColor, QPainter, QFont
 from translations import tr
 from utils import parse_subtitle_file, get_embedded_subtitles_info, extract_embedded_subtitle, parse_srt
 
@@ -149,6 +149,12 @@ class SubtitleMixin:
         """
         self.subtitleLabel.setStyleSheet(style)
         
+        # Explicitly set QFont with correct family and pixel size, so QFontMetrics and OutlineLabel painter use it correctly.
+        font = QFont(font_family)
+        font.setPixelSize(font_size)
+        font.setBold(True)
+        self.subtitleLabel.setFont(font)
+        
         # Apply outline styling
         outline_enabled = self.config.get('subtitle_outline_enabled', False)
         outline_width = self.config.get('subtitle_outline_width', 2)
@@ -183,11 +189,33 @@ class SubtitleMixin:
         view_w = self.view.width()
         view_h = self.view.height()
         
-        # Reset minimum/maximum sizes to let the label compute naturally
-        self.subtitleLabel.setMinimumSize(0, 0)
-        self.subtitleLabel.setMaximumSize(view_w - 40, view_h - 40)
+        text = self.subtitleLabel.text()
+        if not text:
+            return
+
+        # Use QFontMetrics to compute the text width accurately
+        from PyQt6.QtGui import QFontMetrics
+        metrics = QFontMetrics(self.subtitleLabel.font())
         
-        # Adjust size based on content and constraints
+        # Preserving manual line-breaks, find the longest line's width
+        lines = text.split('\n')
+        max_line_w = 0
+        for line in lines:
+            max_line_w = max(max_line_w, metrics.horizontalAdvance(line))
+            
+        # Add padding (16px left + 16px right = 32px) and a safety margin
+        text_w = max_line_w + 32 + 10
+        
+        # Maximum allowed width is 85% of the screen width
+        max_allowed_w = max(200, int(view_w * 0.85))
+        
+        # Limit the label width to max_allowed_w (which triggers wrapping if exceeded)
+        target_w = min(text_w, max_allowed_w)
+        self.subtitleLabel.setFixedWidth(target_w)
+        
+        # Allow vertical resizing to compute height dynamically
+        self.subtitleLabel.setMinimumHeight(0)
+        self.subtitleLabel.setMaximumHeight(view_h - 40)
         self.subtitleLabel.adjustSize()
         
         lbl_w = self.subtitleLabel.width()

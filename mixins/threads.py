@@ -8,7 +8,7 @@ from utils import get_resource_path, get_ffmpeg_path
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
     
-    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None, video_codec=None, qv_value=2):
+    def __init__(self, video_path, start_frame, num_frames, fps, temp_dir=None, parent=None, gpu_enabled=False, player_idx=1, start_number=None, video_codec=None, qv_value=2, is_hdr=False, color_transfer=""):
         super().__init__(parent)
         self.video_path = video_path
         self.start_frame = start_frame
@@ -22,6 +22,8 @@ class FrameExtractionThread(QThread):
         self.temp_dir = temp_dir
         self.video_codec = video_codec
         self.qv_value = qv_value
+        self.is_hdr = is_hdr
+        self.color_transfer = color_transfer
 
     def _extract_from_pipe(self, cmd, creationflags):
         if self._is_cancelled:
@@ -135,6 +137,10 @@ class FrameExtractionThread(QThread):
                     if exact_delta > 0:
                         c.extend(["-ss", f"{exact_delta:.6f}"])
                 
+                if self.is_hdr:
+                    transfer_in = "arib-std-b67" if self.color_transfer == "arib-std-b67" else "smpte2084"
+                    c.extend(["-vf", f"zscale=matrixin=bt2020nc:transferin={transfer_in}:primariesin=bt2020:matrix=bt709:transfer=linear:primaries=bt709,tonemap=tonemap=mobius:desat=0,zscale=transfer=bt709,format=yuv420p"])
+
                 c.extend([
                     "-vframes", str(self.num_frames),
                     "-f", "image2pipe",
@@ -210,12 +216,45 @@ class ThumbnailThread(QThread):
             
             ffmpeg_path = get_ffmpeg_path()
 
+            # Check for HDR in ThumbnailThread
+            is_hdr = False
+            color_transfer = ""
+            try:
+                ffprobe_path = os.path.join(os.path.dirname(ffmpeg_path), "ffprobe.exe" if os.name == 'nt' else "ffprobe")
+                if not os.path.exists(ffprobe_path):
+                    ffprobe_path = "ffprobe"
+                
+                probe_cmd = [
+                    ffprobe_path, "-v", "error",
+                    "-show_entries", "stream=codec_type,color_transfer,color_primaries",
+                    "-of", "json", self.filePath
+                ]
+                creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                import json
+                probe_res = subprocess.check_output(probe_cmd, creationflags=creationflags).decode('utf-8')
+                probe_data = json.loads(probe_res)
+                for s in probe_data.get('streams', []):
+                    if s.get('codec_type') == 'video':
+                        transfer = s.get('color_transfer', '')
+                        primaries = s.get('color_primaries', '')
+                        if transfer in ('smpte2084', 'arib-std-b67') or primaries == 'bt2020':
+                            is_hdr = True
+                            color_transfer = transfer
+                        break
+            except Exception as e:
+                print(f"ffprobe color check failed in ThumbnailThread: {e}")
+
+            vf_filter = "setsar=1,scale=160:160:force_original_aspect_ratio=increase,crop=160:160"
+            if is_hdr:
+                transfer_in = "arib-std-b67" if color_transfer == "arib-std-b67" else "smpte2084"
+                vf_filter = f"zscale=matrixin=bt2020nc:transferin={transfer_in}:primariesin=bt2020:matrix=bt709:transfer=linear:primaries=bt709,tonemap=tonemap=mobius:desat=0,zscale=transfer=bt709,format=yuv420p,{vf_filter}"
+
             cmd = [
                 ffmpeg_path, "-y",
                 "-ss", "1.0",
                 "-i", self.filePath,
                 "-vframes", "1",
-                "-vf", "setsar=1,scale=160:160:force_original_aspect_ratio=increase,crop=160:160",
+                "-vf", vf_filter,
                 thumb_path
             ]
             

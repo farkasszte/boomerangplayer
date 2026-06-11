@@ -415,6 +415,9 @@ class PlaybackMixin(PlaybackMixinBase):
             self.currentFilePath = filePath
             self.currentVideoPath = filePath
             self.video_codec = None
+            self.is_hdr = False
+            self.color_transfer = ""
+            self.color_primaries = ""
             self.last_transform_state = None
             self.is_motion_photo = False
             self.motion_photo_original_path = None
@@ -550,7 +553,7 @@ class PlaybackMixin(PlaybackMixinBase):
 
             cmd = [
                 ffprobe_path, "-v", "error",
-                "-show_entries", "stream=index,codec_type,codec_name,avg_frame_rate,duration,nb_frames,channels:stream_tags=language,title:format=duration",
+                "-show_entries", "stream=index,codec_type,codec_name,avg_frame_rate,duration,nb_frames,channels,color_space,color_transfer,color_primaries:stream_tags=language,title:format=duration",
                 "-of", "json", file_path
             ]
 
@@ -587,6 +590,22 @@ class PlaybackMixin(PlaybackMixinBase):
             
             self.is_audio_only = (video_stream is None and audio_stream is not None)
             
+            # Extract HDR metadata
+            self.is_hdr = False
+            self.color_transfer = ""
+            self.color_primaries = ""
+            if video_stream:
+                self.color_transfer = video_stream.get('color_transfer', '')
+                self.color_primaries = video_stream.get('color_primaries', '')
+                if self.color_transfer in ('smpte2084', 'arib-std-b67') or self.color_primaries == 'bt2020':
+                    self.is_hdr = True
+            
+            # Filename fallback
+            if not self.is_hdr and file_path:
+                bn = os.path.basename(file_path).lower()
+                if '.hdr.' in bn or '_hdr_' in bn or bn.endswith('hdr') or 'hdr10' in bn:
+                    self.is_hdr = True
+
             stream = video_stream if video_stream is not None else audio_stream
             if not stream:
                 return 30.0, 0, 0

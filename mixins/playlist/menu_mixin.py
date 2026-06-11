@@ -70,6 +70,15 @@ class PlaylistMenuMixin:
 
             # Motion JPG export actions
             filePath = item.data(Qt.ItemDataRole.UserRole)
+            
+            import os
+            is_current = False
+            if filePath and self.currentFilePath:
+                is_current = os.path.normcase(os.path.normpath(filePath)) == os.path.normcase(os.path.normpath(self.currentFilePath))
+            
+            if is_current and hasattr(self, 'current_cache_index') and getattr(self, 'cached_frame_dict', None) and self.current_cache_index in self.cached_frame_dict:
+                menu.addAction(tr('replace_thumbnail_current_frame'), lambda: self.replace_thumbnail_with_current_frame(item))
+
             from utils import get_embedded_video_offset
             offset = get_embedded_video_offset(filePath) if filePath else None
             if offset is not None:
@@ -240,3 +249,48 @@ class PlaylistMenuMixin:
                     f.write(data)
             except Exception as e:
                 QMessageBox.critical(self, tr('error') or "Error", f"Failed to export video: {e}")
+
+    def replace_thumbnail_with_current_frame(self, item):
+        if not hasattr(self, 'current_cache_index') or not getattr(self, 'cached_frame_dict', None):
+            return
+            
+        if self.current_cache_index not in self.cached_frame_dict:
+            return
+            
+        data = self.cached_frame_dict[self.current_cache_index]
+        from PyQt6.QtGui import QImage, QPixmap, QIcon, QPainter
+        from PyQt6.QtCore import Qt
+        from qfluentwidgets import InfoBar, InfoBarPosition
+        
+        img = QImage()
+        if isinstance(data, bytes):
+            img.loadFromData(data)
+        elif isinstance(data, str):
+            img.load(data)
+            
+        if not img.isNull():
+            pixmap = QPixmap.fromImage(img)
+            thumb = pixmap.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            final_thumb = QPixmap(160, 160)
+            final_thumb.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(final_thumb)
+            x = (160 - thumb.width()) // 2
+            y = (160 - thumb.height()) // 2
+            painter.drawPixmap(x, y, thumb)
+            painter.end()
+            
+            item.setIcon(QIcon(final_thumb))
+            
+            # Force list widget update to apply the changes
+            if hasattr(self, 'update_playlist_layout'):
+                self.update_playlist_layout()
+                
+            InfoBar.success(
+                title=tr('replace_thumbnail_current_frame'),
+                content=tr('thumbnail_replaced_success'),
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
