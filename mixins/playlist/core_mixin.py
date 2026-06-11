@@ -11,7 +11,7 @@ class PlaylistCoreMixin:
 
     def handle_view_drop(self, files):
         if files:
-            valid_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v',
+            valid_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv',
                           '.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
             valid_files = [f for f in files if f.lower().endswith(valid_exts)]
             if valid_files:

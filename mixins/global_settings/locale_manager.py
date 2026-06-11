@@ -349,7 +349,10 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.gsGeneralLabel.setText(tr('general'))
         
-        self.gsShortcutsLabel.setText(tr('playback_shortcuts'))
+        if hasattr(self, 'gsShortcutsBtn'):
+            self.gsShortcutsBtn.setText(tr('playback_shortcuts'))
+        if hasattr(self, 'gsAboutBtn'):
+            self.gsAboutBtn.setText(tr('about'))
         
         self.loopLabel.setText(tr('loop'))
         if hasattr(self, 'markersTitleLabel') and self.markersTitleLabel:

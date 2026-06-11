@@ -268,7 +268,8 @@ class AudioMixin:
     def prepare_audio_track(self, video_path, track_index=0, start_sec=0.0, duration_sec=300.0, target_pos_ms=None):
         if not hasattr(self, 'current_temp_dir') or not self.current_temp_dir:
             import uuid
-            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
+            import tempfile
+            self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
         os.makedirs(self.current_temp_dir, exist_ok=True)
 
         self.original_audio_path_1 = os.path.normpath(os.path.join(self.current_temp_dir, "original_audio_1.wav"))

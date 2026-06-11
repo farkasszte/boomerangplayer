@@ -65,7 +65,7 @@ class PlaybackMixin(PlaybackMixinBase):
         """
         from PyQt6.QtWidgets import QFileDialog
 
-        video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v')
+        video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')
         image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
         audio_exts = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
         playlist_exts = ('.json', '.bpl')
@@ -73,8 +73,8 @@ class PlaybackMixin(PlaybackMixinBase):
         all_exts = video_exts + image_exts + audio_exts + playlist_exts
 
         name_filters = [
-            f"{tr('all_media')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v *.jpg *.jpeg *.png *.bmp *.webp *.tiff *.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma *.json *.bpl)",
-            f"{tr('video_files')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v)",
+            f"{tr('all_media')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v *.webm *.flv *.mpg *.mpeg *.ogv *.jpg *.jpeg *.png *.bmp *.webp *.tiff *.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma *.json *.bpl)",
+            f"{tr('video_files')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v *.webm *.flv *.mpg *.mpeg *.ogv)",
             f"{tr('image_files')} (*.jpg *.jpeg *.png *.bmp *.webp *.tiff)",
             f"{tr('audio_files')} (*.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma)",
             f"{tr('playlist')} (*.bpl *.json)",

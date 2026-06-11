@@ -319,6 +319,39 @@ def cleanup_nvidia_dxcache():
     thread.start()
 
 
+def cleanup_old_mem_cache():
+    """ Scans the system temporary directory for any stale mem_cache_ directories
+    left over from previous sessions (now unlocked) and deletes them.
+    Runs asynchronously in a background daemon thread.
+    """
+    import threading
+    import tempfile
+    import shutil
+    
+    def worker():
+        try:
+            temp_dir = tempfile.gettempdir()
+            if not os.path.exists(temp_dir) or not os.path.isdir(temp_dir):
+                return
+            
+            cleaned_count = 0
+            for item in os.listdir(temp_dir):
+                if item.startswith("mem_cache_"):
+                    item_path = os.path.join(temp_dir, item)
+                    if os.path.isdir(item_path):
+                        try:
+                            shutil.rmtree(item_path, ignore_errors=True)
+                            cleaned_count += 1
+                        except Exception:
+                            pass
+            if cleaned_count > 0:
+                print(f"[MemCache GC] Cleaned up {cleaned_count} stale cache directories from previous sessions.")
+        except Exception as e:
+            print(f"[MemCache GC] Error cleaning up stale cache directories: {e}")
+            
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def log_debug(msg):
     # Debug logging to file is muted for production/release.
     # Uncomment print below if console debug logs are needed:

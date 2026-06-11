@@ -156,7 +156,7 @@ class CacheMixin(CacheMixinBase):
 
         if not self.current_temp_dir:
             import uuid
-            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
+            self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
 
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
@@ -229,7 +229,7 @@ class CacheMixin(CacheMixinBase):
         # Two-stage extraction: extract exactly 1 frame instantly
         if not self.current_temp_dir:
             import uuid
-            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
+            self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
             
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
@@ -374,7 +374,7 @@ class CacheMixin(CacheMixinBase):
 
         if not self.current_temp_dir:
             import uuid
-            self.current_temp_dir = f"mem_cache_{uuid.uuid4().hex}"
+            self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
 
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 

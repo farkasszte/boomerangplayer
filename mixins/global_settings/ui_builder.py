@@ -151,44 +151,13 @@ class GlobalSettingsUiBuilderMixin:
         hline2.setFrameShadow(QFrame.Shadow.Sunken)
         self.gsInnerLayout.addWidget(hline2)
 
-        self.gsShortcutsLabel = CaptionLabel(tr('playback_shortcuts'))
-        self.gsShortcutsLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
-        self.gsInnerLayout.addWidget(self.gsShortcutsLabel)
+        self.gsShortcutsBtn = PushButton()
+        self.gsShortcutsBtn.clicked.connect(self.show_shortcuts_dialog)
+        self.gsInnerLayout.addWidget(self.gsShortcutsBtn)
 
-        self.shortcutGrid = QGridLayout()
-        self.shortcutGrid.setContentsMargins(0, 0, 0, 0)
-        self.shortcutGrid.setSpacing(6)
-        self.shortcutGrid.setColumnStretch(0, 1)
-        self.shortcutGrid.setColumnStretch(1, 0)
-        self.shortcutLabels = []
-
-        actions = [
-            ('play_pause',   'act_play_pause'),
-            ('smart_mark',   'act_smart_mark'),
-            ('toggle_loop',  'act_toggle_loop'),
-            ('next_frame',   'act_next_frame'),
-            ('prev_frame',   'act_prev_frame'),
-            ('toggle_mute',  'act_toggle_mute'),
-            ('act_full_screen', 'act_full_screen'),
-            ('sub_delay_minus', 'act_sub_delay_minus'),
-            ('sub_delay_plus',  'act_sub_delay_plus'),
-        ]
-
-        for i, (act, label_key) in enumerate(actions):
-            lbl = BodyLabel(tr(label_key))
-            lbl.setWordWrap(True)
-            
-            lbl._label_key = label_key
-            self.shortcutLabels.append(lbl)
-            self.shortcutGrid.addWidget(lbl, i, 0)
-            
-            btn = ShortcutButton(self.config['shortcuts'].get(act, 0))
-            btn.setFixedWidth(80)
-            
-            btn.keyChanged.connect(lambda k, a=act: self.update_shortcut_sidebar(a, k))
-            self.shortcutGrid.addWidget(btn, i, 1)
-
-        self.gsInnerLayout.addLayout(self.shortcutGrid)
+        self.gsAboutBtn = PushButton()
+        self.gsAboutBtn.clicked.connect(self.show_about_dialog)
+        self.gsInnerLayout.addWidget(self.gsAboutBtn)
         self.gsInnerLayout.addStretch(1)
 
         self.gsScrollArea.setWidget(self.gsScrollWidget)
@@ -313,25 +282,17 @@ class GlobalSettingsUiBuilderMixin:
 
         # ---- Reset shortcut buttons ----
         from components import ShortcutButton
-        for i, (act, _) in enumerate([
-            ('play_pause',     'act_play_pause'),
-            ('smart_mark',     'act_smart_mark'),
-            ('toggle_loop',    'act_toggle_loop'),
-            ('next_frame',     'act_next_frame'),
-            ('prev_frame',     'act_prev_frame'),
-            ('toggle_mute',    'act_toggle_mute'),
-            ('act_full_screen','act_full_screen'),
-            ('sub_delay_minus','act_sub_delay_minus'),
-            ('sub_delay_plus', 'act_sub_delay_plus'),
-        ]):
+        dialog_btns = getattr(self, 'dialog_shortcut_buttons', None)
+        for act in [
+            'play_pause', 'smart_mark', 'toggle_loop', 'next_frame', 'prev_frame',
+            'toggle_mute', 'act_full_screen', 'sub_delay_minus', 'sub_delay_plus'
+        ]:
             default_key = DEFAULT_CONFIG['shortcuts'].get(act, 0)
             self.config['shortcuts'][act] = default_key
-            grid_item = self.shortcutGrid.itemAtPosition(i, 1)
-            if grid_item:
-                btn = grid_item.widget()
-                if isinstance(btn, ShortcutButton):
-                    btn.key_code = default_key
-                    btn.update_text()
+            if dialog_btns and act in dialog_btns:
+                btn = dialog_btns[act]
+                btn.key_code = default_key
+                btn.update_text()
         if hasattr(self, 'setup_shortcuts'):
             self.setup_shortcuts()
 
@@ -373,3 +334,83 @@ class GlobalSettingsUiBuilderMixin:
             if len(sizes) > 1 and sizes[1] < 250:
                 sizes[1] = 250
                 self.mainSplitter.setSizes(sizes)
+
+    def show_shortcuts_dialog(self):
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QGridLayout, QHBoxLayout
+        from qfluentwidgets import BodyLabel, PushButton
+        from components import ShortcutButton
+        from styles import ACTION_BTN_STYLE
+        
+        dialog = QDialog(self)
+        if hasattr(self, 'style_dialog'):
+            self.style_dialog(dialog)
+        dialog.setWindowTitle(tr('playback_shortcuts'))
+        dialog.setMinimumWidth(320)
+        
+        # Apply Windows 11 title bar styling using DWM API
+        import sys
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                hwnd = int(dialog.winId())
+                bg_color = self.config.get('bg_color', '#202020')
+                from PyQt6.QtGui import QColor
+                def qcolor_to_colorref(qcolor):
+                    return qcolor.red() | (qcolor.green() << 8) | (qcolor.blue() << 16)
+                bg_color_ref = qcolor_to_colorref(QColor(bg_color))
+                # DWMWA_CAPTION_COLOR = 35 (Windows 11 Build 22000+)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    35,
+                    ctypes.byref(ctypes.c_int(bg_color_ref)),
+                    4
+                )
+            except Exception as e:
+                print(f"[DWM] Failed to set shortcuts dialog title bar color: {e}")
+                
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(24, 24, 24, 20)
+        layout.setSpacing(12)
+        
+        grid = QGridLayout()
+        grid.setSpacing(8)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 0)
+        
+        actions = [
+            ('play_pause',   'act_play_pause'),
+            ('smart_mark',   'act_smart_mark'),
+            ('toggle_loop',  'act_toggle_loop'),
+            ('next_frame',   'act_next_frame'),
+            ('prev_frame',   'act_prev_frame'),
+            ('toggle_mute',  'act_toggle_mute'),
+            ('act_full_screen', 'act_full_screen'),
+            ('sub_delay_minus', 'act_sub_delay_minus'),
+            ('sub_delay_plus',  'act_sub_delay_plus'),
+        ]
+        
+        self.dialog_shortcut_buttons = {}
+        for i, (act, label_key) in enumerate(actions):
+            lbl = BodyLabel(tr(label_key))
+            lbl.setWordWrap(True)
+            grid.addWidget(lbl, i, 0)
+            
+            btn = ShortcutButton(self.config['shortcuts'].get(act, 0))
+            btn.setFixedWidth(100)
+            btn.keyChanged.connect(lambda k, a=act: self.update_shortcut_sidebar(a, k))
+            self.dialog_shortcut_buttons[act] = btn
+            grid.addWidget(btn, i, 1)
+            
+        layout.addLayout(grid)
+        
+        # Close button
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        close_btn = PushButton(tr('close'))
+        close_btn.setStyleSheet(ACTION_BTN_STYLE)
+        close_btn.clicked.connect(dialog.accept)
+        btn_layout.addWidget(close_btn)
+        layout.addLayout(btn_layout)
+        
+        dialog.exec()
+        self.dialog_shortcut_buttons = None

@@ -57,23 +57,19 @@ class ControlsCardUIMixin:
         self.toggleSettingsButton.clicked.connect(self.toggle_settings)
         buttonsLayout.addWidget(self.toggleSettingsButton)
 
-        self.globalSettingsButton = ToolButton(FluentIcon.SETTING)
-        self.globalSettingsButton.setToolTip(tr('tip_settings'))
-        self.globalSettingsButton.setFixedSize(32, 32)
-        self.globalSettingsButton.clicked.connect(self.show_global_settings)
-        buttonsLayout.addWidget(self.globalSettingsButton)
-
         self.toggleSubtitlePanelButton = ToolButton(FluentIcon.CHAT)
         self.toggleSubtitlePanelButton.setToolTip(tr('subtitles'))
         self.toggleSubtitlePanelButton.setFixedSize(32, 32)
         self.toggleSubtitlePanelButton.clicked.connect(self.toggle_subtitle_panel)
         buttonsLayout.addWidget(self.toggleSubtitlePanelButton)
 
-        self.aboutButton = ToolButton(FluentIcon.INFO)
-        self.aboutButton.setToolTip(tr('about'))
-        self.aboutButton.setFixedSize(32, 32)
-        self.aboutButton.clicked.connect(self.show_about_dialog)
-        buttonsLayout.addWidget(self.aboutButton)
+        self.globalSettingsButton = ToolButton(FluentIcon.SETTING)
+        self.globalSettingsButton.setToolTip(tr('tip_settings'))
+        self.globalSettingsButton.setFixedSize(32, 32)
+        self.globalSettingsButton.clicked.connect(self.show_global_settings)
+        buttonsLayout.addWidget(self.globalSettingsButton)
+
+
 
         # Playback buttons (center)
         playbackButtonsLayout = QHBoxLayout()
@@ -179,17 +175,17 @@ class ControlsCardUIMixin:
         self.toggleAudioButton.clicked.connect(self.toggle_audio_panel)
         buttonsLayout.addWidget(self.toggleAudioButton)
 
-        self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
-        self.togglePlaylistButton.setToolTip(tr('tip_playlist'))
-        self.togglePlaylistButton.setFixedSize(32, 32)
-        self.togglePlaylistButton.clicked.connect(self.toggle_playlist)
-        buttonsLayout.addWidget(self.togglePlaylistButton)
-
         self.toggleDrawingButton = ToolButton(FluentIcon.EDIT)
         self.toggleDrawingButton.setToolTip(tr('tip_drawing'))
         self.toggleDrawingButton.setFixedSize(32, 32)
         self.toggleDrawingButton.clicked.connect(self.toggle_drawing_panel)
         buttonsLayout.addWidget(self.toggleDrawingButton)
+
+        self.togglePlaylistButton = ToolButton(FluentIcon.MENU)
+        self.togglePlaylistButton.setToolTip(tr('tip_playlist'))
+        self.togglePlaylistButton.setFixedSize(32, 32)
+        self.togglePlaylistButton.clicked.connect(self.toggle_playlist)
+        buttonsLayout.addWidget(self.togglePlaylistButton)
 
         self.controlsLayout.addLayout(buttonsLayout)
 

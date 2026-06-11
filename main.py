@@ -4,9 +4,10 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 def main():
-    # Garbage collect Nvidia DXCache (.nvph) files asynchronously in the background
-    from utils import cleanup_nvidia_dxcache
+    # Garbage collect Nvidia DXCache (.nvph) files and stale mem_cache directories asynchronously in the background
+    from utils import cleanup_nvidia_dxcache, cleanup_old_mem_cache
     cleanup_nvidia_dxcache()
+    cleanup_old_mem_cache()
 
     # Enable High DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)

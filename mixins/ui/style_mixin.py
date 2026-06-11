@@ -175,7 +175,7 @@ class StyleUIMixin:
             """)
 
         # Update Global Settings Trigger buttons
-        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn']
+        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn', 'gsShortcutsBtn', 'gsAboutBtn']
         for btn_name in gs_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
