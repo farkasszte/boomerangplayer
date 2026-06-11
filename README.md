@@ -6,18 +6,31 @@ A high-performance, frame-accurate video player built for Windows 11. Designed f
   <img src="resources/app_icon.png" width="128" height="128" alt="Boomerang Player Icon">
 </p>
 
-## 🌟 Premium Features
+## 🌟 Core Pillars & Features
 
-*   **⚡ Dual-Direction Playback**: Independent forward and backward play buttons. Switch directions instantly with perfect state synchronization.
-*   **🎯 Frame-Accurate Precision**: Powered by `ffprobe` metadata. Zero-drift playback ensures the UI, counter, and visuals are always in 100% sync.
-*   **🎨 Advanced Annotations**: Professional drawing suite including lines, arrows, shapes, and text.
-*   **✨ Laser Mode**: Revolutionary temporary drawing mode. Annotations and erasures vanish after interaction—perfect for live presentations and coaching.
-*   **↩️ Transactional Undo**: Robust multi-step undo system that tracks every stroke, text addition, and precise eraser "bite".
-*   **💾 Smart Persistence**: Remembers everything. Your last viewed frame, markers, zoom level, and color adjustments are automatically saved per video.
-*   **⏩ Variable Speed Engine**: Smooth playback from **10% to 400%** using high-speed RAM caching.
-*   **🔄 Multi-Segment Looping**: Create complex looping patterns with smart marker placement.
-*   **🔍 Interactive Zoom & Pan**: Deep-dive into details with fluid zoom and cursor-anchored panning.
-*   **🖌️ Modern Aesthetics**: Built with the latest Fluent Design guidelines. Features dark mode, glassmorphism, and smooth micro-animations.
+### 1. 🎯 Precision Playback & Analysis
+*   **Frame-Accurate Zero-Drift**: Real-time rendering engine powered by `ffprobe` metadata. Zero-drift playback ensures the UI counters, timeline sliders, and video frames are always in 100% sync.
+*   **Dual-Direction Playback**: Independent forward and backward play buttons with instant direction switching.
+*   **Variable Playback Speed**: Smooth, cached playback adjustable from **10% to 400%** speed.
+*   **HDR-to-SDR Tone Mapping**: Automatic detection of HDR10 (PQ) and HLG color profiles. Integrates `zscale` and `tonemap` filters to convert high dynamic range footage into correct, vivid SDR colors on standard displays.
+
+### 2. 🎨 Professional Annotation Suite
+*   **Vector Drawing Tools**: Direct viewport annotations using lines, arrows, rectangles, ellipses, and custom text.
+*   **Laser Mode**: Interactive temporary drawing mode. Strokes and annotations automatically fade away after interaction—perfect for live presentations, screen shares, and coaching.
+*   **Transactional Undo/Redo**: Deep history tracking of individual strokes, modifications, and eraser paths.
+
+### 3. 🔄 Advanced Navigation & Synchronization
+*   **Multi-Segment Looping**: Define custom A/B markers to isolate and repeat specific video sequences.
+*   **Timeline Zoom Modes**: Focus your progress bar navigation using mutually exclusive modes:
+    *   *Zoom to Loop*: Restricts the timeline slider to the active loop range.
+    *   *Zoom to Window*: Restricts the timeline slider to a configured frame window around a specific anchor frame.
+*   **Multi-Instance UDP Sync**: Peer-to-peer network synchronization using multicast UDP. Syncs playback states, speed adjustments, and frame seeking across multiple running instances of the player (ideal for multi-angle video analysis).
+*   **Interactive Pan & Zoom**: High-performance canvas zooming and cursor-anchored panning for examining details.
+
+### 4. 🗂️ Smart Workflow & Personalization
+*   **State Persistence**: Automatically remembers your playback position, zoom level, marker ranges, and color adjustments individually for each video file.
+*   **Playlist & Project Files**: Modern sidebar playlist with drag-and-drop media loading. Custom thumbnails can be set from the current frame. Save and load playlists with embedded thumbnail assets using `.bpl` project files.
+*   **Windows 11 Integration**: Themed with native glassmorphic styles, dark/light modes, customizable accent colors, and DWM titlebar coloring.
 
 ## 🚀 Getting Started
 
@@ -46,17 +59,3 @@ To create a portable, single-file Windows executable:
 python build_dist.py
 ```
 *The build includes all icons, translations, and FFmpeg binaries.*
-
-## ⌨️ Shortcuts
-| Action | Key |
-| :--- | :--- |
-| **Play / Pause** | `Space` |
-| **Add Marker** | `S` |
-| **Toggle Loop Mode** | `L` |
-| **Next Frame** | `.` |
-| **Previous Frame** | `,` |
-| **Toggle Mute** | `M` |
-| **Undo Drawing** | `Ctrl + Z` |
-
----
-*Built with ❤️ for detail-oriented professionals.*

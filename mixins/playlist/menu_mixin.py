@@ -281,9 +281,9 @@ class PlaylistMenuMixin:
             
             item.setIcon(QIcon(final_thumb))
             
-            # Force list widget update to apply the changes
+            # Refresh layout without reloading thumbnails so the new icon is preserved
             if hasattr(self, 'update_playlist_layout'):
-                self.update_playlist_layout()
+                self.update_playlist_layout(force_reload_thumbs=False)
                 
             InfoBar.success(
                 title=tr('replace_thumbnail_current_frame'),
