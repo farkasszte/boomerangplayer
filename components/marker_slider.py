@@ -6,14 +6,18 @@ class MarkerSlider(QSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.markers = []
-        self.is_zoomed = False
+        self.zoom_mode = 'none'
         
     def update_markers(self, markers):
         self.markers = sorted(list(set(markers)))
         self.update()
 
+    def set_zoom_mode(self, mode):
+        self.zoom_mode = mode
+        self.update()
+
     def set_zoomed(self, enabled):
-        self.is_zoomed = enabled
+        self.zoom_mode = 'loop' if enabled else 'none'
         self.update()
 
     def mousePressEvent(self, event):
@@ -35,17 +39,23 @@ class MarkerSlider(QSlider):
         r = self.maximum() - self.minimum()
 
         # 1. Draw Zoom Highlight BACKGROUND before the slider itself
-        if self.is_zoomed:
+        if self.zoom_mode != 'none':
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            # Use a very subtle dark cyan tint for the background
+            
+            # Subtle tint based on mode
+            if self.zoom_mode == 'loop':
+                color = QColor(0, 242, 255)
+            else:
+                color = QColor(162, 0, 255)
+
             painter.setOpacity(0.15)
-            painter.setBrush(QColor(0, 242, 255))
+            painter.setBrush(color)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(0, 0, w, h)
             # Draw a slightly more visible border
             painter.setOpacity(0.4)
-            painter.setPen(QPen(QColor(0, 242, 255), 1))
+            painter.setPen(QPen(color, 1))
             painter.drawRect(0, 0, w-1, h-1)
             painter.end()
 

@@ -119,6 +119,7 @@ class StyleUIMixin:
                 'fullScreenButton': FluentIcon.FULL_SCREEN,
                 'togglePlaylistButton': FluentIcon.MENU,
                 'toggleDrawingButton': FluentIcon.EDIT,
+                'zoomWindowResetBtn': FluentIcon.SYNC,
             }
             for btn_name, icon in icons_map.items():
                 if hasattr(self, btn_name):
@@ -150,12 +151,27 @@ class StyleUIMixin:
                 spin.setStyleSheet(s['SPINBOX_STYLE'])
 
         # Update SwitchButtons
-        switches = ['navToggle', 'gsGPUToggle', 'thumbToggle', 'fileNameToggle', 'laserModeToggle', 'chronometerToggle', 'drawModeToggle', 'lockSyncToggle']
+        switches = ['zoomToLoopToggle', 'zoomToWindowToggle', 'gsGPUToggle', 'thumbToggle', 'fileNameToggle', 'laserModeToggle', 'chronometerToggle', 'drawModeToggle', 'lockSyncToggle']
         for sw_name in switches:
             if hasattr(self, sw_name):
                 sw = getattr(self, sw_name)
                 # Apply SWITCH_STYLE
                 sw.setStyleSheet(s['SWITCH_STYLE'])
+
+        if hasattr(self, 'zoomWindowResetBtn') and self.zoomWindowResetBtn:
+            self.zoomWindowResetBtn.setStyleSheet(f"""
+                ToolButton {{
+                    border: none;
+                    border-radius: 4px;
+                    background: transparent;
+                }}
+                ToolButton:hover {{
+                    background: {bg_hover};
+                }}
+                ToolButton:pressed {{
+                    background: {bg_pressed};
+                }}
+            """)
 
         # Update Global Settings Trigger buttons
         gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn']

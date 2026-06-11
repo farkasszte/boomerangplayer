@@ -390,18 +390,18 @@ class SubtitleSidebarUIMixin:
         vOffsetHeader = QHBoxLayout()
         vOffsetHeader.addWidget(CaptionLabel(tr('sub_v_offset')))
         self.subVOffsetSpin = QSpinBox()
-        self.subVOffsetSpin.setRange(0, 500)
-        default_v_offset = self.config.get('subtitle_v_offset', 20)
+        self.subVOffsetSpin.setRange(0, 100)
+        default_v_offset = self.config.get('subtitle_v_offset', 5)
         self.subVOffsetSpin.setValue(default_v_offset)
-        self.subVOffsetSpin.setSuffix(" px")
+        self.subVOffsetSpin.setSuffix(" %")
         self.subVOffsetSpin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.subVOffsetSpin.setFixedWidth(80)
         vOffsetHeader.addStretch(1)
         vOffsetHeader.addWidget(self.subVOffsetSpin)
         vOffsetLayout.addLayout(vOffsetHeader)
-
+ 
         self.subVOffsetSlider = QSlider(Qt.Orientation.Horizontal)
-        self.subVOffsetSlider.setRange(0, 500)
+        self.subVOffsetSlider.setRange(0, 100)
         self.subVOffsetSlider.setValue(default_v_offset)
         self.subVOffsetSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         
@@ -414,25 +414,25 @@ class SubtitleSidebarUIMixin:
         
         vOffsetLayout.addWidget(self.subVOffsetSlider)
         self.subtitleInnerLayout.addLayout(vOffsetLayout)
-
+ 
         # Horizontal Offset
         hOffsetLayout = QVBoxLayout()
         hOffsetLayout.setSpacing(4)
         hOffsetHeader = QHBoxLayout()
         hOffsetHeader.addWidget(CaptionLabel(tr('sub_h_offset')))
         self.subHOffsetSpin = QSpinBox()
-        self.subHOffsetSpin.setRange(-500, 500)
+        self.subHOffsetSpin.setRange(-50, 50)
         default_h_offset = self.config.get('subtitle_h_offset', 0)
         self.subHOffsetSpin.setValue(default_h_offset)
-        self.subHOffsetSpin.setSuffix(" px")
+        self.subHOffsetSpin.setSuffix(" %")
         self.subHOffsetSpin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.subHOffsetSpin.setFixedWidth(80)
         hOffsetHeader.addStretch(1)
         hOffsetHeader.addWidget(self.subHOffsetSpin)
         hOffsetLayout.addLayout(hOffsetHeader)
-
+ 
         self.subHOffsetSlider = QSlider(Qt.Orientation.Horizontal)
-        self.subHOffsetSlider.setRange(-500, 500)
+        self.subHOffsetSlider.setRange(-50, 50)
         self.subHOffsetSlider.setValue(default_h_offset)
         self.subHOffsetSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
         

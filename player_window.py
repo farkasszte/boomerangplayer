@@ -188,7 +188,9 @@ class PlayerWindow(
         self.current_cache_index = 0
         self.last_extracted_center = -1
         self.cache_window_half = self.config.get('cache_window', 900)
-        self.is_zoomed_nav = False
+        self.is_zoomed_loop = False
+        self.is_zoomed_window = False
+        self.zoom_window_anchor = 0
         self.total_frames = 0
         self.is_playing = False
         self.is_scrubbing = False

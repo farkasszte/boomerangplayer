@@ -108,7 +108,10 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.loopLabel.setText(tr('loop'))
         
-        self.navLabel.setText(tr('zoom_nav_bar'))
+        if hasattr(self, 'zoomToLoopLabel') and self.zoomToLoopLabel:
+            self.zoomToLoopLabel.setText(tr('zoom_to_loop'))
+        if hasattr(self, 'zoomToWindowLabel') and self.zoomToWindowLabel:
+            self.zoomToWindowLabel.setText(tr('zoom_to_window'))
         if hasattr(self, 'chronometerToggleLabel'):
             self.chronometerToggleLabel.setText(tr('chronometer_overlay'))
         
@@ -228,7 +231,12 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.infoButton.setToolTip(tr('tip_file_info'))
         
-        self.navToggle.setToolTip(tr('tip_zoom_nav_bar'))
+        if hasattr(self, 'zoomToLoopToggle') and self.zoomToLoopToggle:
+            self.zoomToLoopToggle.setToolTip(tr('tip_zoom_to_loop'))
+        if hasattr(self, 'zoomToWindowToggle') and self.zoomToWindowToggle:
+            self.zoomToWindowToggle.setToolTip(tr('tip_zoom_to_window'))
+        if hasattr(self, 'zoomWindowResetBtn') and self.zoomWindowResetBtn:
+            self.zoomWindowResetBtn.setToolTip(tr('tip_reset_zoom_window'))
         
         self.loopCombo.setToolTip(tr('tip_loop_mode'))
         
@@ -360,9 +368,12 @@ class GlobalSettingsLocaleManagerMixin:
         if hasattr(self, 'opacitySlider') and self.opacitySlider:
             self.opacitySlider.setToolTip(tr('tip_panel_opacity'))
         
-        self.navToggle.setOnText(tr('on'))
-        
-        self.navToggle.setOffText(tr('off'))
+        if hasattr(self, 'zoomToLoopToggle') and self.zoomToLoopToggle:
+            self.zoomToLoopToggle.setOnText(tr('on'))
+            self.zoomToLoopToggle.setOffText(tr('off'))
+        if hasattr(self, 'zoomToWindowToggle') and self.zoomToWindowToggle:
+            self.zoomToWindowToggle.setOnText(tr('on'))
+            self.zoomToWindowToggle.setOffText(tr('off'))
 
         # Update all SwitchButtons on/off Hungarian translations
         if hasattr(self, 'drawModeToggle') and self.drawModeToggle:

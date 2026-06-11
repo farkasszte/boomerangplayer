@@ -501,15 +501,22 @@ class CacheMixin(CacheMixinBase):
 
         self.progressBar.blockSignals(True)
 
-        is_zoomed = getattr(self, 'is_zoomed_nav', False)
-        
-        self.progressBar.set_zoomed(is_zoomed)
+        is_loop = getattr(self, 'is_zoomed_loop', False)
+        is_window = getattr(self, 'is_zoomed_window', False)
 
-        if is_zoomed:
-            
+        if is_loop:
+            self.progressBar.set_zoom_mode('loop')
             start_f, end_f = self.get_active_loop_range()
             self.progressBar.setRange(start_f, max(start_f, end_f))
+        elif is_window:
+            self.progressBar.set_zoom_mode('window')
+            anchor = getattr(self, 'zoom_window_anchor', 0)
+            half_win = getattr(self, 'cache_window_half', 900)
+            start_f = max(0, anchor - half_win)
+            end_f = min(max(0, self.total_frames - 1), anchor + half_win)
+            self.progressBar.setRange(start_f, max(start_f, end_f))
         else:
+            self.progressBar.set_zoom_mode('none')
             self.progressBar.setRange(0, max(0, self.total_frames - 1))
 
         self.progressBar.setValue(self.current_cache_index)

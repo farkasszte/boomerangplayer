@@ -11,47 +11,94 @@ class OutlineLabel(QLabel):
         self.outline_color = QColor(0, 0, 0)
         self.outline_width = 2
         self.outline_enabled = False
+        self._cached_pixmap = None
+        self._cached_text = ""
+        self._cached_width = 0
+        self._cached_height = 0
 
     def setOutline(self, enabled, color=QColor(0, 0, 0), width=2):
         self.outline_enabled = enabled
         self.outline_color = color
         self.outline_width = width
+        self._cached_pixmap = None
         self.update()
+
+    def _update_cache(self):
+        text = self.text()
+        if not text:
+            self._cached_pixmap = None
+            self._cached_text = ""
+            return
+
+        rect = self.contentsRect()
+        if rect.width() <= 0 or rect.height() <= 0:
+            return
+
+        if (self._cached_pixmap is not None 
+                and self._cached_text == text 
+                and self._cached_width == rect.width() 
+                and self._cached_height == rect.height()):
+            return
+
+        from PyQt6.QtGui import QPixmap
+        pixmap = QPixmap(rect.size())
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+
+        font = self.font()
+        painter.setFont(font)
+
+        draw_rect = rect.translated(-rect.topLeft())
+        flags = self.alignment() | Qt.TextFlag.TextWordWrap
+
+        # Draw outline
+        w = self.outline_width
+        painter.setPen(self.outline_color)
+        if self.outline_enabled and w > 0:
+            for dx in range(-w, w + 1):
+                for dy in range(-w, w + 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    painter.drawText(draw_rect.translated(dx, dy), flags, text)
+
+        # Draw foreground text on top
+        original_color = self.palette().color(self.foregroundRole())
+        painter.setPen(original_color)
+        painter.drawText(draw_rect, flags, text)
+
+        painter.end()
+
+        # Cache values
+        self._cached_pixmap = pixmap
+        self._cached_text = text
+        self._cached_width = rect.width()
+        self._cached_height = rect.height()
 
     def paintEvent(self, event):
         if not self.outline_enabled or self.outline_width <= 0:
             super().paintEvent(event)
             return
-        
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Save original color
-        original_color = self.palette().color(self.foregroundRole())
-        
-        # Draw background outline in multiple directions
-        w = self.outline_width
-        palette = self.palette()
-        palette.setColor(self.foregroundRole(), self.outline_color)
-        self.setPalette(palette)
-        
-        for dx in range(-w, w + 1):
-            for dy in range(-w, w + 1):
-                if dx == 0 and dy == 0:
-                    continue
-                painter.translate(dx, dy)
-                super().paintEvent(event)
-                painter.translate(-dx, -dy)
-                
-        # Draw foreground text
-        palette.setColor(self.foregroundRole(), original_color)
-        self.setPalette(palette)
+
+        # 1. Let QLabel paint the background and text first
         super().paintEvent(event)
+
+        # 2. Update cache and blit the cached pixmap
+        self._update_cache()
+
+        if self._cached_pixmap is not None:
+            painter = QPainter(self)
+            rect = self.contentsRect()
+            painter.drawPixmap(rect.topLeft(), self._cached_pixmap)
+            painter.end()
 
 class SubtitleMixin:
     def init_subtitle_state(self):
         self.subtitles = []
         self.subtitleFilePath = None
+        self._last_subtitle_text = None
         
         # Subtitle overlay label using our custom OutlineLabel
         self.subtitleLabel = OutlineLabel(self.view)
@@ -146,13 +193,15 @@ class SubtitleMixin:
         lbl_w = self.subtitleLabel.width()
         lbl_h = self.subtitleLabel.height()
         
-        # Center horizontally, with horizontal offset
+        # Center horizontally, with horizontal offset (as percentage of view width)
         h_offset = self.config.get('subtitle_h_offset', 0)
-        x = (view_w - lbl_w) // 2 + h_offset
+        h_offset_px = int(view_w * (h_offset / 100.0))
+        x = (view_w - lbl_w) // 2 + h_offset_px
         
-        # Offset from bottom
-        v_offset = self.config.get('subtitle_v_offset', 20)
-        margin_bottom = v_offset
+        # Offset from bottom (as percentage of view height)
+        v_offset = self.config.get('subtitle_v_offset', 5)
+        v_offset_px = int(view_h * (v_offset / 100.0))
+        margin_bottom = v_offset_px
         if getattr(self, 'is_full_screen', False) and hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
             margin_bottom += self.controlsCard.height()
         y = view_h - lbl_h - margin_bottom
@@ -180,6 +229,7 @@ class SubtitleMixin:
             
         self.subtitleFilePath = filepath
         self.subtitles = parse_subtitle_file(filepath, fps=getattr(self, 'fps', 30.0))
+        self._last_subtitle_text = None
         print(f"[Subtitles] Loaded {len(self.subtitles)} cues from {filepath}")
         
         # Update combo to show External File is active
@@ -225,12 +275,14 @@ class SubtitleMixin:
         if stream_index == -1: # Off
             self.subtitleLabel.hide()
             self.subtitles = []
+            self._last_subtitle_text = None
         elif stream_index == -2: # External file
             pass
         else: # Embedded
             if self.currentFilePath and os.path.exists(self.currentFilePath):
                 srt_content = extract_embedded_subtitle(self.currentFilePath, stream_index)
                 self.subtitles = parse_srt(srt_content)
+                self._last_subtitle_text = None
                 print(f"[Subtitles] Extracted and loaded {len(self.subtitles)} embedded cues from stream {stream_index}")
                 self.update_subtitles_for_current_time()
 
@@ -259,13 +311,13 @@ class SubtitleMixin:
             self.subTrackCombo.setCurrentIndex(1)
 
     def update_subtitles_for_current_time(self):
-        if not hasattr(self, 'subtitleLabel') or not self.subtitles:
-            if hasattr(self, 'subtitleLabel'):
-                self.subtitleLabel.hide()
+        if not hasattr(self, 'subtitleLabel'):
             return
             
-        if not self.config.get('enable_subtitles', True):
-            self.subtitleLabel.hide()
+        if not self.subtitles or not self.config.get('enable_subtitles', True):
+            if self.subtitleLabel.isVisible():
+                self.subtitleLabel.hide()
+                self._last_subtitle_text = None
             return
 
         # Calculate current time in ms
@@ -285,12 +337,16 @@ class SubtitleMixin:
                 active_text = cue['text']
                 break
 
-        if active_text:
-            self.subtitleLabel.setText(active_text)
-            self.subtitleLabel.show()
-            self.position_subtitle_label()
-        else:
-            self.subtitleLabel.hide()
+        # Only update UI when subtitle text changes
+        last_text = getattr(self, '_last_subtitle_text', None)
+        if active_text != last_text:
+            self._last_subtitle_text = active_text
+            if active_text:
+                self.subtitleLabel.setText(active_text)
+                self.subtitleLabel.show()
+                self.position_subtitle_label()
+            else:
+                self.subtitleLabel.hide()
 
     # --- UI adjustment slots ---
     def on_sub_font_changed(self, idx):

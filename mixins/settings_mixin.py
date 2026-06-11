@@ -466,26 +466,6 @@ class SettingsMixin(SettingsMixinBase):
         self.loopLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
         loopGroup.addWidget(self.loopLabel)
 
-        # Zoom navigation bar toggle
-        navGroup = QHBoxLayout()
-        self.navLabel = CaptionLabel(tr('zoom_nav_bar'))
-        self.navToggle = SwitchButton()
-        self.navToggle.setChecked(False)
-        self.navToggle.setOnText(tr('on'))
-        self.navToggle.setOffText(tr('off'))
-        self.navToggle.setToolTip(tr('tip_zoom_nav_bar'))
-
-        def toggle_nav_mode(checked):
-            self.is_zoomed_nav = checked
-            
-            self.sync_progress_bar()
-
-        self.navToggle.checkedChanged.connect(toggle_nav_mode)
-        navGroup.addWidget(self.navLabel)
-        navGroup.addStretch(1)
-        navGroup.addWidget(self.navToggle)
-        loopGroup.addLayout(navGroup)
-
         # The loop mode dropdown combo box
         self.loopCombo = QComboBox()
         self.loopCombo.addItems([tr('loop_none'), tr('loop_forward'), tr('loop_backward'), tr('loop_pingpong')])
@@ -564,6 +544,80 @@ class SettingsMixin(SettingsMixinBase):
         row2.addWidget(self.deleteMarkerButton)
         row2.addWidget(self.clearMarkersButton)
         markersGroup.addLayout(row2)
+
+        # Zoom to loop toggle
+        zoomToLoopGroup = QHBoxLayout()
+        self.zoomToLoopLabel = CaptionLabel(tr('zoom_to_loop'))
+        self.zoomToLoopToggle = SwitchButton()
+        self.zoomToLoopToggle.setChecked(False)
+        self.zoomToLoopToggle.setOnText(tr('on'))
+        self.zoomToLoopToggle.setOffText(tr('off'))
+        self.zoomToLoopToggle.setToolTip(tr('tip_zoom_to_loop'))
+
+        def toggle_zoom_to_loop(checked):
+            self.is_zoomed_loop = checked
+            if checked:
+                self.zoomToWindowToggle.blockSignals(True)
+                self.zoomToWindowToggle.setChecked(False)
+                self.zoomToWindowToggle.blockSignals(False)
+                self.is_zoomed_window = False
+            self.sync_progress_bar()
+
+        self.zoomToLoopToggle.checkedChanged.connect(toggle_zoom_to_loop)
+        zoomToLoopGroup.addWidget(self.zoomToLoopLabel)
+        zoomToLoopGroup.addStretch(1)
+        zoomToLoopGroup.addWidget(self.zoomToLoopToggle)
+        markersGroup.addLayout(zoomToLoopGroup)
+
+        # Zoom to window toggle + reset button
+        zoomToWindowGroup = QHBoxLayout()
+        self.zoomToWindowLabel = CaptionLabel(tr('zoom_to_window'))
+        
+        self.zoomWindowResetBtn = ToolButton(FluentIcon.SYNC, self.settingsContainer)
+        self.zoomWindowResetBtn.setFixedSize(24, 24)
+        self.zoomWindowResetBtn.setToolTip(tr('tip_reset_zoom_window'))
+        self.zoomWindowResetBtn.setStyleSheet("""
+            ToolButton {
+                background: transparent;
+                border: none;
+                border-radius: 4px;
+            }
+            ToolButton:hover {
+                background: rgba(255, 255, 255, 0.08);
+            }
+            ToolButton:pressed {
+                background: rgba(255, 255, 255, 0.04);
+            }
+        """)
+        
+        self.zoomToWindowToggle = SwitchButton()
+        self.zoomToWindowToggle.setChecked(False)
+        self.zoomToWindowToggle.setOnText(tr('on'))
+        self.zoomToWindowToggle.setOffText(tr('off'))
+        self.zoomToWindowToggle.setToolTip(tr('tip_zoom_to_window'))
+
+        def toggle_zoom_to_window(checked):
+            self.is_zoomed_window = checked
+            if checked:
+                self.zoomToLoopToggle.blockSignals(True)
+                self.zoomToLoopToggle.setChecked(False)
+                self.zoomToLoopToggle.blockSignals(False)
+                self.is_zoomed_loop = False
+                self.zoom_window_anchor = self.current_cache_index
+            self.sync_progress_bar()
+
+        def reset_zoom_window():
+            self.zoom_window_anchor = self.current_cache_index
+            self.sync_progress_bar()
+
+        self.zoomToWindowToggle.checkedChanged.connect(toggle_zoom_to_window)
+        self.zoomWindowResetBtn.clicked.connect(reset_zoom_window)
+        
+        zoomToWindowGroup.addWidget(self.zoomToWindowLabel)
+        zoomToWindowGroup.addStretch(1)
+        zoomToWindowGroup.addWidget(self.zoomWindowResetBtn)
+        zoomToWindowGroup.addWidget(self.zoomToWindowToggle)
+        markersGroup.addLayout(zoomToWindowGroup)
 
         self.settingsInnerLayout.addLayout(markersGroup)
 
