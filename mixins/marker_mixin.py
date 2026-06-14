@@ -562,12 +562,23 @@ class MarkerMixin(MarkerMixinBase):
             if not os.path.exists(ffmpeg_path):
                 ffmpeg_path = "ffmpeg"
 
-            if self.fps > 0:
-                # Use current loop range
-                start_f, end_f = self.get_active_loop_range()
-                start_sec = max(0.0, (start_f / self.fps) - 0.001)
+            # Determine actual input file for ffmpeg (use currentVideoPath if motion photo, otherwise currentFilePath)
+            input_file = getattr(self, 'currentVideoPath', self.currentFilePath)
+            is_motion = getattr(self, 'is_motion_photo', False)
+
+            start_f, end_f = self.get_active_loop_range()
+            
+            # Map player frames to actual video frames for ffmpeg
+            if is_motion:
+                start_f_vid = max(0, start_f - 1)
+                end_f_vid = max(0, end_f - 1)
             else:
-                start_f, end_f = self.get_active_loop_range()
+                start_f_vid = start_f
+                end_f_vid = end_f
+
+            if self.fps > 0:
+                start_sec = max(0.0, (start_f_vid / self.fps) - 0.001)
+            else:
                 start_sec = 0.0
 
             encode_args = ["-c:v", "libx264", "-crf", "18", "-preset", "fast", "-c:a", "aac", "-b:a", "192k"]
@@ -576,26 +587,26 @@ class MarkerMixin(MarkerMixinBase):
                 cmd = [
                     ffmpeg_path, "-y",
                     "-ss", f"{start_sec:.6f}",
-                    "-i", self.currentFilePath
+                    "-i", input_file
                 ] + encode_args + [fileName]
             else:
                 if self.fps > 0:
-                    frames_count = max(1, end_f - start_f)
+                    frames_count = max(1, end_f_vid - start_f_vid)
                     duration_sec = (frames_count / self.fps) + 0.005
 
                     cmd = [
                         ffmpeg_path, "-y",
                         "-ss", f"{start_sec:.6f}",
-                        "-i", self.currentFilePath,
+                        "-i", input_file,
                         "-t", f"{duration_sec:.6f}",
                         "-frames:v", str(frames_count)
                     ] + encode_args + [fileName]
                 else:
-                    duration_sec = (end_f - start_f) / 30.0
+                    duration_sec = (end_f_vid - start_f_vid) / 30.0
                     cmd = [
                         ffmpeg_path, "-y",
                         "-ss", f"{start_sec:.6f}",
-                        "-i", self.currentFilePath,
+                        "-i", input_file,
                         "-t", f"{duration_sec:.6f}"
                     ] + encode_args + [fileName]
 
@@ -606,3 +617,4 @@ class MarkerMixin(MarkerMixinBase):
                 subprocess.Popen(cmd, creationflags=creationflags)
             except Exception as e:
                 print(f"Error saving loop: {e}")
+

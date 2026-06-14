@@ -78,6 +78,10 @@ class AudioMixin:
         if not hasattr(self, 'mediaPlayer') or self.mediaPlayer is None:
             return
         
+        # Prevent double interception which leads to infinite recursion
+        if getattr(self.mediaPlayer.setPosition, '__func__', None) == self.custom_set_position.__func__:
+            return
+        
         self.orig_set_position = self.mediaPlayer.setPosition
         self.orig_position = self.mediaPlayer.position
         
