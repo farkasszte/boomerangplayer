@@ -419,6 +419,12 @@ class MarkerMixin(MarkerMixinBase):
             data['gamma'] = self.gammaSlider.value()
             
             data['saturation'] = self.saturationSlider.value()
+            data['hue'] = self.hueSlider.value() if hasattr(self, 'hueSlider') else 0
+            data['temperature'] = self.tempSlider.value() if hasattr(self, 'tempSlider') else 0
+            data['exposure'] = self.exposureSlider.value() if hasattr(self, 'exposureSlider') else 0
+            data['sharpen'] = self.sharpenSlider.value() if hasattr(self, 'sharpenSlider') else 0
+            data['blur'] = self.blurSlider.value() if hasattr(self, 'blurSlider') else 0
+            data['invert'] = self.invertButton.isChecked() if hasattr(self, 'invertButton') else False
             data['lastPosition'] = self.current_cache_index
 
             
@@ -462,6 +468,19 @@ class MarkerMixin(MarkerMixinBase):
             self.gammaSlider.setValue(data.get('gamma', 100))
             
             self.saturationSlider.setValue(data.get('saturation', 100))
+            
+            if hasattr(self, 'hueSlider') and self.hueSlider:
+                self.hueSlider.setValue(data.get('hue', 0))
+            if hasattr(self, 'tempSlider') and self.tempSlider:
+                self.tempSlider.setValue(data.get('temperature', 0))
+            if hasattr(self, 'exposureSlider') and self.exposureSlider:
+                self.exposureSlider.setValue(data.get('exposure', 0))
+            if hasattr(self, 'sharpenSlider') and self.sharpenSlider:
+                self.sharpenSlider.setValue(data.get('sharpen', 0))
+            if hasattr(self, 'blurSlider') and self.blurSlider:
+                self.blurSlider.setValue(data.get('blur', 0))
+            if hasattr(self, 'invertButton') and self.invertButton:
+                self.invertButton.setChecked(data.get('invert', False))
 
             # Restore zoom UI immediately to prevent cascade
             zoom_val = data.get('zoom', 100)

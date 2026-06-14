@@ -85,6 +85,7 @@ class UIMixin(
         
         self.init_global_settings_sidebar()
         self.init_video_settings_sidebar()
+        self.init_image_adj_sidebar()
         self.init_subtitle_sidebar()
         self.init_audio_sidebar()
         self._init_playlist_sidebar()
@@ -92,13 +93,16 @@ class UIMixin(
 
         self.mainSplitter.addWidget(self.globalSettingsContainer)
         self.mainSplitter.addWidget(self.settingsContainer)
+        self.mainSplitter.addWidget(self.imageAdjContainer)
         self.mainSplitter.addWidget(self.subtitleContainer)
+        self.view.filesDropped.connect(self.handle_view_drop)
+        self.view.zoomChanged.connect(self.on_user_zoom_changed)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.audioContainer)
         self.mainSplitter.addWidget(self.playlistContainer)
         self.mainSplitter.addWidget(self.drawingContainer)
-        self.mainSplitter.setStretchFactor(3, 1)
-        self.mainSplitter.setSizes([0, 0, 0, 10000, 0, 250, 0])
+        self.mainSplitter.setStretchFactor(4, 1)
+        self.mainSplitter.setSizes([0, 0, 0, 0, 10000, 0, 250, 0])
 
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
 
@@ -247,6 +251,8 @@ class UIMixin(
             self.globalSettingsLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'settingsLayout'):
             self.settingsLayout.setContentsMargins(10, 10, 4, bottom_margin)
+        if hasattr(self, 'imageAdjLayout'):
+            self.imageAdjLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'subtitleLayout'):
             self.subtitleLayout.setContentsMargins(10, 10, 4, bottom_margin)
         if hasattr(self, 'audioLayout'):
@@ -258,8 +264,8 @@ class UIMixin(
 
     def update_sidebar_fullscreen_state(self):
         if not hasattr(self, 'globalSettingsContainer') or not hasattr(self, 'settingsContainer') \
-           or not hasattr(self, 'playlistContainer') or not hasattr(self, 'drawingContainer') \
-           or not hasattr(self, 'mainSplitter'):
+           or not hasattr(self, 'imageAdjContainer') or not hasattr(self, 'playlistContainer') \
+           or not hasattr(self, 'drawingContainer') or not hasattr(self, 'mainSplitter'):
             return
 
         is_fs = getattr(self, 'is_full_screen', False)
@@ -267,10 +273,11 @@ class UIMixin(
         sidebars = [
             ('global_settings', self.globalSettingsContainer, 'left', 0),
             ('settings', self.settingsContainer, 'left', 1),
-            ('subtitle', self.subtitleContainer, 'left', 2),
-            ('audio', self.audioContainer, 'right', 4),
-            ('playlist', self.playlistContainer, 'right', 5),
-            ('drawing', self.drawingContainer, 'right', 6)
+            ('image_adj', self.imageAdjContainer, 'left', 2),
+            ('subtitle', self.subtitleContainer, 'left', 3),
+            ('audio', self.audioContainer, 'right', 5),
+            ('playlist', self.playlistContainer, 'right', 6),
+            ('drawing', self.drawingContainer, 'right', 7)
         ]
         
         if is_fs:
@@ -302,13 +309,23 @@ class UIMixin(
                 container.setVisible(was_visible)
             
             # Enforce mutual exclusivity on the same side in windowed mode
-            if self.globalSettingsContainer.isVisible() and self.settingsContainer.isVisible():
-                self.globalSettingsContainer.hide()
+            if self.globalSettingsContainer.isVisible():
+                if self.settingsContainer.isVisible(): self.settingsContainer.hide()
+                if self.imageAdjContainer.isVisible(): self.imageAdjContainer.hide()
+                if self.subtitleContainer.isVisible(): self.subtitleContainer.hide()
+            if self.settingsContainer.isVisible():
+                if self.globalSettingsContainer.isVisible(): self.globalSettingsContainer.hide()
+                if self.imageAdjContainer.isVisible(): self.imageAdjContainer.hide()
+                if self.subtitleContainer.isVisible(): self.subtitleContainer.hide()
+            if self.imageAdjContainer.isVisible():
+                if self.globalSettingsContainer.isVisible(): self.globalSettingsContainer.hide()
+                if self.settingsContainer.isVisible(): self.settingsContainer.hide()
+                if self.subtitleContainer.isVisible(): self.subtitleContainer.hide()
             if self.subtitleContainer.isVisible():
-                if self.settingsContainer.isVisible():
-                    self.settingsContainer.hide()
-                if self.globalSettingsContainer.isVisible():
-                    self.globalSettingsContainer.hide()
+                if self.globalSettingsContainer.isVisible(): self.globalSettingsContainer.hide()
+                if self.settingsContainer.isVisible(): self.settingsContainer.hide()
+                if self.imageAdjContainer.isVisible(): self.imageAdjContainer.hide()
+
             if hasattr(self, 'audioContainer') and self.audioContainer.isVisible():
                 if self.playlistContainer.isVisible():
                     self.playlistContainer.hide()
@@ -321,6 +338,7 @@ class UIMixin(
             sizes = [
                 250 if self.globalSettingsContainer.isVisible() else 0,
                 250 if self.settingsContainer.isVisible() else 0,
+                250 if self.imageAdjContainer.isVisible() else 0,
                 250 if self.subtitleContainer.isVisible() else 0,
                 10000,
                 250 if hasattr(self, 'audioContainer') and self.audioContainer.isVisible() else 0,

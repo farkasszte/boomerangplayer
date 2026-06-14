@@ -155,6 +155,10 @@ class GlobalSettingsUiBuilderMixin:
         self.gsShortcutsBtn.clicked.connect(self.show_shortcuts_dialog)
         self.gsInnerLayout.addWidget(self.gsShortcutsBtn)
 
+        self.gsFileInfoBtn = PushButton()
+        self.gsFileInfoBtn.clicked.connect(self.show_file_info)
+        self.gsInnerLayout.addWidget(self.gsFileInfoBtn)
+
         self.gsAboutBtn = PushButton()
         self.gsAboutBtn.clicked.connect(self.show_about_dialog)
         self.gsInnerLayout.addWidget(self.gsAboutBtn)
@@ -187,6 +191,8 @@ class GlobalSettingsUiBuilderMixin:
         is_visible = self.globalSettingsContainer.isVisible()
         if not is_visible:
             self.settingsContainer.hide()
+            if hasattr(self, 'imageAdjContainer'):
+                self.imageAdjContainer.hide()
             if hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.hide()
         self.globalSettingsContainer.setVisible(not is_visible)
@@ -322,6 +328,8 @@ class GlobalSettingsUiBuilderMixin:
         is_visible = self.settingsContainer.isVisible()
         if not is_visible:
             self.globalSettingsContainer.hide()
+            if hasattr(self, 'imageAdjContainer'):
+                self.imageAdjContainer.hide()
             if hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.hide()
         

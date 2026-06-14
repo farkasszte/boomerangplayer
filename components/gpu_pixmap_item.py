@@ -20,6 +20,12 @@ class GPUPixmapItem(QGraphicsPixmapItem):
         self.contrast = 1.0      # 0.0 to 2.0
         self.gamma = 1.0         # 0.1 to 3.0
         self.saturation = 1.0    # 0.0 to 2.0
+        self.hue = 0.0           # -180.0 to 180.0
+        self.temperature = 0.0   # -100.0 to 100.0
+        self.exposure = 1.0      # 0.1 to 3.0
+        self.invert = 0.0        # 0.0 or 1.0
+        self.sharpen = 0.0       # 0.0 to 100.0
+        self.blur = 0.0          # 0.0 to 100.0
         
         self.texture = None
         self._last_pixmap_id = None
@@ -59,11 +65,17 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             self._new_image_loaded = False
         self.update()
 
-    def update_params(self, b, c, g, s):
+    def update_params(self, b, c, g, s, hue=0.0, temp=0.0, exposure=1.0, invert=0.0, sharpen=0.0, blur=0.0):
         self.brightness = b / 100.0
         self.contrast = c
         self.gamma = g
         self.saturation = s
+        self.hue = hue
+        self.temperature = temp
+        self.exposure = exposure
+        self.invert = invert
+        self.sharpen = sharpen
+        self.blur = blur
         self.update()
 
     def _init_shader(self):
@@ -93,23 +105,72 @@ class GPUPixmapItem(QGraphicsPixmapItem):
         uniform float u_gamma;
         uniform float u_saturation;
         
+        uniform float u_hue;
+        uniform float u_temp;
+        uniform float u_exposure;
+        uniform float u_invert;
+        uniform float u_sharpen;
+        uniform float u_blur;
+        uniform vec2 u_texelSize;
+        
         void main(void) {
             vec4 color = texture2D(u_texture, v_texCoord);
-            
-            // 1. Brightness & Contrast
-            // Apply (x - 0.5) * contrast + 0.5 + brightness
             vec3 rgb = color.rgb;
+            
+            // 0. Blur & Sharpen kernels
+            if (u_blur > 0.0 || u_sharpen > 0.0) {
+                vec3 center = rgb;
+                vec3 top = texture2D(u_texture, v_texCoord + vec2(0.0, u_texelSize.y)).rgb;
+                vec3 bottom = texture2D(u_texture, v_texCoord - vec2(0.0, u_texelSize.y)).rgb;
+                vec3 left = texture2D(u_texture, v_texCoord - vec2(u_texelSize.x, 0.0)).rgb;
+                vec3 right = texture2D(u_texture, v_texCoord + vec2(u_texelSize.x, 0.0)).rgb;
+                
+                if (u_blur > 0.0) {
+                    vec3 blurred = (center * 4.0 + top + bottom + left + right) / 8.0;
+                    rgb = mix(rgb, blurred, u_blur);
+                }
+                if (u_sharpen > 0.0) {
+                    vec3 sharpened = center * 5.0 - (top + bottom + left + right);
+                    rgb = mix(rgb, sharpened, u_sharpen);
+                }
+            }
+            
+            // 1. Exposure
+            if (u_exposure != 1.0) {
+                rgb = rgb * u_exposure;
+            }
+            
+            // 2. Brightness & Contrast
             rgb = (rgb - 0.5) * u_contrast + 0.5 + u_brightness;
             
-            // 2. Gamma
+            // 3. Gamma
             if (u_gamma != 1.0 && u_gamma > 0.0) {
                 rgb = pow(max(rgb, vec3(0.0)), vec3(1.0 / u_gamma));
             }
             
-            // 3. Saturation
+            // 4. Saturation
             if (u_saturation != 1.0) {
                 float gray = dot(rgb, vec3(0.299, 0.587, 0.114));
                 rgb = mix(vec3(gray), rgb, u_saturation);
+            }
+            
+            // 5. Hue Rotation (Rodrigues' rotation formula)
+            if (u_hue != 0.0) {
+                vec3 k = vec3(0.57735, 0.57735, 0.57735);
+                float cosAngle = cos(u_hue);
+                rgb = rgb * cosAngle + cross(k, rgb) * sin(u_hue) + k * dot(k, rgb) * (1.0 - cosAngle);
+            }
+            
+            // 6. Color Temperature
+            if (u_temp != 0.0) {
+                rgb.r = rgb.r + u_temp * 0.15;
+                rgb.b = rgb.b - u_temp * 0.15;
+                rgb.g = rgb.g + u_temp * 0.05;
+            }
+            
+            // 7. Invert / Negative
+            if (u_invert > 0.5) {
+                rgb = vec3(1.0) - rgb;
             }
             
             gl_FragColor = vec4(rgb, color.a * u_opacity);
@@ -177,11 +238,20 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             proj = QMatrix4x4()
             proj.ortho(0, widget.width(), widget.height(), 0, -1, 1)
             
+            import math
+            from PyQt6.QtGui import QVector2D
             self.shader.setUniformValue("matrix", proj * matrix)
             self.shader.setUniformValue("u_brightness", self.brightness)
             self.shader.setUniformValue("u_contrast", self.contrast)
             self.shader.setUniformValue("u_gamma", self.gamma)
             self.shader.setUniformValue("u_saturation", self.saturation)
+            self.shader.setUniformValue("u_hue", float(self.hue * math.pi / 180.0))
+            self.shader.setUniformValue("u_temp", float(self.temperature / 100.0))
+            self.shader.setUniformValue("u_exposure", float(self.exposure))
+            self.shader.setUniformValue("u_invert", float(self.invert))
+            self.shader.setUniformValue("u_sharpen", float(self.sharpen / 100.0))
+            self.shader.setUniformValue("u_blur", float(self.blur / 100.0))
+            self.shader.setUniformValue("u_texelSize", QVector2D(1.0 / max(1, img.width()), 1.0 / max(1, img.height())))
             self.shader.setUniformValue("u_opacity", painter.opacity())
             self.shader.setUniformValue("u_texture", 0)
 

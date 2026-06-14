@@ -21,7 +21,8 @@ class StyleUIMixin:
 
         # Update main UI elements
         sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 'qvSlider',
-                   'brightnessSlider', 'contrastSlider', 'gammaSlider', 'saturationSlider', 'opacitySlider']
+                   'brightnessSlider', 'contrastSlider', 'gammaSlider', 'saturationSlider', 'opacitySlider',
+                   'hueSlider', 'tempSlider', 'exposureSlider', 'sharpenSlider', 'blurSlider']
         for slider_name in sliders:
             if hasattr(self, slider_name):
                 slider = getattr(self, slider_name)
@@ -38,9 +39,9 @@ class StyleUIMixin:
         # Action buttons
         action_btns = ['saveScreenshotBtn', 'sidebarUndoBtn', 'sidebarClearBtn', 'gsSaveBtn', 'gsResetDefaultsBtn', 'thumbSizeBtn',
                        'syncFrameButton', 'saveLoopButton', 'saveFrameButton', 'mirrorButton', 
-                       'mirrorVerticalButton', 'rotateLeftButton', 'rotateRightButton', 'resetAdjButton', 'infoButton',
-                       'smartMarkButton', 'manageMarkersButton', 'deleteMarkerButton', 'clearMarkersButton',
-                       'penColorBtn', 'btn_add', 'btn_sort', 'btn_save', 'btn_clear']
+                        'mirrorVerticalButton', 'rotateLeftButton', 'rotateRightButton', 'resetAdjButton', 'infoButton', 'invertButton',
+                        'smartMarkButton', 'manageMarkersButton', 'deleteMarkerButton', 'clearMarkersButton',
+                        'penColorBtn', 'btn_add', 'btn_sort', 'btn_save', 'btn_clear']
         for btn_name in action_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -68,7 +69,7 @@ class StyleUIMixin:
 
         # Controls card bottom row tool buttons styling
         cc_btns = [
-            'toggleSettingsButton', 'globalSettingsButton', 'toggleSubtitlePanelButton', 'aboutButton',
+            'toggleSettingsButton', 'toggleImageAdjustButton', 'globalSettingsButton', 'toggleSubtitlePanelButton', 'aboutButton',
             'volumeButton', 'toggleAudioButton', 'togglePlaylistButton', 'toggleDrawingButton'
         ]
         for btn_name in cc_btns:
@@ -111,6 +112,7 @@ class StyleUIMixin:
             from qfluentwidgets import FluentIcon
             icons_map = {
                 'toggleSettingsButton': FluentIcon.VIDEO,
+                'toggleImageAdjustButton': FluentIcon.PHOTO,
                 'globalSettingsButton': FluentIcon.SETTING,
                 'toggleSubtitlePanelButton': FluentIcon.CHAT,
                 'aboutButton': FluentIcon.INFO,
@@ -145,7 +147,10 @@ class StyleUIMixin:
         # Update SpinBoxes
         spinboxes = ['speedValueLabel', 'zoomValueLabel', 'cacheValueLabel', 'qvValueSpinBox',
                      'brightnessSpinBox', 'contrastSpinBox', 'gammaSpinBox', 'saturationSpinBox',
-                     'penSizeLabel']
+                     'hueSpinBox', 'tempSpinBox', 'exposureSpinBox', 'sharpenSpinBox', 'blurSpinBox',
+                     'penSizeLabel', 'subFontSizeSpin', 'subBgOpacitySpin', 'subOutlineWidthSpin',
+                     'subShadowBlurSpin', 'subShadowDxSpin', 'subShadowDySpin', 'subOffsetSpin',
+                     'subHOffsetSpin', 'subVOffsetSpin']
         for spin_name in spinboxes:
             if hasattr(self, spin_name):
                 spin = getattr(self, spin_name)
@@ -175,7 +180,7 @@ class StyleUIMixin:
             """)
 
         # Update Global Settings Trigger buttons
-        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn', 'gsShortcutsBtn', 'gsAboutBtn']
+        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn', 'gsShortcutsBtn', 'gsFileInfoBtn', 'gsAboutBtn']
         for btn_name in gs_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -204,7 +209,7 @@ class StyleUIMixin:
                 lbl.setStyleSheet(f"color: {fg_color}; font-size: 13px;")
 
         # Update Sidebar Titles and Category Labels
-        titles = ['settingsTitle', 'globalSettingsTitle', 'drawingSidebarTitle', 'playlistLabel']
+        titles = ['settingsTitle', 'imageAdjTitle', 'globalSettingsTitle', 'drawingSidebarTitle', 'playlistLabel']
         for t_name in titles:
             if hasattr(self, t_name):
                 getattr(self, t_name).setStyleSheet(s['TITLE_STYLE'])
@@ -249,7 +254,7 @@ class StyleUIMixin:
             self.controlsCard.setStyleSheet(transparent_bg_style)
             
         # Sidebars
-        sidebar_containers = ['settingsContainer', 'globalSettingsContainer', 
+        sidebar_containers = ['settingsContainer', 'imageAdjContainer', 'globalSettingsContainer', 
                               'drawingContainer', 'playlistContainer']
         for container_name in sidebar_containers:
             if hasattr(self, container_name):
@@ -269,6 +274,10 @@ class StyleUIMixin:
         # Settings scroll widget
         if hasattr(self, 'settingsScrollWidget'):
             self.settingsScrollWidget.setStyleSheet("background: transparent;")
+        if hasattr(self, 'imageAdjScrollWidget'):
+            self.imageAdjScrollWidget.setStyleSheet("background: transparent;")
+        if hasattr(self, 'imageAdjScrollArea'):
+            self.imageAdjScrollArea.setStyleSheet("background: transparent; border: none;")
         if hasattr(self, 'gsScrollWidget'):
             self.gsScrollWidget.setStyleSheet("background: transparent;")
 

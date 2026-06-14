@@ -104,7 +104,21 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.resetAdjButton.setText(tr('reset_image'))
         
-        self.infoButton.setText(tr('file_info'))
+        if hasattr(self, 'infoButton') and self.infoButton:
+            self.infoButton.setText(tr('file_info'))
+            
+        if hasattr(self, 'hueLabel') and self.hueLabel:
+            self.hueLabel.setText(tr('hue'))
+        if hasattr(self, 'tempLabel') and self.tempLabel:
+            self.tempLabel.setText(tr('temperature'))
+        if hasattr(self, 'exposureLabel') and self.exposureLabel:
+            self.exposureLabel.setText(tr('exposure'))
+        if hasattr(self, 'sharpenLabel') and self.sharpenLabel:
+            self.sharpenLabel.setText(tr('sharpen'))
+        if hasattr(self, 'blurLabel') and self.blurLabel:
+            self.blurLabel.setText(tr('blur'))
+        if hasattr(self, 'invertButton') and self.invertButton:
+            self.invertButton.setText(tr('invert'))
         
         self.loopLabel.setText(tr('loop'))
         
@@ -231,7 +245,21 @@ class GlobalSettingsLocaleManagerMixin:
         
         self.resetAdjButton.setToolTip(tr('tip_reset_image'))
         
-        self.infoButton.setToolTip(tr('tip_file_info'))
+        if hasattr(self, 'infoButton') and self.infoButton:
+            self.infoButton.setToolTip(tr('tip_file_info'))
+            
+        if hasattr(self, 'hueSlider') and self.hueSlider:
+            self.hueSlider.setToolTip(tr('tip_hue'))
+        if hasattr(self, 'tempSlider') and self.tempSlider:
+            self.tempSlider.setToolTip(tr('tip_temperature'))
+        if hasattr(self, 'exposureSlider') and self.exposureSlider:
+            self.exposureSlider.setToolTip(tr('tip_exposure'))
+        if hasattr(self, 'sharpenSlider') and self.sharpenSlider:
+            self.sharpenSlider.setToolTip(tr('tip_sharpen'))
+        if hasattr(self, 'blurSlider') and self.blurSlider:
+            self.blurSlider.setToolTip(tr('tip_blur'))
+        if hasattr(self, 'invertButton') and self.invertButton:
+            self.invertButton.setToolTip(tr('tip_invert'))
         
         if hasattr(self, 'zoomToLoopToggle') and self.zoomToLoopToggle:
             self.zoomToLoopToggle.setToolTip(tr('tip_zoom_to_loop'))
@@ -351,6 +379,9 @@ class GlobalSettingsLocaleManagerMixin:
         
         if hasattr(self, 'gsShortcutsBtn'):
             self.gsShortcutsBtn.setText(tr('playback_shortcuts'))
+        if hasattr(self, 'gsFileInfoBtn') and self.gsFileInfoBtn:
+            self.gsFileInfoBtn.setText(tr('file_info'))
+            self.gsFileInfoBtn.setToolTip(tr('tip_file_info'))
         if hasattr(self, 'gsAboutBtn'):
             self.gsAboutBtn.setText(tr('about'))
         

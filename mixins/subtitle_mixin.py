@@ -456,6 +456,8 @@ class SubtitleMixin:
         if not is_visible:
             if hasattr(self, 'settingsContainer') and self.settingsContainer.isVisible():
                 self.settingsContainer.hide()
+            if hasattr(self, 'imageAdjContainer') and self.imageAdjContainer.isVisible():
+                self.imageAdjContainer.hide()
             if hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible():
                 self.globalSettingsContainer.hide()
                 

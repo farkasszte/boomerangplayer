@@ -1,5 +1,6 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QSlider, QSpinBox
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QSlider
+from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import CaptionLabel, SwitchButton, PushButton, ToolButton
 from styles import TOOL_BTN_STYLE, FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE
 from translations import tr

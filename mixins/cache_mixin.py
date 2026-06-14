@@ -538,11 +538,22 @@ class CacheMixin(CacheMixinBase):
         self.contrastSlider.setValue(100)
         self.gammaSlider.setValue(100)
         self.saturationSlider.setValue(100)
+        if hasattr(self, 'hueSlider') and self.hueSlider: self.hueSlider.setValue(0)
+        if hasattr(self, 'tempSlider') and self.tempSlider: self.tempSlider.setValue(0)
+        if hasattr(self, 'exposureSlider') and self.exposureSlider: self.exposureSlider.setValue(0)
+        if hasattr(self, 'sharpenSlider') and self.sharpenSlider: self.sharpenSlider.setValue(0)
+        if hasattr(self, 'blurSlider') and self.blurSlider: self.blurSlider.setValue(0)
+        if hasattr(self, 'invertButton') and self.invertButton: self.invertButton.setChecked(False)
         
         if hasattr(self, 'brightnessSpinBox'): self.brightnessSpinBox.setValue(0)
         if hasattr(self, 'contrastSpinBox'): self.contrastSpinBox.setValue(100)
         if hasattr(self, 'gammaSpinBox'): self.gammaSpinBox.setValue(100)
         if hasattr(self, 'saturationSpinBox'): self.saturationSpinBox.setValue(100)
+        if hasattr(self, 'hueSpinBox') and self.hueSpinBox: self.hueSpinBox.setValue(0)
+        if hasattr(self, 'tempSpinBox') and self.tempSpinBox: self.tempSpinBox.setValue(0)
+        if hasattr(self, 'exposureSpinBox') and self.exposureSpinBox: self.exposureSpinBox.setValue(0)
+        if hasattr(self, 'sharpenSpinBox') and self.sharpenSpinBox: self.sharpenSpinBox.setValue(0)
+        if hasattr(self, 'blurSpinBox') and self.blurSpinBox: self.blurSpinBox.setValue(0)
         
         self.isMirrored = False
         self.isMirroredVertical = False
@@ -633,12 +644,19 @@ class CacheMixin(CacheMixinBase):
             c = self.contrastSlider.value() / 100.0
             g = self.gammaSlider.value() / 100.0
             s = self.saturationSlider.value() / 100.0
+            hue_val = self.hueSlider.value() if hasattr(self, 'hueSlider') else 0
+            temp_val = self.tempSlider.value() if hasattr(self, 'tempSlider') else 0
+            exp_val = self.exposureSlider.value() if hasattr(self, 'exposureSlider') else 0
+            exposure_mult = 1.0 + exp_val / 50.0 if exp_val >= 0 else 1.0 + exp_val / 111.0
+            invert_val = 1.0 if (hasattr(self, 'invertButton') and self.invertButton.isChecked()) else 0.0
+            sharpen_val = self.sharpenSlider.value() if hasattr(self, 'sharpenSlider') else 0
+            blur_val = self.blurSlider.value() if hasattr(self, 'blurSlider') else 0
 
             gpu_enabled = self.config.get('gpu_acceleration', False)
             if gpu_enabled:
                 if self.pixmapItem is not None:
                     if target_index == getattr(self, '_last_rendered_index', -1):
-                        self.pixmapItem.update_params(b, c, g, s)
+                        self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
                     else:
                         image = QImage()
                         if isinstance(data, bytes):
@@ -647,7 +665,7 @@ class CacheMixin(CacheMixinBase):
                             image.load(data)
                         
                         self.pixmapItem.setImage(image)
-                        self.pixmapItem.update_params(b, c, g, s)
+                        self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
                         
                         fit_val = False
                         if getattr(self, 'is_motion_photo', False):
@@ -673,17 +691,41 @@ class CacheMixin(CacheMixinBase):
                     self._current_base_image = img
                     self._last_base_index = target_index
 
-                if b != 0 or c != 1.0 or g != 1.0 or s != 1.0:
+                if b != 0 or c != 1.0 or g != 1.0 or s != 1.0 or hue_val != 0 or temp_val != 0 or exposure_mult != 1.0 or invert_val != 0 or sharpen_val > 0 or blur_val > 0:
                     img = img.convertToFormat(QImage.Format.Format_ARGB32)
                     width, height = img.width(), img.height()
                     ptr = img.bits()
                     ptr.setsize(img.sizeInBytes())
                     arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
+                    # 1. Blur & Sharpen
+                    if blur_val > 0 or sharpen_val > 0:
+                        orig = arr[:, :, :3].astype(np.float32)
+                        top = np.roll(orig, -1, axis=0)
+                        bottom = np.roll(orig, 1, axis=0)
+                        left = np.roll(orig, -1, axis=1)
+                        right = np.roll(orig, 1, axis=1)
+                        
+                        if blur_val > 0:
+                            blurred = (orig * 4.0 + top + bottom + left + right) / 8.0
+                            orig = orig + (blur_val / 100.0) * (blurred - orig)
+                            
+                        if sharpen_val > 0:
+                            sharpened = orig * 5.0 - (top + bottom + left + right)
+                            orig = orig + (sharpen_val / 100.0) * (sharpened - orig)
+                            
+                        arr[:, :, :3] = np.clip(orig, 0, 255).astype(np.uint8)
+
+                    # 2. Exposure
+                    if exposure_mult != 1.0:
+                        arr[:, :, :3] = np.clip(arr[:, :, :3].astype(np.float32) * exposure_mult, 0, 255).astype(np.uint8)
+
+                    # 3. Brightness, Contrast & Gamma
                     if b != 0 or c != 1.0 or g != 1.0:
                         lut = self._get_adj_lut(b, c, g)
                         arr[:, :, :3] = lut[arr[:, :, :3]]
 
+                    # 4. Saturation
                     if s != 1.0:
                         b_chan = arr[:, :, 0].astype(np.float32)
                         g_chan = arr[:, :, 1].astype(np.float32)
@@ -694,6 +736,38 @@ class CacheMixin(CacheMixinBase):
                         arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
                         arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
                         arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
+
+                    # 5. Hue Rotation (YIQ space rotation)
+                    if hue_val != 0:
+                        rad = hue_val * np.pi / 180.0
+                        cos_a = np.cos(rad)
+                        sin_a = np.sin(rad)
+                        
+                        r_ch = arr[:, :, 2].astype(np.float32)
+                        g_ch = arr[:, :, 1].astype(np.float32)
+                        b_ch = arr[:, :, 0].astype(np.float32)
+                        
+                        y = 0.299 * r_ch + 0.587 * g_ch + 0.114 * b_ch
+                        u = -0.147 * r_ch - 0.289 * g_ch + 0.436 * b_ch
+                        v = 0.615 * r_ch - 0.515 * g_ch - 0.100 * b_ch
+                        
+                        u_prime = u * cos_a - v * sin_a
+                        v_prime = u * sin_a + v * cos_a
+                        
+                        arr[:, :, 2] = np.clip(y + 1.140 * v_prime, 0, 255).astype(np.uint8)
+                        arr[:, :, 1] = np.clip(y - 0.395 * u_prime - 0.581 * v_prime, 0, 255).astype(np.uint8)
+                        arr[:, :, 0] = np.clip(y + 2.032 * u_prime, 0, 255).astype(np.uint8)
+
+                    # 6. Temperature (Warmth)
+                    if temp_val != 0:
+                        shift = temp_val * 0.15 * 2.55
+                        arr[:, :, 2] = np.clip(arr[:, :, 2].astype(np.float32) + shift, 0, 255).astype(np.uint8)
+                        arr[:, :, 0] = np.clip(arr[:, :, 0].astype(np.float32) - shift, 0, 255).astype(np.uint8)
+                        arr[:, :, 1] = np.clip(arr[:, :, 1].astype(np.float32) + shift * 0.33, 0, 255).astype(np.uint8)
+
+                    # 7. Invert / Negative
+                    if invert_val > 0.5:
+                        arr[:, :, :3] = 255 - arr[:, :, :3]
 
                 pixmap = QPixmap.fromImage(img)
 

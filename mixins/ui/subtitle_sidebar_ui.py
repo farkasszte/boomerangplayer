@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
-                              QWidget, QComboBox, QSpinBox)
+                              QWidget, QComboBox)
+from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea)
 from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE)

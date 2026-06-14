@@ -5,7 +5,8 @@ SettingsMixin — video settings sidebar builder (speed, zoom, cache,
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
-                              QGridLayout, QWidget, QComboBox, QSpinBox)
+                              QGridLayout, QWidget, QComboBox)
+from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, ToolButton, FluentIcon,
                              FluentIconBase, Theme)
@@ -55,6 +56,12 @@ class SettingsMixin(SettingsMixinBase):
         contrastSlider: QSlider
         gammaSlider: QSlider
         saturationSlider: QSlider
+        hueSlider: QSlider
+        tempSlider: QSlider
+        exposureSlider: QSlider
+        sharpenSlider: QSlider
+        blurSlider: QSlider
+        invertButton: QPushButton
         is_motion_photo: bool
         
         update_zoom: callable
@@ -96,7 +103,6 @@ class SettingsMixin(SettingsMixinBase):
         self._build_speed_section()
         self._build_zoom_section()
         self._build_cache_section()
-        self._build_image_adj_section()
         self._build_loop_section()
         self._build_markers_section()
         self._build_sync_section()
@@ -347,11 +353,59 @@ class SettingsMixin(SettingsMixinBase):
         hline2.setFrameShadow(QFrame.Shadow.Sunken)
         self.settingsInnerLayout.addWidget(hline2)
 
-    def _build_image_adj_section(self):
-        self.adjLabel = CaptionLabel(tr('image_adjustments'))
-        self.adjLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
-        self.settingsInnerLayout.addWidget(self.adjLabel)
+    def init_image_adj_sidebar(self):
+        self.imageAdjContainer = QFrame()
+        self.imageAdjContainer.setMinimumWidth(250)
+        self.imageAdjContainer.setStyleSheet("background: #202020; border: none;")
+        self.imageAdjLayout = QVBoxLayout(self.imageAdjContainer)
+        self.imageAdjLayout.setContentsMargins(10, 10, 4, 10)
+        self.imageAdjLayout.setSpacing(6)
 
+        self.imageAdjTitle = CaptionLabel(tr('image_adjustments'))
+        self.imageAdjTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.adjLabel = self.imageAdjTitle
+        self.imageAdjLayout.addWidget(self.imageAdjTitle)
+
+        self.imageAdjScrollArea = SingleDirectionScrollArea(self.imageAdjContainer, Qt.Orientation.Vertical)
+        self.imageAdjScrollArea.setWidgetResizable(True)
+        self.imageAdjScrollArea.setStyleSheet("background: transparent; border: none;")
+        self.imageAdjScrollArea.setFrameShape(QFrame.Shape.NoFrame)
+        self.imageAdjScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.imageAdjScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        self.imageAdjScrollWidget = QWidget()
+        self.imageAdjScrollWidget.setStyleSheet("background: transparent;")
+        self.imageAdjInnerLayout = QVBoxLayout(self.imageAdjScrollWidget)
+        self.imageAdjInnerLayout.setContentsMargins(0, 0, 0, 0)
+        self.imageAdjInnerLayout.setSpacing(6)
+
+        self.imageAdjScrollArea.setWidget(self.imageAdjScrollWidget)
+        self.imageAdjLayout.addWidget(self.imageAdjScrollArea)
+
+        self._build_image_adj_section()
+
+        self.imageAdjInnerLayout.addStretch(1)
+        self.imageAdjContainer.hide()
+
+    def toggle_image_adj(self):
+        is_visible = self.imageAdjContainer.isVisible()
+        if not is_visible:
+            self.globalSettingsContainer.hide()
+            self.settingsContainer.hide()
+            if hasattr(self, 'subtitleContainer'):
+                self.subtitleContainer.hide()
+        
+        self.imageAdjContainer.setVisible(not is_visible)
+        if hasattr(self, 'update_sidebar_fullscreen_state'):
+            self.update_sidebar_fullscreen_state()
+
+        if not is_visible and not getattr(self, 'is_full_screen', False):
+            sizes = self.mainSplitter.sizes()
+            if len(sizes) > 2 and sizes[2] < 250:
+                sizes[2] = 250
+                self.mainSplitter.setSizes(sizes)
+
+    def _build_image_adj_section(self):
         def create_adj_slider(label_text, min_val, max_val, default, tip_key):
             layout = QVBoxLayout()
             header = QHBoxLayout()
@@ -397,11 +451,16 @@ class SettingsMixin(SettingsMixinBase):
         self.contrastSlider,   self.contrastLabel,   l2, self.contrastSpinBox   = create_adj_slider(tr('contrast'),     0, 200, 100, 'tip_contrast')
         self.gammaSlider,      self.gammaLabel,      l3, self.gammaSpinBox      = create_adj_slider(tr('gamma'),        10, 300, 100, 'tip_gamma')
         self.saturationSlider, self.saturationLabel, l4, self.saturationSpinBox = create_adj_slider(tr('saturation'),    0, 200, 100, 'tip_saturation')
+        self.hueSlider,        self.hueLabel,        l5, self.hueSpinBox        = create_adj_slider(tr('hue'),       -180, 180, 0, 'tip_hue')
+        self.tempSlider,       self.tempLabel,       l6, self.tempSpinBox       = create_adj_slider(tr('temperature'),-100, 100, 0, 'tip_temperature')
+        self.exposureSlider,   self.exposureLabel,   l7, self.exposureSpinBox   = create_adj_slider(tr('exposure'),   -100, 100, 0, 'tip_exposure')
+        self.sharpenSlider,    self.sharpenLabel,    l8, self.sharpenSpinBox    = create_adj_slider(tr('sharpen'),      0, 100, 0, 'tip_sharpen')
+        self.blurSlider,       self.blurLabel,       l9, self.blurSpinBox       = create_adj_slider(tr('blur'),         0, 100, 0, 'tip_blur')
 
-        for l in [l1, l2, l3, l4]:
-            self.settingsInnerLayout.addLayout(l)
+        for l in [l1, l2, l3, l4, l5, l6, l7, l8, l9]:
+            self.imageAdjInnerLayout.addLayout(l)
 
-        # Mirror and Rotate buttons (placed BEFORE the Alaphelyzet button)
+        # Mirror, Rotate, and Invert buttons
         self.mirrorButton = PushButton(tr('mirror_h'))
         self.mirrorButton.setToolTip(tr('tip_mirror_h'))
         
@@ -420,42 +479,46 @@ class SettingsMixin(SettingsMixinBase):
         
         self.rotateRightButton.clicked.connect(self.rotate_video_right)
 
-        for btn in [self.mirrorButton, self.mirrorVerticalButton, self.rotateLeftButton, self.rotateRightButton]:
+        self.invertButton = PushButton(tr('invert'))
+        self.invertButton.setToolTip(tr('tip_invert'))
+        self.invertButton.setCheckable(True)
+        self.invertButton.clicked.connect(self.update_pixmap_from_cache)
+
+        for btn in [self.mirrorButton, self.mirrorVerticalButton, self.rotateLeftButton, self.rotateRightButton, self.invertButton]:
             btn.setStyleSheet(ACTION_BTN_STYLE)
 
         mirrorRow = QHBoxLayout()
         mirrorRow.setSpacing(6)
         mirrorRow.addWidget(self.mirrorButton)
         mirrorRow.addWidget(self.mirrorVerticalButton)
-        self.settingsInnerLayout.addLayout(mirrorRow)
+        self.imageAdjInnerLayout.addLayout(mirrorRow)
 
         rotateRow = QHBoxLayout()
         rotateRow.setSpacing(6)
         rotateRow.addWidget(self.rotateLeftButton)
         rotateRow.addWidget(self.rotateRightButton)
-        self.settingsInnerLayout.addLayout(rotateRow)
+        self.imageAdjInnerLayout.addLayout(rotateRow)
 
-        # Footer row with Alaphelyzet (Reset Image) and Fájl infó (File Info)
+        invertRow = QHBoxLayout()
+        invertRow.setSpacing(6)
+        invertRow.addWidget(self.invertButton)
+        self.imageAdjInnerLayout.addLayout(invertRow)
+
+        # Footer row with Alaphelyzet (Reset Image)
         footerLayout = QHBoxLayout()
         footerLayout.setSpacing(6)
         self.resetAdjButton = PushButton(tr('reset_image'))
         self.resetAdjButton.setToolTip(tr('tip_reset_image'))
         
         self.resetAdjButton.clicked.connect(self.reset_adjustments)
-        self.infoButton = PushButton(tr('file_info'))
-        self.infoButton.setToolTip(tr('tip_file_info'))
-        
-        self.infoButton.clicked.connect(self.show_file_info)
-        for btn in [self.resetAdjButton, self.infoButton]:
-            btn.setStyleSheet(ACTION_BTN_STYLE)
+        self.resetAdjButton.setStyleSheet(ACTION_BTN_STYLE)
         footerLayout.addWidget(self.resetAdjButton)
-        footerLayout.addWidget(self.infoButton)
-        self.settingsInnerLayout.addLayout(footerLayout)
+        self.imageAdjInnerLayout.addLayout(footerLayout)
 
         hline3 = QFrame()
         hline3.setFrameShape(QFrame.Shape.HLine)
         hline3.setFrameShadow(QFrame.Shadow.Sunken)
-        self.settingsInnerLayout.addWidget(hline3)
+        self.imageAdjInnerLayout.addWidget(hline3)
 
     def _build_loop_section(self):
         loopGroup = QVBoxLayout()

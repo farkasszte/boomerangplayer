@@ -22,6 +22,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
         currentVideoPath: str | None
         fps: float
         infoButton: QPushButton
+        gsFileInfoBtn: QPushButton
         mediaPlayer: QMediaPlayer
 
     def show_file_info(self):
@@ -176,8 +177,11 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                 pass  # path already in info_text above
 
             # Show menu next to the info button
-            
-            pos = self.infoButton.mapToGlobal(QPoint(0, self.infoButton.height() + 5))
+            button = getattr(self, 'gsFileInfoBtn', None) or getattr(self, 'infoButton', None)
+            if button:
+                pos = button.mapToGlobal(QPoint(0, button.height() + 5))
+            else:
+                pos = self.mapToGlobal(QPoint(100, 100))
             menu.exec(pos)
 
         except Exception as e:

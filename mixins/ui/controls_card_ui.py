@@ -57,6 +57,12 @@ class ControlsCardUIMixin:
         self.toggleSettingsButton.clicked.connect(self.toggle_settings)
         buttonsLayout.addWidget(self.toggleSettingsButton)
 
+        self.toggleImageAdjustButton = ToolButton(FluentIcon.PHOTO)
+        self.toggleImageAdjustButton.setToolTip(tr('image_adjustments'))
+        self.toggleImageAdjustButton.setFixedSize(32, 32)
+        self.toggleImageAdjustButton.clicked.connect(self.toggle_image_adj)
+        buttonsLayout.addWidget(self.toggleImageAdjustButton)
+
         self.toggleSubtitlePanelButton = ToolButton(FluentIcon.CHAT)
         self.toggleSubtitlePanelButton.setToolTip(tr('subtitles'))
         self.toggleSubtitlePanelButton.setFixedSize(32, 32)
@@ -233,6 +239,8 @@ class ControlsCardUIMixin:
                 self.drawingContainer.show()
             if hidden_sidebars.get('settings') and hasattr(self, 'settingsContainer'):
                 self.settingsContainer.show()
+            if hidden_sidebars.get('image_adj') and hasattr(self, 'imageAdjContainer'):
+                self.imageAdjContainer.show()
             if hidden_sidebars.get('subtitle') and hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.show()
             if hidden_sidebars.get('audio') and hasattr(self, 'audioContainer'):
@@ -268,6 +276,7 @@ class ControlsCardUIMixin:
                 'playlist': hasattr(self, 'playlistContainer') and self.playlistContainer.isVisible(),
                 'drawing': hasattr(self, 'drawingContainer') and self.drawingContainer.isVisible(),
                 'settings': hasattr(self, 'settingsContainer') and self.settingsContainer.isVisible(),
+                'image_adj': hasattr(self, 'imageAdjContainer') and self.imageAdjContainer.isVisible(),
                 'global_settings': hasattr(self, 'globalSettingsContainer') and self.globalSettingsContainer.isVisible(),
                 'subtitle': hasattr(self, 'subtitleContainer') and self.subtitleContainer.isVisible(),
                 'audio': hasattr(self, 'audioContainer') and self.audioContainer.isVisible()
@@ -284,6 +293,8 @@ class ControlsCardUIMixin:
                 self.drawingContainer.hide()
             if hasattr(self, 'settingsContainer'):
                 self.settingsContainer.hide()
+            if hasattr(self, 'imageAdjContainer'):
+                self.imageAdjContainer.hide()
             if hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.hide()
             if hasattr(self, 'audioContainer'):
