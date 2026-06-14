@@ -75,6 +75,7 @@ class DrawingSidebarUIMixin:
             (tr('measure'),      'measure',      tr('tip_measure')),
             (tr('obj_eraser'),   'obj_eraser',   tr('tip_obj_eraser')),
             (tr('area_eraser'),  'area_eraser',  tr('tip_area_eraser')),
+            (tr('watermark'),    'watermark',    tr('tip_watermark')),
         ]
 
         for i, (label, tool_id, tip) in enumerate(all_tools):
@@ -96,6 +97,7 @@ class DrawingSidebarUIMixin:
             elif tool_id == 'obj_eraser':    self.objEraserTool = btn
             elif tool_id == 'area_eraser':   self.areaEraserTool = btn
             elif tool_id == 'measure':       self.measureTool = btn
+            elif tool_id == 'watermark':     self.watermarkTool = btn
 
             self.toolGroup.addButton(btn)
             

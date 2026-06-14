@@ -30,7 +30,7 @@ class StyleUIMixin:
         
         # Tool buttons
         tool_btns = ['penTool', 'lineTool', 'arrowTool', 'textTool', 'rectTool', 
-                     'ellipseTool', 'triangleTool', 'objEraserTool', 'areaEraserTool', 'measureTool']
+                     'ellipseTool', 'triangleTool', 'objEraserTool', 'areaEraserTool', 'measureTool', 'watermarkTool']
         for btn_name in tool_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)

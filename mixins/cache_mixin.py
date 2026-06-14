@@ -265,7 +265,8 @@ class CacheMixin(CacheMixinBase):
         self.extraction_thread.start()
 
     def on_first_frame_extracted(self, frame_dict, temp_dir, start_frame, num_frames):
-        print(f"[on_first_frame_extracted] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={self.currentFilePath}")
+        path_safe = self.currentFilePath.encode('ascii', errors='replace').decode('ascii') if self.currentFilePath else ""
+        print(f"[on_first_frame_extracted] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={path_safe}")
         if not self.currentFilePath or not self.extraction_thread or temp_dir != self.current_temp_dir:
             print("[on_first_frame_extracted] Early abort: invalid file path, missing thread, or temp_dir mismatch.")
             self.loadingOverlay.hide()

@@ -1,10 +1,89 @@
 import math
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
-from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont
+from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath, QPainterPathStroker, QFont, QPixmap, QImage
 from PyQt6.QtWidgets import (QGraphicsView, QInputDialog, QGraphicsPathItem, 
                              QGraphicsTextItem, QGraphicsEllipseItem, QGraphicsItemGroup,
-                             QGraphicsScene)
+                             QGraphicsScene, QFileDialog, QGraphicsPixmapItem,
+                             QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider)
 from translations import tr
+
+class WatermarkPropertiesDialog(QDialog):
+    def __init__(self, item, parent=None):
+        super().__init__(parent)
+        self.item = item
+        self.setWindowTitle(tr('watermark_properties'))
+        self.setFixedWidth(300)
+        self.setStyleSheet("background: #202020; color: white;")
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(12)
+        
+        # Opacity Slider
+        opacity_layout = QHBoxLayout()
+        self.opacity_lbl = QLabel(f"{tr('watermark_opacity_title')}: {int(item.opacity() * 100)}%")
+        self.opacity_lbl.setStyleSheet("color: white; font-size: 12px; border: none;")
+        opacity_layout.addWidget(self.opacity_lbl)
+        
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(0, 100)
+        self.slider.setValue(int(item.opacity() * 100))
+        
+        layout.addLayout(opacity_layout)
+        layout.addWidget(self.slider)
+        
+        # Live preview connection
+        self.slider.valueChanged.connect(self.on_opacity_changed)
+        
+        # Scale Slider
+        scale_layout = QHBoxLayout()
+        self.scale_lbl = QLabel(f"{tr('watermark_scale')}: 100%")
+        self.scale_lbl.setStyleSheet("color: white; font-size: 12px; border: none;")
+        scale_layout.addWidget(self.scale_lbl)
+        
+        self.scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self.scale_slider.setRange(10, 300)
+        self.scale_slider.setValue(100)
+        
+        layout.addLayout(scale_layout)
+        layout.addWidget(self.scale_slider)
+        
+        self.scale_slider.valueChanged.connect(self.on_scale_changed)
+        self.original_pixmap = item.pixmap()
+        self.original_scale = 1.0
+        
+        # Buttons
+        from qfluentwidgets import PushButton
+        from styles import ACTION_BTN_STYLE
+        btn_layout = QHBoxLayout()
+        self.delete_btn = PushButton(tr('delete'))
+        self.delete_btn.setStyleSheet(ACTION_BTN_STYLE)
+        self.delete_btn.clicked.connect(self.on_delete)
+        self.ok_btn = PushButton(tr('ok'))
+        self.ok_btn.setStyleSheet(ACTION_BTN_STYLE)
+        self.ok_btn.clicked.connect(self.accept)
+        
+        btn_layout.addWidget(self.delete_btn)
+        btn_layout.addStretch(1)
+        btn_layout.addWidget(self.ok_btn)
+        layout.addLayout(btn_layout)
+        
+    def on_opacity_changed(self, val):
+        opacity = val / 100.0
+        self.item.setOpacity(opacity)
+        self.opacity_lbl.setText(f"{tr('watermark_opacity_title')}: {val}%")
+        
+    def on_scale_changed(self, val):
+        scale = val / 100.0
+        w = int(self.original_pixmap.width() * scale)
+        h = int(self.original_pixmap.height() * scale)
+        scaled_pix = self.original_pixmap.scaled(max(1, w), max(1, h), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        self.item.setPixmap(scaled_pix)
+        self.scale_lbl.setText(f"{tr('watermark_scale')}: {val}%")
+        
+    def on_delete(self):
+        self.done(2)
+
 
 class ZoomView(QGraphicsView):
     zoomChanged = pyqtSignal(float)
@@ -109,6 +188,16 @@ class ZoomView(QGraphicsView):
             self.original_paths_in_drag = {}
             scene_pos = self.mapToScene(event.pos())
             
+            # If clicked on a watermark, allow dragging it directly even in drawing mode
+            clicked_items = self.scene().items(scene_pos)
+            for item in clicked_items:
+                if isinstance(item, QGraphicsPixmapItem) and item in self.strokes:
+                    self.moving_watermark_item = item
+                    self.watermark_start_pos = item.pos()
+                    self.watermark_drag_offset = scene_pos - item.pos()
+                    super().mousePressEvent(event)
+                    return
+            
             if self.drawing_tool in ['obj_eraser', 'stroke_eraser']:
                 self.perform_object_erase(scene_pos)
                 self.last_eraser_pos = scene_pos
@@ -126,6 +215,38 @@ class ZoomView(QGraphicsView):
                     self.scene().addItem(path_item)
                     self.strokes.append(path_item)
                     self.current_undo_transaction.append(('add', path_item))
+                return
+            elif self.drawing_tool == 'watermark':
+                self.text_preview_item.hide()
+                import os
+                fileName, _ = QFileDialog.getOpenFileName(
+                    self,
+                    tr('select_watermark_title'),
+                    "",
+                    f"{tr('image_files_filter')} (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.avif *.ico)"
+                )
+                if fileName and os.path.exists(fileName):
+                    opacity, ok = QInputDialog.getDouble(self, tr('watermark_opacity_title'), tr('enter_opacity'), 0.5, 0.0, 1.0, 2)
+                    if ok:
+                        pixmap = QPixmap(fileName)
+                        max_dim = max(100, self.pen_width * 50)
+                        if pixmap.width() > max_dim or pixmap.height() > max_dim:
+                            pixmap = pixmap.scaled(max_dim, max_dim, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                        
+                        path_item = QGraphicsPixmapItem(pixmap)
+                        path_item.setOpacity(opacity)
+                        path_item.setPos(scene_pos - QPointF(pixmap.width()/2.0, pixmap.height()/2.0))
+                        path_item.setZValue(1000)
+                        
+                        path_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsMovable, True)
+                        path_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsSelectable, True)
+                        
+                        self.scene().addItem(path_item)
+                        self.strokes.append(path_item)
+                        self.current_undo_transaction.append(('add', path_item))
+                        self.undo_stack.append(self.current_undo_transaction)
+                        self.current_undo_transaction = []
+                        self.strokesChanged.emit()
                 return
             elif self.drawing_tool == 'measure':
                 self.current_undo_transaction = []
@@ -172,11 +293,46 @@ class ZoomView(QGraphicsView):
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            scene_pos = self.mapToScene(event.pos())
+            clicked_items = self.scene().items(scene_pos)
+            for item in clicked_items:
+                if isinstance(item, QGraphicsPixmapItem) and item in self.strokes:
+                    old_opacity = item.opacity()
+                    old_pixmap = item.pixmap()
+                    old_pos = item.pos()
+                    
+                    dialog = WatermarkPropertiesDialog(item, self)
+                    res = dialog.exec()
+                    if res == 2: # Delete
+                        self.current_undo_transaction = [('delete', item, None, None, None, item.zValue())]
+                        self.undo_stack.append(self.current_undo_transaction)
+                        self.current_undo_transaction = []
+                        self.scene().removeItem(item)
+                        self.strokes.remove(item)
+                        self.strokesChanged.emit()
+                    elif res == QDialog.DialogCode.Accepted:
+                        self.current_undo_transaction = [('modify_watermark', item, old_opacity, old_pixmap, old_pos)]
+                        self.undo_stack.append(self.current_undo_transaction)
+                        self.current_undo_transaction = []
+                        self.strokesChanged.emit()
+                    else:
+                        item.setOpacity(old_opacity)
+                        item.setPixmap(old_pixmap)
+                        item.setPos(old_pos)
+                    return
             self.doubleClicked.emit()
         else:
             super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
+        if getattr(self, 'moving_watermark_item', None) is not None:
+            curr_pos = self.mapToScene(event.pos())
+            offset = getattr(self, 'watermark_drag_offset', QPointF(0,0))
+            self.moving_watermark_item.setPos(curr_pos - offset)
+            self.cursor_item.setPos(curr_pos)
+            super().mouseMoveEvent(event)
+            return
+
         if self.drawing_mode:
             curr_pos = self.mapToScene(event.pos())
             self.cursor_item.setPos(curr_pos)
@@ -506,6 +662,13 @@ class ZoomView(QGraphicsView):
         return subpaths
 
     def mouseReleaseEvent(self, event):
+        if getattr(self, 'moving_watermark_item', None) is not None:
+            if self.moving_watermark_item.pos() != self.watermark_start_pos:
+                move_transaction = [('modify_watermark', self.moving_watermark_item, self.moving_watermark_item.opacity(), self.moving_watermark_item.pixmap(), self.watermark_start_pos)]
+                self.undo_stack.append(move_transaction)
+                self.strokesChanged.emit()
+            self.moving_watermark_item = None
+
         if self.drawing_mode and event.button() == Qt.MouseButton.LeftButton:
             was_eraser = self.drawing_tool in ['obj_eraser', 'area_eraser', 'stroke_eraser']
             
@@ -565,6 +728,11 @@ class ZoomView(QGraphicsView):
                     item.setPath(old_path)
                     item.setPen(old_pen)
                     item.setBrush(old_brush)
+                elif type == 'modify_watermark':
+                    item, old_opacity, old_pixmap, old_pos = action[1], action[2], action[3], action[4]
+                    item.setOpacity(old_opacity)
+                    item.setPixmap(old_pixmap)
+                    item.setPos(old_pos)
             self.strokesChanged.emit()
 
     def clear_strokes(self):
@@ -621,6 +789,25 @@ class ZoomView(QGraphicsView):
                 'transform': [t.m11(), t.m12(), t.m13(), t.m21(), t.m22(), t.m23(), t.m31(), t.m32(), t.m33()]
             }
             
+        elif isinstance(item, QGraphicsPixmapItem):
+            import base64
+            from PyQt6.QtCore import QByteArray, QBuffer, QIODevice
+            pixmap = item.pixmap()
+            ba = QByteArray()
+            buffer = QBuffer(ba)
+            buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+            pixmap.toImage().save(buffer, "PNG")
+            b64 = base64.b64encode(ba.data()).decode('utf-8')
+            t = item.transform()
+            return {
+                'type': 'watermark',
+                'image_b64': b64,
+                'opacity': item.opacity(),
+                'pos': (item.pos().x(), item.pos().y()),
+                'z': item.zValue(),
+                'transform': [t.m11(), t.m12(), t.m13(), t.m21(), t.m22(), t.m23(), t.m31(), t.m32(), t.m33()]
+            }
+            
         elif isinstance(item, QGraphicsTextItem):
             t = item.transform()
             return {
@@ -664,7 +851,7 @@ class ZoomView(QGraphicsView):
                             self.scene().addItem(item)
                             self.strokes.append(item)
                     except Exception as e:
-                        print(f"Error deserializing stroke data {data}: {e}")
+                         print(f"Error deserializing stroke data {data}: {e}")
         finally:
             self.blockSignals(False)
         self.strokesChanged.emit()
@@ -720,6 +907,26 @@ class ZoomView(QGraphicsView):
                 brush.setStyle(Qt.BrushStyle(b_data.get('style', 0)))
                 item.setBrush(brush)
                 
+            item.setZValue(data.get('z', 1000))
+            pos = data.get('pos', (0,0))
+            item.setPos(QPointF(pos[0], pos[1]))
+            item.setTransform(t)
+            return item
+            
+        elif item_type == 'watermark':
+            import base64
+            from PyQt6.QtCore import QByteArray
+            from PyQt6.QtGui import QImage, QPixmap
+            from PyQt6.QtWidgets import QGraphicsPixmapItem
+            
+            b64 = data.get('image_b64', '')
+            ba = QByteArray.fromBase64(b64.encode('utf-8'))
+            img = QImage()
+            img.loadFromData(ba)
+            pixmap = QPixmap.fromImage(img)
+            
+            item = QGraphicsPixmapItem(pixmap)
+            item.setOpacity(data.get('opacity', 0.5))
             item.setZValue(data.get('z', 1000))
             pos = data.get('pos', (0,0))
             item.setPos(QPointF(pos[0], pos[1]))

@@ -320,6 +320,9 @@ class GlobalSettingsLocaleManagerMixin:
         self.areaEraserTool.setText(tr('area_eraser'))
         
         self.measureTool.setText(tr('measure'))
+        
+        if hasattr(self, 'watermarkTool') and self.watermarkTool:
+            self.watermarkTool.setText(tr('watermark'))
 
         
         self.penTool.setToolTip(tr('tip_pen'))
@@ -341,6 +344,9 @@ class GlobalSettingsLocaleManagerMixin:
         self.areaEraserTool.setToolTip(tr('tip_area_eraser'))
         
         self.measureTool.setToolTip(tr('tip_measure'))
+        
+        if hasattr(self, 'watermarkTool') and self.watermarkTool:
+            self.watermarkTool.setToolTip(tr('tip_watermark'))
         
         self.sidebarUndoBtn.setToolTip(tr('tip_undo'))
         
