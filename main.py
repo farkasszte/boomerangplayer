@@ -44,7 +44,7 @@ def main():
             self.showOpacityAni.setEndValue(1)
             self.showOpacityAni.setDuration(200)
             self.showOpacityAni.setEasingCurve(QEasingCurve.Type.InSine)
-            self.showOpacityAni.finished.connect(lambda: self.setGraphicsEffect(None))
+            self.showOpacityAni.finished.connect(lambda: opacityEffect.setOpacity(1.0))
             self.showOpacityAni.start()
             super(MaskDialogBase, self).showEvent(e)
 
