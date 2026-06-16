@@ -9,38 +9,43 @@ class Configuration(dict):
     validates settings, and supports persistence operations.
     """
     def __init__(self):
+        self._loading = True
         super().__init__()
         self.load()
 
     def load(self):
-        self.clear()
-        self.update(DEFAULT_CONFIG)
-        
-        path = get_config_path()
-        if os.path.exists(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    
-                    # Prevent custom dictionary pollution and merge carefully
-                    for k, v in data.items():
-                        if k == 'shortcuts' and isinstance(v, dict):
-                            # Merge shortcuts specifically
-                            merged_shortcuts = DEFAULT_CONFIG['shortcuts'].copy()
-                            merged_shortcuts.update(v)
-                            self['shortcuts'] = merged_shortcuts
-                        elif k == 'palette' and isinstance(v, list):
-                            # Ensure palette is a valid list of hex colors
-                            valid_palette = []
-                            for color in v:
-                                if isinstance(color, str) and color.startswith('#'):
-                                    valid_palette.append(color.upper())
-                            if valid_palette:
-                                self['palette'] = valid_palette
-                        else:
-                            self[k] = v
-            except Exception as e:
-                print(f"Error loading configuration in Configuration class: {e}")
+        self._loading = True
+        try:
+            self.clear()
+            self.update(DEFAULT_CONFIG)
+            
+            path = get_config_path()
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        
+                        # Prevent custom dictionary pollution and merge carefully
+                        for k, v in data.items():
+                            if k == 'shortcuts' and isinstance(v, dict):
+                                # Merge shortcuts specifically
+                                merged_shortcuts = DEFAULT_CONFIG['shortcuts'].copy()
+                                merged_shortcuts.update(v)
+                                self['shortcuts'] = merged_shortcuts
+                            elif k == 'palette' and isinstance(v, list):
+                                # Ensure palette is a valid list of hex colors
+                                valid_palette = []
+                                for color in v:
+                                    if isinstance(color, str) and color.startswith('#'):
+                                        valid_palette.append(color.upper())
+                                if valid_palette:
+                                    self['palette'] = valid_palette
+                            else:
+                                self[k] = v
+                except Exception as e:
+                    print(f"Error loading configuration in Configuration class: {e}")
+        finally:
+            self._loading = False
 
     def save(self):
         path = get_config_path()
@@ -78,3 +83,15 @@ class Configuration(dict):
                 value = 100
         
         super().__setitem__(key, value)
+        if not getattr(self, '_loading', False):
+            self.save()
+
+    def update(self, *args, **kwargs):
+        was_loading = getattr(self, '_loading', False)
+        self._loading = True
+        try:
+            super().update(*args, **kwargs)
+        finally:
+            self._loading = was_loading
+        if not self._loading:
+            self.save()

@@ -181,6 +181,8 @@ class SubtitleMixin:
             self.subtitleLabel.setGraphicsEffect(None)
             
         self.position_subtitle_label()
+        if hasattr(self, 'view') and self.view:
+            self.view.viewport().update()
 
     def position_subtitle_label(self):
         if not hasattr(self, 'subtitleLabel') or not self.subtitleLabel.isVisible():
@@ -239,9 +241,10 @@ class SubtitleMixin:
     def on_enable_subtitles_changed(self, checked):
         self.config['enable_subtitles'] = checked
         self.config.save()
-        if not checked:
-            self.subtitleLabel.hide()
-        else:
+        self._last_subtitle_text = None
+        if hasattr(self, 'view') and self.view:
+            self.view.viewport().update()
+        if checked:
             self.update_subtitles_for_current_time()
 
     def browse_subtitle_file(self):
@@ -301,9 +304,10 @@ class SubtitleMixin:
             
         stream_index = self.subTrackCombo.itemData(idx)
         if stream_index == -1: # Off
-            self.subtitleLabel.hide()
             self.subtitles = []
             self._last_subtitle_text = None
+            if hasattr(self, 'view') and self.view:
+                self.view.viewport().update()
         elif stream_index == -2: # External file
             pass
         else: # Embedded
@@ -343,9 +347,11 @@ class SubtitleMixin:
             return
             
         if not self.subtitles or not self.config.get('enable_subtitles', True):
-            if self.subtitleLabel.isVisible():
-                self.subtitleLabel.hide()
+            if getattr(self, '_last_subtitle_text', None) is not None:
                 self._last_subtitle_text = None
+                self.subtitleLabel.setText("")
+                if hasattr(self, 'view') and self.view:
+                    self.view.viewport().update()
             return
 
         # Calculate current time in ms
@@ -369,12 +375,9 @@ class SubtitleMixin:
         last_text = getattr(self, '_last_subtitle_text', None)
         if active_text != last_text:
             self._last_subtitle_text = active_text
-            if active_text:
-                self.subtitleLabel.setText(active_text)
-                self.subtitleLabel.show()
-                self.position_subtitle_label()
-            else:
-                self.subtitleLabel.hide()
+            self.subtitleLabel.setText(active_text)
+            if hasattr(self, 'view') and self.view:
+                self.view.viewport().update()
 
     # --- UI adjustment slots ---
     def on_sub_font_changed(self, idx):
@@ -559,9 +562,11 @@ class SubtitleMixin:
     def on_sub_v_offset_changed(self, val):
         self.config['subtitle_v_offset'] = val
         self.config.save()
-        self.position_subtitle_label()
+        if hasattr(self, 'view') and self.view:
+            self.view.viewport().update()
 
     def on_sub_h_offset_changed(self, val):
         self.config['subtitle_h_offset'] = val
         self.config.save()
-        self.position_subtitle_label()
+        if hasattr(self, 'view') and self.view:
+            self.view.viewport().update()
