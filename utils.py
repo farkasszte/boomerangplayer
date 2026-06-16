@@ -666,6 +666,114 @@ def extract_embedded_subtitle(filepath, stream_index):
         return ""
 
 
+_last_lut_params = None
+_cached_lut = None
+
+def get_adjustment_lut(b, c, g):
+    global _last_lut_params, _cached_lut
+    params = (b, c, g)
+    if _last_lut_params == params:
+        return _cached_lut
+    
+    import numpy as np
+    x = np.arange(256, dtype=np.float32)
+    lut = x * c + b
+    if g != 1.0:
+        lut = np.clip(lut, 0, 255)
+        lut = 255.0 * np.power(lut / 255.0, 1.0 / g)
+    _cached_lut = np.clip(lut, 0, 255).astype(np.uint8)
+    _last_lut_params = params
+    return _cached_lut
+
+
+def apply_software_adjustments(arr, b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val):
+    """
+    Applies software-based image adjustments to a 4-channel numpy array (height, width, 4) in-place.
+    Optimized with slice-based convolutions and Rodrigues' vector rotation for hue.
+    """
+    import numpy as np
+
+    # 1. Blur & Sharpen (Optimized with slice convolution)
+    if blur_val > 0 or sharpen_val > 0:
+        orig = arr[:, :, :3].astype(np.float32)
+        top = np.empty_like(orig)
+        top[:-1, :] = orig[1:, :]
+        top[-1, :] = orig[-1, :]
+        
+        bottom = np.empty_like(orig)
+        bottom[1:, :] = orig[:-1, :]
+        bottom[0, :] = orig[0, :]
+        
+        left = np.empty_like(orig)
+        left[:, :-1] = orig[:, 1:]
+        left[:, -1] = orig[:, -1]
+        
+        right = np.empty_like(orig)
+        right[:, 1:] = orig[:, :-1]
+        right[:, 0] = orig[:, 0]
+        
+        if blur_val > 0:
+            blurred = (orig * 4.0 + top + bottom + left + right) * 0.125
+            orig = orig + (blur_val * 0.01) * (blurred - orig)
+        if sharpen_val > 0:
+            sharpened = orig * 5.0 - (top + bottom + left + right)
+            orig = orig + (sharpen_val * 0.01) * (sharpened - orig)
+            
+        arr[:, :, :3] = np.clip(orig, 0, 255).astype(np.uint8)
+
+    # 2. Exposure
+    if exposure_mult != 1.0:
+        arr[:, :, :3] = np.clip(arr[:, :, :3].astype(np.float32) * exposure_mult, 0, 255).astype(np.uint8)
+
+    # 3. Brightness, Contrast & Gamma
+    if b != 0 or c != 1.0 or g != 1.0:
+        lut = get_adjustment_lut(b, c, g)
+        arr[:, :, :3] = lut[arr[:, :, :3]]
+
+    # 4. Saturation
+    if s != 1.0:
+        b_chan = arr[:, :, 0].astype(np.float32)
+        g_chan = arr[:, :, 1].astype(np.float32)
+        r_chan = arr[:, :, 2].astype(np.float32)
+        gray = 0.299 * r_chan + 0.587 * g_chan + 0.114 * b_chan
+        arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
+        arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
+        arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
+
+    # 5. Hue Rotation (Rodrigues' rotation formula)
+    if hue_val != 0:
+        rgb = arr[:, :, :3].astype(np.float32)
+        b_ch = rgb[:, :, 0]
+        g_ch = rgb[:, :, 1]
+        r_ch = rgb[:, :, 2]
+
+        rad = hue_val * np.pi / 180.0
+        cos_a = np.cos(rad)
+        sin_a = np.sin(rad)
+        one_minus_cos = 1.0 - cos_a
+
+        cross_b = 0.57735 * (r_ch - g_ch)
+        cross_g = 0.57735 * (b_ch - r_ch)
+        cross_r = 0.57735 * (g_ch - b_ch)
+
+        dot_term = 0.333333 * (b_ch + g_ch + r_ch) * one_minus_cos
+
+        arr[:, :, 0] = np.clip(b_ch * cos_a + cross_b * sin_a + dot_term, 0, 255).astype(np.uint8)
+        arr[:, :, 1] = np.clip(g_ch * cos_a + cross_g * sin_a + dot_term, 0, 255).astype(np.uint8)
+        arr[:, :, 2] = np.clip(r_ch * cos_a + cross_r * sin_a + dot_term, 0, 255).astype(np.uint8)
+
+    # 6. Temperature (Warmth)
+    if temp_val != 0:
+        shift = temp_val * 0.15 * 2.55
+        arr[:, :, 2] = np.clip(arr[:, :, 2].astype(np.float32) + shift, 0, 255).astype(np.uint8)
+        arr[:, :, 0] = np.clip(arr[:, :, 0].astype(np.float32) - shift, 0, 255).astype(np.uint8)
+        arr[:, :, 1] = np.clip(arr[:, :, 1].astype(np.float32) + shift * 0.33, 0, 255).astype(np.uint8)
+
+    # 7. Invert / Negative
+    if invert_val > 0.5:
+        arr[:, :, :3] = 255 - arr[:, :, :3]
+
+
 
 
 

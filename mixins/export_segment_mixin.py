@@ -8,9 +8,9 @@ from PyQt6.QtWidgets import QFileDialog, QDialog
 from PyQt6.QtGui import QImage
 from PyQt6.QtCore import Qt
 from translations import tr
-from utils import get_resource_path
-
 from components.marker_dialogs import SaveLoopOptionsDialog
+from utils import get_resource_path, apply_software_adjustments
+from workers.threads import ProcessMonitorThread, FrameExtractionThread
 
 from typing import TYPE_CHECKING
 
@@ -126,6 +126,71 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
         speed_mult = self.speedSlider.value() / 100.0 if hasattr(self, 'speedSlider') else 1.0
 
         if include_drawings and not is_lossless:
+            # Check if any frames in range are missing from cache.
+            # If so, pre-extract them in a single sequential pass instead of seeking one-by-one.
+            missing_frames = [f for f in range(start_f, end_f + 1) if f not in self.cached_frame_dict]
+            if missing_frames:
+                from PyQt6.QtWidgets import QProgressDialog
+                from PyQt6.QtCore import QCoreApplication, QEventLoop
+                
+                extract_progress = QProgressDialog(tr('loading_video') or "Extracting frames...", tr('cancel'), 0, 100, self)
+                extract_progress.setWindowModality(Qt.WindowModality.WindowModal)
+                extract_progress.setMinimumDuration(0)
+                extract_progress.setValue(0)
+                QCoreApplication.processEvents()
+                
+                actual_start_frame = start_f - 1 if is_motion else start_f
+                actual_num_frames = (end_f - start_f + 1)
+                start_number = start_f if is_motion else None
+                gpu_enabled = self.config.get('gpu_acceleration', False)
+                qv_value = self.config.get('qv_value', 2)
+                
+                if not self.current_temp_dir:
+                    import uuid
+                    import tempfile
+                    self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
+                    os.makedirs(self.current_temp_dir, exist_ok=True)
+                
+                loop = QEventLoop()
+                extracted_data = {}
+                
+                def on_extract_finished(frame_dict, temp_dir, start, num):
+                    nonlocal extracted_data
+                    extracted_data = frame_dict
+                    loop.quit()
+                
+                thread = FrameExtractionThread(
+                    input_file,
+                    actual_start_frame,
+                    actual_num_frames,
+                    self.fps,
+                    self.current_temp_dir,
+                    self,
+                    gpu_enabled=gpu_enabled,
+                    start_number=start_number,
+                    video_codec=self.video_codec,
+                    qv_value=qv_value,
+                    is_hdr=getattr(self, 'is_hdr', False),
+                    color_transfer=getattr(self, 'color_transfer', "")
+                )
+                thread.finished_extraction.connect(on_extract_finished)
+                thread.start()
+                
+                pulse = 0
+                while thread.isRunning():
+                    pulse = (pulse + 5) % 100
+                    extract_progress.setValue(pulse)
+                    QCoreApplication.processEvents()
+                    if extract_progress.wasCanceled():
+                        thread.cancel()
+                        thread.wait()
+                        break
+                    loop.processEvents(QEventLoop.ProcessEventsFlag.AllEvents, 100)
+                
+                extract_progress.close()
+                if extracted_data:
+                    self.cached_frame_dict = {**self.cached_frame_dict, **extracted_data}
+
             # Case C: Re-encode WITH drawings (Piped raw frames)
             import numpy as np
             from PyQt6.QtGui import QPainter, QPixmap, QTransform
@@ -196,67 +261,7 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                 ptr.setsize(img.sizeInBytes())
                 arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
-                # 1. Blur & Sharpen
-                if blur_val > 0 or sharpen_val > 0:
-                    orig = arr[:, :, :3].astype(np.float32)
-                    top = np.roll(orig, -1, axis=0)
-                    bottom = np.roll(orig, 1, axis=0)
-                    left = np.roll(orig, -1, axis=1)
-                    right = np.roll(orig, 1, axis=1)
-                    if blur_val > 0:
-                        blurred = (orig * 4.0 + top + bottom + left + right) / 8.0
-                        orig = orig + (blur_val / 100.0) * (blurred - orig)
-                    if sharpen_val > 0:
-                        sharpened = orig * 5.0 - (top + bottom + left + right)
-                        orig = orig + (sharpen_val / 100.0) * (sharpened - orig)
-                    arr[:, :, :3] = np.clip(orig, 0, 255).astype(np.uint8)
-
-                # 2. Exposure
-                if exposure_mult != 1.0:
-                    arr[:, :, :3] = np.clip(arr[:, :, :3].astype(np.float32) * exposure_mult, 0, 255).astype(np.uint8)
-
-                # 3. Brightness, Contrast & Gamma
-                if b != 0 or c != 1.0 or g != 1.0:
-                    lut = self._get_adj_lut(b, c, g)
-                    arr[:, :, :3] = lut[arr[:, :, :3]]
-
-                # 4. Saturation
-                if s != 1.0:
-                    b_chan = arr[:, :, 0].astype(np.float32)
-                    g_chan = arr[:, :, 1].astype(np.float32)
-                    r_chan = arr[:, :, 2].astype(np.float32)
-                    gray = (0.299 * r_chan + 0.587 * g_chan + 0.114 * b_chan)
-                    arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
-                    arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
-                    arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
-
-                # 5. Hue Rotation
-                if hue_val != 0:
-                    rad = hue_val * np.pi / 180.0
-                    cos_a = np.cos(rad)
-                    sin_a = np.sin(rad)
-                    r_ch = arr[:, :, 2].astype(np.float32)
-                    g_ch = arr[:, :, 1].astype(np.float32)
-                    b_ch = arr[:, :, 0].astype(np.float32)
-                    y = 0.299 * r_ch + 0.587 * g_ch + 0.114 * b_ch
-                    u = -0.147 * r_ch - 0.289 * g_ch + 0.436 * b_ch
-                    v = 0.615 * r_ch - 0.515 * g_ch - 0.100 * b_ch
-                    u_prime = u * cos_a - v * sin_a
-                    v_prime = u * sin_a + v * cos_a
-                    arr[:, :, 2] = np.clip(y + 1.140 * v_prime, 0, 255).astype(np.uint8)
-                    arr[:, :, 1] = np.clip(y - 0.395 * u_prime - 0.581 * v_prime, 0, 255).astype(np.uint8)
-                    arr[:, :, 0] = np.clip(y + 2.032 * u_prime, 0, 255).astype(np.uint8)
-
-                # 6. Temperature
-                if temp_val != 0:
-                    shift = temp_val * 0.15 * 2.55
-                    arr[:, :, 2] = np.clip(arr[:, :, 2].astype(np.float32) + shift, 0, 255).astype(np.uint8)
-                    arr[:, :, 0] = np.clip(arr[:, :, 0].astype(np.float32) - shift, 0, 255).astype(np.uint8)
-                    arr[:, :, 1] = np.clip(arr[:, :, 1].astype(np.float32) + shift * 0.33, 0, 255).astype(np.uint8)
-
-                # 7. Invert
-                if invert_val > 0.5:
-                    arr[:, :, :3] = 255 - arr[:, :, :3]
+                apply_software_adjustments(arr, b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
 
                 # Mirroring & rotation
                 transform = QTransform()
@@ -582,7 +587,12 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                 creationflags = 0
                 if os.name == 'nt':
                     creationflags = subprocess.CREATE_NO_WINDOW
-                subprocess.Popen(cmd, creationflags=creationflags)
+                process = subprocess.Popen(cmd, creationflags=creationflags)
+                
+                # Monitor export progress in background
+                self.export_monitor = ProcessMonitorThread(process, fileName, self)
+                self.export_monitor.finished_export.connect(self.on_export_finished)
+                self.export_monitor.start()
                 
                 from qfluentwidgets import InfoBar, InfoBarPosition
                 InfoBar.info(
@@ -596,3 +606,26 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                 )
             except Exception as e:
                 print(f"Error saving loop: {e}")
+
+    def on_export_finished(self, filename, success, error_msg):
+        from qfluentwidgets import InfoBar, InfoBarPosition
+        if success:
+            InfoBar.success(
+                title=tr('save_loop'),
+                content=f"{tr('ok')}: {os.path.basename(filename)}",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3500,
+                parent=self
+            )
+        else:
+            InfoBar.error(
+                title=tr('save_loop'),
+                content=f"Error: {error_msg}",
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=5000,
+                parent=self
+            )

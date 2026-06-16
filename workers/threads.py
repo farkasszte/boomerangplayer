@@ -2,8 +2,8 @@ import os
 import subprocess
 import tempfile
 import json
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from PyQt6.QtGui import QPixmap, QPainter, QColor
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QRunnable, QObject
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QImage
 from utils import get_resource_path, get_ffmpeg_path
 
 class FrameExtractionThread(QThread):
@@ -329,3 +329,48 @@ class AudioExtractionThread(QThread):
         except Exception as e:
             print(f"[AudioExtractionThread] Error extracting audio track {self.track_index} at {self.start_time}s: {e}")
             self.finished_extraction.emit("", self.start_time, self.duration)
+
+
+class PreDecodeSignals(QObject):
+    decoded = pyqtSignal(int, QImage)
+
+
+class PreDecodeRunnable(QRunnable):
+    def __init__(self, frame_idx, jpeg_data, signals):
+        super().__init__()
+        self.frame_idx = frame_idx
+        self.jpeg_data = jpeg_data
+        self.signals = signals
+
+    def run(self):
+        try:
+            from PyQt6.QtGui import QImage
+            image = QImage()
+            if isinstance(self.jpeg_data, bytes):
+                image.loadFromData(self.jpeg_data)
+            elif isinstance(self.jpeg_data, str):
+                image.load(self.jpeg_data)
+            
+            if not image.isNull():
+                self.signals.decoded.emit(self.frame_idx, image)
+        except Exception:
+            pass
+
+
+class ProcessMonitorThread(QThread):
+    finished_export = pyqtSignal(str, bool, str)
+
+    def __init__(self, process, filename, parent=None):
+        super().__init__(parent)
+        self.process = process
+        self.filename = filename
+
+    def run(self):
+        try:
+            self.process.wait()
+            if self.process.returncode == 0:
+                self.finished_export.emit(self.filename, True, "")
+            else:
+                self.finished_export.emit(self.filename, False, f"FFmpeg exited with code {self.process.returncode}")
+        except Exception as e:
+            self.finished_export.emit(self.filename, False, str(e))

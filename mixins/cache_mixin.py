@@ -6,6 +6,7 @@ import os
 import tempfile
 import shutil
 from PyQt6.QtGui import QImage, QPixmap
+from workers.threads import PreDecodeRunnable
 
 
 from typing import TYPE_CHECKING
@@ -79,6 +80,10 @@ class CacheMixin(CacheMixinBase):
             else:
                 self.current_temp_dir = None
         self.cached_frame_dict = {}
+        if hasattr(self, 'decoded_frame_cache'):
+            self.decoded_frame_cache.clear()
+        if hasattr(self, 'currently_predecoding_set'):
+            self.currently_predecoding_set.clear()
         self.last_extracted_center = -1
         self._last_rendered_index = -1
         self._last_base_index = -1
@@ -87,6 +92,44 @@ class CacheMixin(CacheMixinBase):
         pixmap_item = getattr(self, 'pixmapItem', None)
         if pixmap_item is not None:
             pixmap_item.setPixmap(QPixmap())
+
+    def on_frame_predecoded(self, frame_idx, image):
+        if hasattr(self, 'currently_predecoding_set') and frame_idx in self.currently_predecoding_set:
+            self.currently_predecoding_set.remove(frame_idx)
+        if hasattr(self, 'decoded_frame_cache'):
+            self.decoded_frame_cache[frame_idx] = image
+
+    def manage_predecode_pool(self):
+        if not self.currentFilePath or getattr(self, 'is_audio_only', False):
+            return
+
+        playhead = self.current_cache_index
+        is_forward = getattr(self, 'isForward', True)
+        predecode_window_size = 20
+        
+        if is_forward:
+            targets = range(playhead + 1, min(self.total_frames, playhead + predecode_window_size + 1))
+        else:
+            targets = range(max(0, playhead - predecode_window_size), playhead)
+
+        from PyQt6.QtCore import QThreadPool
+        pool = QThreadPool.globalInstance()
+        
+        for idx in targets:
+            if idx in self.cached_frame_dict:
+                if idx not in self.decoded_frame_cache and idx not in self.currently_predecoding_set:
+                    if len(self.currently_predecoding_set) < 8:
+                        self.currently_predecoding_set.add(idx)
+                        runnable = PreDecodeRunnable(idx, self.cached_frame_dict[idx], self.predecode_signals)
+                        pool.start(runnable)
+
+        # Prune old decoded images from RAM
+        keys_to_prune = []
+        for idx in self.decoded_frame_cache.keys():
+            if idx < playhead - 10 or idx > playhead + 30:
+                keys_to_prune.append(idx)
+        for idx in keys_to_prune:
+            del self.decoded_frame_cache[idx]
 
     # ------------------------------------------------------------------ #
     # Extraction requests                                                  #

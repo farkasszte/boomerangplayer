@@ -8,6 +8,7 @@ import numpy as np
 from PyQt6.QtGui import QImage, QPixmap, QPainter, QColor, QFont
 from PyQt6.QtCore import Qt, QRectF, QBuffer, QIODevice
 from translations import tr
+from utils import apply_software_adjustments
 
 from typing import TYPE_CHECKING
 
@@ -104,21 +105,7 @@ class AdjustmentMixin(AdjustmentMixinBase):
         if not getattr(self, 'is_loading_video', False):
             self.save_current_markers()
 
-    def _get_adj_lut(self, b, c, g):
-        params = (b, c, g)
-        if hasattr(self, '_last_adj_params') and self._last_adj_params == params:
-            return self._adj_lut
-        
-        x = np.arange(256, dtype=np.float32)
-        lut = x * c + b
-        
-        if g != 1.0:
-            lut = np.clip(lut, 0, 255)
-            lut = 255.0 * np.power(lut / 255.0, 1.0 / g)
-            
-        self._adj_lut = np.clip(lut, 0, 255).astype(np.uint8)
-        self._last_adj_params = params
-        return self._adj_lut
+
 
     def generate_audio_placeholder(self):
         """Generates a simple flat grey audio placeholder image with text labels."""
@@ -175,11 +162,14 @@ class AdjustmentMixin(AdjustmentMixinBase):
                     if target_index == getattr(self, '_last_rendered_index', -1):
                         self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
                     else:
-                        image = QImage()
-                        if isinstance(data, bytes):
-                            image.loadFromData(data)
-                        elif isinstance(data, str):
-                            image.load(data)
+                        if target_index in getattr(self, 'decoded_frame_cache', {}):
+                            image = self.decoded_frame_cache[target_index]
+                        else:
+                            image = QImage()
+                            if isinstance(data, bytes):
+                                image.loadFromData(data)
+                            elif isinstance(data, str):
+                                image.load(data)
                         
                         self.pixmapItem.setImage(image)
                         self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
@@ -198,12 +188,15 @@ class AdjustmentMixin(AdjustmentMixinBase):
                         and hasattr(self, '_current_base_image') and not self._current_base_image.isNull()):
                     img = self._current_base_image.copy()
                 else:
-                    pixmap = QPixmap()
-                    if isinstance(data, bytes):
-                        pixmap.loadFromData(data)
-                    elif isinstance(data, str):
-                        pixmap.load(data)
-                    img = pixmap.toImage()
+                    if target_index in getattr(self, 'decoded_frame_cache', {}):
+                        img = self.decoded_frame_cache[target_index].copy()
+                    else:
+                        pixmap = QPixmap()
+                        if isinstance(data, bytes):
+                            pixmap.loadFromData(data)
+                        elif isinstance(data, str):
+                            pixmap.load(data)
+                        img = pixmap.toImage()
                     self._current_base_image = img
                     self._last_base_index = target_index
 
@@ -213,77 +206,7 @@ class AdjustmentMixin(AdjustmentMixinBase):
                     ptr = img.bits()
                     ptr.setsize(img.sizeInBytes())
                     arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
-
-                    # 1. Blur & Sharpen
-                    if blur_val > 0 or sharpen_val > 0:
-                        orig = arr[:, :, :3].astype(np.float32)
-                        top = np.roll(orig, -1, axis=0)
-                        bottom = np.roll(orig, 1, axis=0)
-                        left = np.roll(orig, -1, axis=1)
-                        right = np.roll(orig, 1, axis=1)
-                        
-                        if blur_val > 0:
-                            blurred = (orig * 4.0 + top + bottom + left + right) / 8.0
-                            orig = orig + (blur_val / 100.0) * (blurred - orig)
-                            
-                        if sharpen_val > 0:
-                            sharpened = orig * 5.0 - (top + bottom + left + right)
-                            orig = orig + (sharpen_val / 100.0) * (sharpened - orig)
-                            
-                        arr[:, :, :3] = np.clip(orig, 0, 255).astype(np.uint8)
-
-                    # 2. Exposure
-                    if exposure_mult != 1.0:
-                        arr[:, :, :3] = np.clip(arr[:, :, :3].astype(np.float32) * exposure_mult, 0, 255).astype(np.uint8)
-
-                    # 3. Brightness, Contrast & Gamma
-                    if b != 0 or c != 1.0 or g != 1.0:
-                        lut = self._get_adj_lut(b, c, g)
-                        arr[:, :, :3] = lut[arr[:, :, :3]]
-
-                    # 4. Saturation
-                    if s != 1.0:
-                        b_chan = arr[:, :, 0].astype(np.float32)
-                        g_chan = arr[:, :, 1].astype(np.float32)
-                        r_chan = arr[:, :, 2].astype(np.float32)
-                        
-                        gray = (0.299 * r_chan + 0.587 * g_chan + 0.114 * b_chan)
-                        
-                        arr[:, :, 0] = np.clip(gray + s * (b_chan - gray), 0, 255).astype(np.uint8)
-                        arr[:, :, 1] = np.clip(gray + s * (g_chan - gray), 0, 255).astype(np.uint8)
-                        arr[:, :, 2] = np.clip(gray + s * (r_chan - gray), 0, 255).astype(np.uint8)
-
-                    # 5. Hue Rotation (YIQ space rotation)
-                    if hue_val != 0:
-                        rad = hue_val * np.pi / 180.0
-                        cos_a = np.cos(rad)
-                        sin_a = np.sin(rad)
-                        
-                        r_ch = arr[:, :, 2].astype(np.float32)
-                        g_ch = arr[:, :, 1].astype(np.float32)
-                        b_ch = arr[:, :, 0].astype(np.float32)
-                        
-                        y = 0.299 * r_ch + 0.587 * g_ch + 0.114 * b_ch
-                        u = -0.147 * r_ch - 0.289 * g_ch + 0.436 * b_ch
-                        v = 0.615 * r_ch - 0.515 * g_ch - 0.100 * b_ch
-                        
-                        u_prime = u * cos_a - v * sin_a
-                        v_prime = u * sin_a + v * cos_a
-                        
-                        arr[:, :, 2] = np.clip(y + 1.140 * v_prime, 0, 255).astype(np.uint8)
-                        arr[:, :, 1] = np.clip(y - 0.395 * u_prime - 0.581 * v_prime, 0, 255).astype(np.uint8)
-                        arr[:, :, 0] = np.clip(y + 2.032 * u_prime, 0, 255).astype(np.uint8)
-
-                    # 6. Temperature (Warmth)
-                    if temp_val != 0:
-                        shift = temp_val * 0.15 * 2.55
-                        arr[:, :, 2] = np.clip(arr[:, :, 2].astype(np.float32) + shift, 0, 255).astype(np.uint8)
-                        arr[:, :, 0] = np.clip(arr[:, :, 0].astype(np.float32) - shift, 0, 255).astype(np.uint8)
-                        arr[:, :, 1] = np.clip(arr[:, :, 1].astype(np.float32) + shift * 0.33, 0, 255).astype(np.uint8)
-
-                    # 7. Invert / Negative
-                    if invert_val > 0.5:
-                        arr[:, :, :3] = 255 - arr[:, :, :3]
+                    apply_software_adjustments(arr, b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
 
                 pixmap = QPixmap.fromImage(img)
 
@@ -317,3 +240,6 @@ class AdjustmentMixin(AdjustmentMixinBase):
 
         if hasattr(self, 'update_subtitles_for_current_time'):
             self.update_subtitles_for_current_time()
+
+        if hasattr(self, 'manage_predecode_pool'):
+            self.manage_predecode_pool()
