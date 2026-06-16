@@ -6,7 +6,7 @@ import bisect
 from translations import tr
 
 # Import refactored dialogs
-from mixins.marker_dialogs import MarkersDialog
+from components.marker_dialogs import MarkersDialog
 
 from typing import TYPE_CHECKING
 

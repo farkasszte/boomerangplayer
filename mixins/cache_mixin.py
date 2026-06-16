@@ -171,7 +171,7 @@ class CacheMixin(CacheMixinBase):
             actual_num_frames = actual_end_player - actual_start_player + 1
             start_number = actual_start_player
 
-        from mixins.threads import FrameExtractionThread
+        from workers.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         qv_value = self.config.get('qv_value', 2)
         print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, temp_dir={self.current_temp_dir}, qv_value={qv_value}")
@@ -237,7 +237,7 @@ class CacheMixin(CacheMixinBase):
             actual_start_frame = start_pos - 1
             start_number = start_pos
 
-        from mixins.threads import FrameExtractionThread
+        from workers.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         qv_value = self.config.get('qv_value', 2)
         self.extraction_thread = FrameExtractionThread(
@@ -388,7 +388,7 @@ class CacheMixin(CacheMixinBase):
             actual_num_frames = actual_end_player - actual_start_player + 1
             start_number = actual_start_player
 
-        from mixins.threads import FrameExtractionThread
+        from workers.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         qv_value = self.config.get('qv_value', 2)
         print(f"[check_proactive_cache] Starting {'forward' if is_forward else 'backward'} proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_missing={first_missing}, qv_value={qv_value}")

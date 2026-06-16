@@ -2,7 +2,7 @@ import os
 from PyQt6.QtCore import Qt, QSize, QPoint
 from PyQt6.QtGui import QColor, QPixmap, QIcon
 from PyQt6.QtWidgets import QListView, QMenu
-from mixins.threads import ThumbnailThread
+from workers.threads import ThumbnailThread
 from translations import tr
 
 class PlaylistThumbnailMixin:

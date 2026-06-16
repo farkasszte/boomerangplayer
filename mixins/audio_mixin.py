@@ -3,46 +3,7 @@ import subprocess
 from PyQt6.QtCore import Qt, QTimer, QUrl, QThread, pyqtSignal
 from qfluentwidgets import InfoBar, InfoBarPosition
 from translations import tr
-
-class AudioExtractionThread(QThread):
-    finished_extraction = pyqtSignal(str, float, float)
-
-    def __init__(self, video_path, ffmpeg_path, output_path, track_index=0, start_time=0.0, duration=300.0):
-        super().__init__()
-        self.video_path = video_path
-        self.ffmpeg_path = ffmpeg_path
-        self.output_path = output_path
-        self.track_index = track_index
-        self.start_time = start_time
-        self.duration = duration
-
-    def run(self):
-        try:
-            # Remove output file if it exists to prevent ffmpeg prompts
-            if os.path.exists(self.output_path):
-                try:
-                    os.remove(self.output_path)
-                except OSError:
-                    pass
-
-            # Fast seek by placing -ss before -i
-            cmd = [
-                self.ffmpeg_path, "-y",
-                "-ss", f"{self.start_time:.3f}",
-                "-i", self.video_path,
-                "-t", f"{self.duration:.3f}",
-                "-map", f"0:a:{self.track_index}",
-                "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
-                self.output_path
-            ]
-            creationflags = 0
-            if os.name == 'nt':
-                creationflags = subprocess.CREATE_NO_WINDOW
-            subprocess.run(cmd, creationflags=creationflags, check=True)
-            self.finished_extraction.emit(self.output_path, self.start_time, self.duration)
-        except Exception as e:
-            print(f"[AudioExtractionThread] Error extracting audio track {self.track_index} at {self.start_time}s: {e}")
-            self.finished_extraction.emit("", self.start_time, self.duration)
+from workers.threads import AudioExtractionThread
 
 
 class AudioMixin:

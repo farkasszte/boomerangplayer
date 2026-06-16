@@ -8,7 +8,7 @@ from PyQt6.QtGui import QImage
 from PyQt6.QtCore import Qt
 from translations import tr
 
-from mixins.marker_dialogs import SaveFrameOptionsDialog
+from components.marker_dialogs import SaveFrameOptionsDialog
 
 from typing import TYPE_CHECKING
 

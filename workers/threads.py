@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tempfile
+import json
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtGui import QPixmap, QPainter, QColor
 from utils import get_resource_path, get_ffmpeg_path
@@ -49,7 +50,6 @@ class FrameExtractionThread(QThread):
         frame_idx = self.start_number
         
         while not self._is_cancelled:
-            
             chunk = self.process.stdout.read(65536)
             if not chunk:
                 break
@@ -90,9 +90,6 @@ class FrameExtractionThread(QThread):
             start_time = self.start_frame / self.fps
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             
-            # Calculate combined seek parameters (approximate fast input seek + exact output seek)
-            # We seek to 0.5 seconds before the target time, then decode and discard the remaining 0.5 seconds
-            # This is much faster for heavy codecs like AV1 than the previous 5.0s margin.
             approx_time = max(0.0, start_time - 0.5)
             exact_delta = start_time - approx_time
             
@@ -121,16 +118,13 @@ class FrameExtractionThread(QThread):
                         hwaccel = self.parent().config.get('detected_hwaccel', 'auto')
                     c.extend(["-hwaccel", hwaccel])
                 
-                # Use all available CPU threads for decoding/encoding
                 c.extend(["-threads", "0"])
                 
                 if fallback_output_only:
-                    # Full output seeking (100% accurate, no input seeking)
                     c.extend(["-i", self.video_path])
                     if start_time > 0:
                         c.extend(["-ss", f"{start_time:.6f}"])
                 else:
-                    # Combined seeking (fast input seek + accurate output seek)
                     if approx_time > 0:
                         c.extend(["-ss", f"{approx_time:.6f}"])
                     c.extend(["-i", self.video_path])
@@ -150,17 +144,14 @@ class FrameExtractionThread(QThread):
                 ])
                 return c
 
-            # Layer 1: GPU enabled (if requested) + Combined seeking
             cmd = build_cmd(gpu=self.gpu_enabled)
             frame_bytes = self._extract_from_pipe(cmd, creationflags)
             
-            # Layer 2 Fallback: If GPU failed, retry in software mode + Combined seeking
             if not frame_bytes and self.gpu_enabled and not self._is_cancelled:
                 print(f"[FrameExtractionThread] GPU extraction failed. Retrying in software mode + combined seeking.")
                 cmd = build_cmd(gpu=False)
                 frame_bytes = self._extract_from_pipe(cmd, creationflags)
                 
-            # Layer 3 Fallback: If combined seeking failed, retry with full software output seeking
             if not frame_bytes and self.start_frame > 0 and not self._is_cancelled:
                 print(f"[FrameExtractionThread] Combined seeking failed. Retrying with full software output seeking.")
                 cmd = build_cmd(gpu=False, fallback_output_only=True)
@@ -179,6 +170,7 @@ class FrameExtractionThread(QThread):
             except OSError:
                 pass
 
+
 class ThumbnailThread(QThread):
     finished = pyqtSignal(str, QPixmap)
 
@@ -190,7 +182,6 @@ class ThumbnailThread(QThread):
 
     def run(self):
         try:
-            # Native image handling
             image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
             if self.filePath.lower().endswith(image_exts):
                 pixmap = QPixmap(self.filePath)
@@ -208,15 +199,13 @@ class ThumbnailThread(QThread):
                         self.finished.emit(self.filePath, final_thumb)
                     return
 
-            # Video handling via FFmpeg
-            import uuid
             temp_dir = tempfile.gettempdir()
+            import uuid
             thumb_name = f"thumb_{uuid.uuid4().hex}.jpg"
             thumb_path = os.path.join(temp_dir, thumb_name)
             
             ffmpeg_path = get_ffmpeg_path()
 
-            # Check for HDR in ThumbnailThread
             is_hdr = False
             color_transfer = ""
             try:
@@ -230,7 +219,6 @@ class ThumbnailThread(QThread):
                     "-of", "json", self.filePath
                 ]
                 creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                import json
                 probe_res = subprocess.check_output(probe_cmd, creationflags=creationflags).decode('utf-8')
                 probe_data = json.loads(probe_res)
                 for s in probe_data.get('streams', []):
@@ -302,3 +290,42 @@ class ThumbnailThread(QThread):
                 self.process.kill()
             except OSError:
                 pass
+
+
+class AudioExtractionThread(QThread):
+    finished_extraction = pyqtSignal(str, float, float)
+
+    def __init__(self, video_path, ffmpeg_path, output_path, track_index=0, start_time=0.0, duration=300.0):
+        super().__init__()
+        self.video_path = video_path
+        self.ffmpeg_path = ffmpeg_path
+        self.output_path = output_path
+        self.track_index = track_index
+        self.start_time = start_time
+        self.duration = duration
+
+    def run(self):
+        try:
+            if os.path.exists(self.output_path):
+                try:
+                    os.remove(self.output_path)
+                except OSError:
+                    pass
+
+            cmd = [
+                self.ffmpeg_path, "-y",
+                "-ss", f"{self.start_time:.3f}",
+                "-i", self.video_path,
+                "-t", f"{self.duration:.3f}",
+                "-map", f"0:a:{self.track_index}",
+                "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
+                self.output_path
+            ]
+            creationflags = 0
+            if os.name == 'nt':
+                creationflags = subprocess.CREATE_NO_WINDOW
+            subprocess.run(cmd, creationflags=creationflags, check=True)
+            self.finished_extraction.emit(self.output_path, self.start_time, self.duration)
+        except Exception as e:
+            print(f"[AudioExtractionThread] Error extracting audio track {self.track_index} at {self.start_time}s: {e}")
+            self.finished_extraction.emit("", self.start_time, self.duration)

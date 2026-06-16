@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt
 from translations import tr
 from utils import get_resource_path
 
-from mixins.marker_dialogs import SaveLoopOptionsDialog
+from components.marker_dialogs import SaveLoopOptionsDialog
 
 from typing import TYPE_CHECKING
 
