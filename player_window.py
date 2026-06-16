@@ -31,9 +31,12 @@ from utils import get_resource_path, qt_message_handler, load_markers, VERSION
 from translations import set_lang
 from mixins.cache_mixin import CacheMixin
 from mixins.playback_mixin import PlaybackMixin
+from mixins.loader_mixin import LoaderMixin
 from mixins.transform_mixin import TransformMixin
 from mixins.volume_mixin import VolumeMixin
 from mixins.marker_mixin import MarkerMixin
+from mixins.export_frame_mixin import ExportFrameMixin
+from mixins.export_segment_mixin import ExportSegmentMixin
 from mixins.playlist_mixin import PlaylistMixin
 from mixins.drawing_mixin import DrawingMixin
 from mixins.settings_mixin import SettingsMixin
@@ -42,16 +45,18 @@ from mixins.ipc_sync_mixin import IPCSyncMixin
 from mixins.ui_mixin import UIMixin
 from mixins.subtitle_mixin import SubtitleMixin
 from mixins.audio_mixin import AudioMixin
+from mixins.adjustment_mixin import AdjustmentMixin
+from mixins.image_adj_settings_mixin import ImageAdjSettingsMixin
 
 qInstallMessageHandler(qt_message_handler)
 
 
 class PlayerWindow(
     AudioMixin,
-    CacheMixin, PlaybackMixin, TransformMixin, VolumeMixin,
-    MarkerMixin, PlaylistMixin, DrawingMixin,
+    CacheMixin, PlaybackMixin, LoaderMixin, TransformMixin, VolumeMixin,
+    MarkerMixin, ExportFrameMixin, ExportSegmentMixin, PlaylistMixin, DrawingMixin,
     SettingsMixin, GlobalSettingsMixin, IPCSyncMixin, UIMixin,
-    SubtitleMixin,
+    SubtitleMixin, AdjustmentMixin, ImageAdjSettingsMixin,
     FluentWindow
 ):
     def __init__(self):
