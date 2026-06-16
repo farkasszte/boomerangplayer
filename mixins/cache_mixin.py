@@ -6,7 +6,6 @@ import os
 import tempfile
 import shutil
 from PyQt6.QtGui import QImage, QPixmap
-from workers.threads import PreDecodeRunnable
 
 
 from typing import TYPE_CHECKING
@@ -80,10 +79,6 @@ class CacheMixin(CacheMixinBase):
             else:
                 self.current_temp_dir = None
         self.cached_frame_dict = {}
-        if hasattr(self, 'decoded_frame_cache'):
-            self.decoded_frame_cache.clear()
-        if hasattr(self, 'currently_predecoding_set'):
-            self.currently_predecoding_set.clear()
         self.last_extracted_center = -1
         self._last_rendered_index = -1
         self._last_base_index = -1
@@ -92,44 +87,6 @@ class CacheMixin(CacheMixinBase):
         pixmap_item = getattr(self, 'pixmapItem', None)
         if pixmap_item is not None:
             pixmap_item.setPixmap(QPixmap())
-
-    def on_frame_predecoded(self, frame_idx, image):
-        if hasattr(self, 'currently_predecoding_set') and frame_idx in self.currently_predecoding_set:
-            self.currently_predecoding_set.remove(frame_idx)
-        if hasattr(self, 'decoded_frame_cache'):
-            self.decoded_frame_cache[frame_idx] = image
-
-    def manage_predecode_pool(self):
-        if not self.currentFilePath or getattr(self, 'is_audio_only', False):
-            return
-
-        playhead = self.current_cache_index
-        is_forward = getattr(self, 'isForward', True)
-        predecode_window_size = 20
-        
-        if is_forward:
-            targets = range(playhead + 1, min(self.total_frames, playhead + predecode_window_size + 1))
-        else:
-            targets = range(max(0, playhead - predecode_window_size), playhead)
-
-        from PyQt6.QtCore import QThreadPool
-        pool = QThreadPool.globalInstance()
-        
-        for idx in targets:
-            if idx in self.cached_frame_dict:
-                if idx not in self.decoded_frame_cache and idx not in self.currently_predecoding_set:
-                    if len(self.currently_predecoding_set) < 8:
-                        self.currently_predecoding_set.add(idx)
-                        runnable = PreDecodeRunnable(idx, self.cached_frame_dict[idx], self.predecode_signals)
-                        pool.start(runnable)
-
-        # Prune old decoded images from RAM
-        keys_to_prune = []
-        for idx in self.decoded_frame_cache.keys():
-            if idx < playhead - 10 or idx > playhead + 30:
-                keys_to_prune.append(idx)
-        for idx in keys_to_prune:
-            del self.decoded_frame_cache[idx]
 
     # ------------------------------------------------------------------ #
     # Extraction requests                                                  #
@@ -150,7 +107,6 @@ class CacheMixin(CacheMixinBase):
             if force:
                 print(f"[request_frame_extraction] Cancelling running extraction thread for force request (center={center_frame}, running range={t_start}-{t_end}).")
                 try:
-                    
                     self.extraction_thread.finished_extraction.disconnect()
                 except TypeError:
                     pass
@@ -160,20 +116,37 @@ class CacheMixin(CacheMixinBase):
                 self.extraction_thread = None
             else:
                 print(f"[request_frame_extraction] Aborted: extraction thread is already running.")
-                self.last_extracted_center = center_frame
                 return  # Already extracting
 
-        start_frame = max(0, center_frame - self.cache_window_half)
-        end_frame = min(max(0, self.total_frames - 1), center_frame + self.cache_window_half)
+        divisor = [1, 2, 4, 6][self.config.get('prefetch_chunk_idx', 0)]
+        if divisor == 1:
+            start_frame = max(0, center_frame - self.cache_window_half)
+            end_frame = min(max(0, self.total_frames - 1), center_frame + self.cache_window_half)
+            chunk_size = self.cache_window_half * 2
+        else:
+            total_window = self.cache_window_half * 2
+            chunk_size = max(10, total_window // divisor)
+            is_forward = getattr(self, 'isForward', True)
+            if is_forward:
+                backward_buffer = max(5, int(chunk_size * 0.15))
+                forward_buffer = chunk_size - backward_buffer
+                start_frame = max(0, center_frame - backward_buffer)
+                end_frame = min(max(0, self.total_frames - 1), center_frame + forward_buffer)
+            else:
+                forward_buffer = max(5, int(chunk_size * 0.15))
+                backward_buffer = chunk_size - forward_buffer
+                start_frame = max(0, center_frame - backward_buffer)
+                end_frame = min(max(0, self.total_frames - 1), center_frame + forward_buffer)
+
         num_frames = end_frame - start_frame + 1
         if num_frames <= 0:
             return
 
         # Don't extract if we already have this exact range (optimisation)
-        threshold = self.cache_window_half // 2
+        threshold = max(5, chunk_size // 4)
         if (not force and self.last_extracted_center != -1
                 and abs(self.last_extracted_center - center_frame) < threshold):
-            print(f"[request_frame_extraction] Aborted: optimization threshold met (last={self.last_extracted_center}, current={center_frame}).")
+            print(f"[request_frame_extraction] Aborted: optimization threshold met (last={self.last_extracted_center}, current={center_frame}, threshold={threshold}).")
             return
 
         # Skip extraction for frames already in cache
@@ -348,116 +321,16 @@ class CacheMixin(CacheMixinBase):
         if self.last_extracted_center == -1:
             return
 
+        divisor = [1, 2, 4, 6][self.config.get('prefetch_chunk_idx', 0)]
+        if divisor == 1:
+            chunk_size = self.cache_window_half * 2
+        else:
+            chunk_size = max(10, (self.cache_window_half * 2) // divisor)
+        threshold = max(5, chunk_size // 4)
+
         dist = abs(self.current_cache_index - self.last_extracted_center)
-        threshold = self.cache_window_half // 2
         if dist > threshold:
             self.request_frame_extraction(self.current_cache_index)
-        else:
-            self.check_proactive_cache()
-
-    def check_proactive_cache(self):
-        if not self.currentFilePath:
-            return
-
-        if self.extraction_thread and self.extraction_thread.isRunning():
-            return
-
-        is_forward = getattr(self, 'isForward', True)
-
-        if is_forward:
-            max_cache_ahead = self.cache_window_half * 2
-            target_end = min(self.total_frames - 1, self.current_cache_index + max_cache_ahead)
-
-            first_missing = -1
-            for i in range(self.current_cache_index, target_end + 1):
-                if i not in self.cached_frame_dict:
-                    first_missing = i
-                    break
-
-            if first_missing == -1:
-                return
-
-            chunk_size = self.cache_window_half
-            start_frame = first_missing
-            end_frame = min(self.total_frames - 1, start_frame + chunk_size - 1)
-        else:
-            max_cache_behind = self.cache_window_half * 2
-            target_start = max(0, self.current_cache_index - max_cache_behind)
-
-            first_missing = -1
-            for i in range(self.current_cache_index, target_start - 1, -1):
-                if i not in self.cached_frame_dict:
-                    first_missing = i
-                    break
-
-            if first_missing == -1:
-                return
-
-            chunk_size = self.cache_window_half
-            end_frame = first_missing
-            start_frame = max(0, end_frame - chunk_size + 1)
-
-        num_frames = end_frame - start_frame + 1
-
-        if num_frames <= 0:
-            return
-
-        player_range_start = start_frame
-        player_range_end = end_frame
-
-        missing = [i for i in range(start_frame, start_frame + num_frames)
-                   if i not in self.cached_frame_dict]
-        if not missing:
-            return
-
-        start_frame = missing[0]
-        num_frames = missing[-1] - missing[0] + 1
-
-        if not self.current_temp_dir:
-            import uuid
-            self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
-
-        video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
-
-        actual_start_frame = start_frame
-        actual_num_frames = num_frames
-        start_number = None
-        if getattr(self, 'is_motion_photo', False):
-            actual_start_player = max(1, start_frame)
-            actual_end_player = start_frame + num_frames - 1
-            if actual_start_player > actual_end_player:
-                return
-            actual_start_frame = actual_start_player - 1
-            actual_num_frames = actual_end_player - actual_start_player + 1
-            start_number = actual_start_player
-
-        from workers.threads import FrameExtractionThread
-        gpu_enabled = self.config.get('gpu_acceleration', False)
-        qv_value = self.config.get('qv_value', 2)
-        print(f"[check_proactive_cache] Starting {'forward' if is_forward else 'backward'} proactive FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, target_missing={first_missing}, qv_value={qv_value}")
-        
-        self.last_extracted_center = start_frame + num_frames // 2
-
-        self.extraction_thread = FrameExtractionThread(
-            video_path,
-            actual_start_frame,
-            actual_num_frames,
-            self.fps,
-            self.current_temp_dir,
-            self,
-            gpu_enabled=gpu_enabled,
-            start_number=start_number,
-            video_codec=self.video_codec,
-            qv_value=qv_value,
-            is_hdr=getattr(self, 'is_hdr', False),
-            color_transfer=getattr(self, 'color_transfer', "")
-        )
-        
-        self.extraction_thread.player_start = player_range_start
-        
-        self.extraction_thread.player_end = player_range_end
-        self.extraction_thread.finished_extraction.connect(self.on_extraction_finished)
-        self.extraction_thread.start()
 
     # ------------------------------------------------------------------ #
     # Extraction callback                                                  #
@@ -482,23 +355,11 @@ class CacheMixin(CacheMixinBase):
          
         self.cached_file_path = self.currentFilePath
 
-        # Prune old/future frames to save RAM (skip for short videos that fit entirely in cache)
+        # Prune old frames to save disk/RAM (skip for short videos that fit entirely in cache)
         if self.total_frames > self.cache_window_half * 2:
-            playhead = self.current_cache_index
-            is_forward = getattr(self, 'isForward', True)
-            if is_forward:
-                prune_behind = self.cache_window_half
-                prune_ahead = int(self.cache_window_half * 2.5)
-            else:
-                prune_behind = int(self.cache_window_half * 2.5)
-                prune_ahead = self.cache_window_half
-
-            keys_to_delete = []
-            for k in new_dict:
-                if getattr(self, 'is_motion_photo', False) and k == 0:
-                    continue
-                if k < playhead - prune_behind or k > playhead + prune_ahead:
-                    keys_to_delete.append(k)
+            center = self.last_extracted_center
+            prune_threshold = int(self.cache_window_half * 1.5)
+            keys_to_delete = [k for k in new_dict if abs(k - center) > prune_threshold and (not getattr(self, 'is_motion_photo', False) or k != 0)]
 
             for k in keys_to_delete:
                 val = new_dict[k]
@@ -530,8 +391,6 @@ class CacheMixin(CacheMixinBase):
         if self.extraction_thread:
             self.extraction_thread.wait()
             self.extraction_thread = None
-
-        self.check_proactive_cache()
 
         if getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False

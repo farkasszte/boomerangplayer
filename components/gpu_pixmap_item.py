@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QImage, QMatrix4x4, QPixmap
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture, QOpenGLBuffer
+from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture
 
 class GPUPixmapItem(QGraphicsPixmapItem):
     """
@@ -28,15 +28,12 @@ class GPUPixmapItem(QGraphicsPixmapItem):
         self.blur = 0.0          # 0.0 to 100.0
         
         self.texture = None
-        self.pbo = None
         self._last_pixmap_id = None
         self._new_image_loaded = False
 
     def __del__(self):
         if self.texture:
             self.texture.destroy()
-        if hasattr(self, 'pbo') and self.pbo:
-            self.pbo.destroy()
 
     def boundingRect(self):
         if not self.current_image.isNull():
@@ -223,17 +220,8 @@ class GPUPixmapItem(QGraphicsPixmapItem):
                 texture_recreated = True
             
             if self._new_image_loaded or texture_recreated:
-                # Optimized update: upload CPU image memory to GPU texture asynchronously using PBO
-                if self.pbo is None:
-                    self.pbo = QOpenGLBuffer(QOpenGLBuffer.Type.PixelUnpackBuffer)
-                    self.pbo.create()
-                    self.pbo.setUsagePattern(QOpenGLBuffer.UsagePattern.StreamDraw)
-                
-                self.pbo.bind()
-                self.pbo.allocate(img.constBits().asstring(img.sizeInBytes()), img.sizeInBytes())
-                
-                self.texture.setData(QOpenGLTexture.PixelFormat.RGBA, QOpenGLTexture.PixelType.UInt8, None)
-                self.pbo.release()
+                # Optimized update: upload CPU image memory directly to GPU texture (no readback!)
+                self.texture.setData(QOpenGLTexture.PixelFormat.RGBA, QOpenGLTexture.PixelType.UInt8, img.constBits())
                 self._new_image_loaded = False
 
             painter.beginNativePainting()

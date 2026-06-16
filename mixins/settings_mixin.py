@@ -45,6 +45,7 @@ class SettingsMixin(SettingsMixinBase):
         cache_window_half: int
         cacheValueLabel: QSpinBox
         cacheSlider: QSlider
+        chunkCombo: QComboBox
         loopCombo: QComboBox
         speedSlider: QSlider
         speedValueLabel: QSpinBox
@@ -284,6 +285,32 @@ class SettingsMixin(SettingsMixinBase):
         self.cacheSlider.valueChanged.connect(update_cache_size)
         self.cacheValueLabel.valueChanged.connect(self.cacheSlider.setValue)
         cacheGroup.addWidget(self.cacheSlider)
+        
+        # Prefetch Chunk Size Combobox
+        chunkLayout = QHBoxLayout()
+        chunkLayout.setContentsMargins(0, 4, 0, 4)
+        self.chunkLabel = CaptionLabel(tr('prefetch_chunk_size'))
+        self.chunkCombo = QComboBox()
+        self.chunkCombo.addItems([
+            tr('chunk_full'),
+            tr('chunk_half'),
+            tr('chunk_quarter'),
+            tr('chunk_sixth')
+        ])
+        self.chunkCombo.setFixedWidth(120)
+        self.chunkCombo.setCurrentIndex(self.config.get('prefetch_chunk_idx', 0))
+        
+        def update_chunk_idx(idx):
+            self.config['prefetch_chunk_idx'] = idx
+            self.config.save()
+            if getattr(self, 'currentFilePath', None):
+                self.request_frame_extraction(self.current_cache_index, force=True)
+                
+        self.chunkCombo.currentIndexChanged.connect(update_chunk_idx)
+        chunkLayout.addWidget(self.chunkLabel)
+        chunkLayout.addStretch(1)
+        chunkLayout.addWidget(self.chunkCombo)
+        cacheGroup.addLayout(chunkLayout)
         
         # --- MJPEG Quality Slider ---
         qvGroup = QVBoxLayout()

@@ -143,6 +143,8 @@ class StyleUIMixin:
         # Update ComboBox
         if hasattr(self, 'loopCombo'):
             self.loopCombo.setStyleSheet(s['COMBO_STYLE'])
+        if hasattr(self, 'chunkCombo'):
+            self.chunkCombo.setStyleSheet(s['COMBO_STYLE'])
 
         # Update SpinBoxes
         spinboxes = ['speedValueLabel', 'zoomValueLabel', 'cacheValueLabel', 'qvValueSpinBox',

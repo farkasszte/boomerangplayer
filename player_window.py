@@ -187,11 +187,6 @@ class PlayerWindow(
 
         # ---- Cache / playback variables --------------------------------
         self.cached_frame_dict = {}
-        self.decoded_frame_cache = {}
-        self.currently_predecoding_set = set()
-        from workers.threads import PreDecodeSignals
-        self.predecode_signals = PreDecodeSignals()
-        self.predecode_signals.decoded.connect(self.on_frame_predecoded)
         self.current_temp_dir = None
         self.extraction_thread = None
         self.cached_file_path = None

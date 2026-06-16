@@ -162,14 +162,11 @@ class AdjustmentMixin(AdjustmentMixinBase):
                     if target_index == getattr(self, '_last_rendered_index', -1):
                         self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
                     else:
-                        if target_index in getattr(self, 'decoded_frame_cache', {}):
-                            image = self.decoded_frame_cache[target_index]
-                        else:
-                            image = QImage()
-                            if isinstance(data, bytes):
-                                image.loadFromData(data)
-                            elif isinstance(data, str):
-                                image.load(data)
+                        image = QImage()
+                        if isinstance(data, bytes):
+                            image.loadFromData(data)
+                        elif isinstance(data, str):
+                            image.load(data)
                         
                         self.pixmapItem.setImage(image)
                         self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
@@ -188,15 +185,12 @@ class AdjustmentMixin(AdjustmentMixinBase):
                         and hasattr(self, '_current_base_image') and not self._current_base_image.isNull()):
                     img = self._current_base_image.copy()
                 else:
-                    if target_index in getattr(self, 'decoded_frame_cache', {}):
-                        img = self.decoded_frame_cache[target_index].copy()
-                    else:
-                        pixmap = QPixmap()
-                        if isinstance(data, bytes):
-                            pixmap.loadFromData(data)
-                        elif isinstance(data, str):
-                            pixmap.load(data)
-                        img = pixmap.toImage()
+                    pixmap = QPixmap()
+                    if isinstance(data, bytes):
+                        pixmap.loadFromData(data)
+                    elif isinstance(data, str):
+                        pixmap.load(data)
+                    img = pixmap.toImage()
                     self._current_base_image = img
                     self._last_base_index = target_index
 
@@ -240,6 +234,3 @@ class AdjustmentMixin(AdjustmentMixinBase):
 
         if hasattr(self, 'update_subtitles_for_current_time'):
             self.update_subtitles_for_current_time()
-
-        if hasattr(self, 'manage_predecode_pool'):
-            self.manage_predecode_pool()
