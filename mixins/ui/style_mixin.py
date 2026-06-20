@@ -152,7 +152,7 @@ class StyleUIMixin:
                      'hueSpinBox', 'tempSpinBox', 'exposureSpinBox', 'sharpenSpinBox', 'blurSpinBox',
                      'penSizeLabel', 'subFontSizeSpin', 'subBgOpacitySpin', 'subOutlineWidthSpin',
                      'subShadowBlurSpin', 'subShadowDxSpin', 'subShadowDySpin', 'subOffsetSpin',
-                     'subHOffsetSpin', 'subVOffsetSpin']
+                     'subHOffsetSpin', 'subVOffsetSpin', 'loopCountSpin']
         for spin_name in spinboxes:
             if hasattr(self, spin_name):
                 spin = getattr(self, spin_name)

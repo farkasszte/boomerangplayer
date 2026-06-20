@@ -236,6 +236,8 @@ class GlobalSettingsUiBuilderMixin:
             'show_thumbnails': True,
             'show_filenames': True,
             'thumbnail_size_index': 1,
+            'advance_playlist_after_loop': DEFAULT_CONFIG.get('advance_playlist_after_loop', False),
+            'advance_playlist_loop_count': DEFAULT_CONFIG.get('advance_playlist_loop_count', 1),
         }
 
         for key, val in factories.items():
@@ -246,6 +248,19 @@ class GlobalSettingsUiBuilderMixin:
         self.pending_panel_opacity = factories['panel_opacity']
 
         # ---- Update UI widgets ----
+        if hasattr(self, 'advancePlaylistToggle'):
+            self.advancePlaylistToggle.blockSignals(True)
+            self.advancePlaylistToggle.setChecked(factories['advance_playlist_after_loop'])
+            self.advancePlaylistToggle.blockSignals(False)
+        if hasattr(self, 'loopCountSpin'):
+            self.loopCountSpin.blockSignals(True)
+            self.loopCountSpin.setValue(factories['advance_playlist_loop_count'])
+            self.loopCountSpin.blockSignals(False)
+        if hasattr(self, 'loopCountSlider'):
+            self.loopCountSlider.blockSignals(True)
+            self.loopCountSlider.setValue(factories['advance_playlist_loop_count'])
+            self.loopCountSlider.blockSignals(False)
+
         if hasattr(self, 'gsLangBtn'):
             self.gsLangBtn.setText(tr('lang_en'))
         if hasattr(self, 'gsAudioBtn'):

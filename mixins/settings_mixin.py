@@ -389,6 +389,60 @@ class SettingsMixin(SettingsMixinBase):
         self.loopCombo.currentIndexChanged.connect(self.on_loop_mode_changed)
         loopGroup.addWidget(self.loopCombo)
 
+        # Advance playlist after loops toggle row
+        advancePlaylistRow = QHBoxLayout()
+        self.advancePlaylistLabel = CaptionLabel(tr('advance_playlist_after_loop'))
+        self.advancePlaylistToggle = SwitchButton()
+        self.advancePlaylistToggle.setChecked(self.config.get('advance_playlist_after_loop', False))
+        self.advancePlaylistToggle.setOnText(tr('on'))
+        self.advancePlaylistToggle.setOffText(tr('off'))
+        self.advancePlaylistToggle.setToolTip(tr('tip_advance_playlist_after_loop'))
+        
+        def toggle_advance_playlist(checked):
+            self.config['advance_playlist_after_loop'] = checked
+            self.config.save()
+            
+        self.advancePlaylistToggle.checkedChanged.connect(toggle_advance_playlist)
+        advancePlaylistRow.addWidget(self.advancePlaylistLabel)
+        advancePlaylistRow.addStretch(1)
+        advancePlaylistRow.addWidget(self.advancePlaylistToggle)
+        loopGroup.addLayout(advancePlaylistRow)
+
+        # Loop count spin box row
+        loopCountHeader = QHBoxLayout()
+        self.loopCountLabel = CaptionLabel(tr('advance_playlist_loop_count'))
+        self.loopCountSpin = QSpinBox()
+        self.loopCountSpin.setRange(1, 10)
+        self.loopCountSpin.setValue(self.config.get('advance_playlist_loop_count', 1))
+        self.loopCountSpin.setFixedWidth(80)
+        self.loopCountSpin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        self.loopCountSpin.setToolTip(tr('tip_advance_playlist_loop_count'))
+        loopCountHeader.addWidget(self.loopCountLabel)
+        loopCountHeader.addStretch(1)
+        loopCountHeader.addWidget(self.loopCountSpin)
+        loopGroup.addLayout(loopCountHeader)
+
+        # Loop count slider
+        self.loopCountSlider = QSlider(Qt.Orientation.Horizontal)
+        self.loopCountSlider.setRange(1, 10)
+        self.loopCountSlider.setValue(self.config.get('advance_playlist_loop_count', 1))
+        self.loopCountSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
+        self.loopCountSlider.setToolTip(tr('tip_advance_playlist_loop_count'))
+        
+        def change_loop_count(val):
+            self.config['advance_playlist_loop_count'] = val
+            self.config.save()
+            self.loopCountSpin.blockSignals(True)
+            self.loopCountSpin.setValue(val)
+            self.loopCountSpin.blockSignals(False)
+            self.loopCountSlider.blockSignals(True)
+            self.loopCountSlider.setValue(val)
+            self.loopCountSlider.blockSignals(False)
+            
+        self.loopCountSlider.valueChanged.connect(change_loop_count)
+        self.loopCountSpin.valueChanged.connect(change_loop_count)
+        loopGroup.addWidget(self.loopCountSlider)
+
         # Save loop and Save frame buttons inside the Hurok section
         self.saveLoopButton = PushButton(tr('save_loop'))
         self.saveLoopButton.setToolTip(tr('tip_save_loop'))

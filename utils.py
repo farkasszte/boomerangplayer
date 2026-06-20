@@ -3,7 +3,7 @@ import sys
 import json
 import subprocess
 from PyQt6.QtCore import Qt
-VERSION = "3.4"
+VERSION = "3.5"
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -170,7 +170,9 @@ DEFAULT_CONFIG = {
     'subtitle_shadow_color': 'Black',
     'subtitle_v_offset': 5,
     'subtitle_h_offset': 0,
-    'detected_hwaccel': 'auto'
+    'detected_hwaccel': 'auto',
+    'advance_playlist_after_loop': False,
+    'advance_playlist_loop_count': 1
 }
 
 def get_config_path():

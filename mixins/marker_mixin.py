@@ -266,9 +266,10 @@ class MarkerMixin(MarkerMixinBase):
             self.apply_transformations(fit=True)
             
             # Restore position
-            last_pos = data.get('lastPosition', 0)
-            if last_pos > 0:
-                self.set_position(last_pos)
+            if not getattr(self, 'autoplay_next', False):
+                last_pos = data.get('lastPosition', 0)
+                if last_pos > 0:
+                    self.set_position(last_pos)
 
             # Restore drawings
             if hasattr(self, 'view') and self.view:

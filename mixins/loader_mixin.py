@@ -401,6 +401,7 @@ class LoaderMixin(LoaderMixinBase):
         self.was_playing_before_cache_miss = was_playing
         self.frame_accumulator = 0.0
         self.last_advance_ms = 0
+        self.loop_count = 0
 
         self.mediaPlayer.setSource(QUrl())
         self.cleanup_cache()
@@ -408,6 +409,11 @@ class LoaderMixin(LoaderMixinBase):
         is_image = False
         try:
             self.is_loading_video = True
+            if hasattr(self, 'subtitles'):
+                self.subtitles = []
+                self.subtitleFilePath = None
+                if hasattr(self, 'subtitleLabel') and self.subtitleLabel:
+                    self.subtitleLabel.hide()
             self.currentFilePath = filePath
             self.currentVideoPath = filePath
             self.video_codec = None
@@ -498,6 +504,13 @@ class LoaderMixin(LoaderMixinBase):
                 self.playButton.setIcon(FluentIcon.PLAY)
                 self.playButton.setEnabled(True)
 
+            self.load_markers_for_current()
+
+            if not is_image:
+                if hasattr(self, 'auto_load_subtitles_for_video'):
+                    self.auto_load_subtitles_for_video(filePath)
+
+            if not is_image:
                 if self.is_audio_only:
                     self.generate_audio_placeholder()
                     self.update_pixmap_from_cache()
@@ -506,16 +519,17 @@ class LoaderMixin(LoaderMixinBase):
                     self.update_pixmap_from_cache()
                     self.start_full_extraction()
 
-            if hasattr(self, 'subtitles'):
-                self.subtitles = []
-                self.subtitleFilePath = None
-                if hasattr(self, 'subtitleLabel'):
-                    self.subtitleLabel.hide()
-            if not is_image:
-                if hasattr(self, 'auto_load_subtitles_for_video'):
-                    self.auto_load_subtitles_for_video(filePath)
-
-            self.load_markers_for_current()
+            if getattr(self, 'autoplay_next', False):
+                if self.is_audio_only or is_image:
+                    self.autoplay_next = False
+                    loop_mode = self.loopCombo.currentIndex()
+                    if loop_mode == 2:
+                        self.isForward = False
+                        self.current_cache_index = max(0, self.total_frames - 1)
+                    else:
+                        self.isForward = True
+                        self.current_cache_index = 0
+                    self._start_playback()
 
         except Exception as e:
             print(f"Error opening file: {e}")

@@ -221,7 +221,11 @@ class CacheMixin(CacheMixinBase):
             self.loadingOverlay.show()
 
         data = self.playlistData.get(self.currentFilePath, {})
-        start_pos = data.get('startFrame', 0)
+        loop_mode = data.get('loopMode', self.loopCombo.currentIndex())
+        if loop_mode == 2:
+            start_pos = max(0, self.total_frames - 1)
+        else:
+            start_pos = data.get('startFrame', 0)
         self.current_cache_index = start_pos
         
         # If it's a motion photo, cache frame 0 as the high-res photo path
@@ -312,10 +316,19 @@ class CacheMixin(CacheMixinBase):
         print(f"[on_first_frame_extracted] Triggering request_frame_extraction for current_cache_index={self.current_cache_index}")
         self.request_frame_extraction(self.current_cache_index, force=True)
 
-        if getattr(self, 'was_playing_before_cache_miss', False):
+        if getattr(self, 'autoplay_next', False):
+            self.autoplay_next = False
+            loop_mode = self.loopCombo.currentIndex()
+            if loop_mode == 2:
+                self.isForward = False
+            else:
+                self.isForward = True
+            if hasattr(self, '_start_playback'):
+                self._start_playback()
+        elif getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False
-            if hasattr(self, 'play_pause') and not getattr(self, 'is_playing', False):
-                self.play_pause()
+            if hasattr(self, '_start_playback'):
+                self._start_playback()
 
     def check_sliding_window(self):
         if self.last_extracted_center == -1:
@@ -394,8 +407,8 @@ class CacheMixin(CacheMixinBase):
 
         if getattr(self, 'was_playing_before_cache_miss', False):
             self.was_playing_before_cache_miss = False
-            
-            self.play_pause()
+            if hasattr(self, '_start_playback'):
+                self._start_playback()
 
     # ------------------------------------------------------------------ #
     # Progress bar sync                                                    #

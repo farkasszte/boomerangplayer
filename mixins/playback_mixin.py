@@ -118,6 +118,35 @@ class PlaybackMixin(PlaybackMixinBase):
     # Frame advance (timer callback)                                       #
     # ------------------------------------------------------------------ #
 
+    def handle_loop_cycle(self):
+        self.loop_count = getattr(self, 'loop_count', 0) + 1
+        if self.config.get('advance_playlist_after_loop', False):
+            limit = self.config.get('advance_playlist_loop_count', 1)
+            if self.loop_count >= limit:
+                self.loop_count = 0
+                self.advance_playlist()
+                return True
+        return False
+
+    def advance_playlist(self):
+        if not hasattr(self, 'playlistList') or self.playlistList.count() == 0:
+            return
+        
+        current_idx = -1
+        for i in range(self.playlistList.count()):
+            item = self.playlistList.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == self.currentFilePath:
+                current_idx = i
+                break
+        
+        if current_idx != -1 and current_idx + 1 < self.playlistList.count():
+            next_item = self.playlistList.item(current_idx + 1)
+            self.playlistList.setCurrentItem(next_item)
+            self.autoplay_next = True
+            self.load_video(next_item.data(Qt.ItemDataRole.UserRole))
+        else:
+            self.stop_playback()
+
     def advance_frame(self):
         if not getattr(self, 'cached_frame_dict', None) or self.fps <= 0:
             return
@@ -168,6 +197,10 @@ class PlaybackMixin(PlaybackMixinBase):
             self.current_cache_index += int_delta
             if self.current_cache_index > end_frame:
                 if loop_mode in (1, 2, 3):
+                    if loop_mode != 3:
+                        if self.handle_loop_cycle():
+                            return
+
                     if loop_mode == 3:  # Ping-pong
                         self.isForward = False
                         self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
@@ -185,11 +218,17 @@ class PlaybackMixin(PlaybackMixinBase):
                         self.audioOutput.setVolume(self.audioOutput.volume())
                 else:
                     self.current_cache_index = end_frame
-                    self.stop_playback()
+                    if self.config.get('advance_playlist_after_loop', False):
+                        self.advance_playlist()
+                    else:
+                        self.stop_playback()
         else:
             self.current_cache_index -= int_delta
             if self.current_cache_index < start_frame:
                 if loop_mode == 3:  # Ping-pong
+                    if self.handle_loop_cycle():
+                        return
+
                     self.isForward = True
                     self.current_cache_index = start_frame + (start_frame - self.current_cache_index)
                     
@@ -205,10 +244,16 @@ class PlaybackMixin(PlaybackMixinBase):
                         self.mediaPlayer.setPlaybackRate(rate)
                         self.mediaPlayer.play()
                 elif loop_mode == 2:  # Backward loop
+                    if self.handle_loop_cycle():
+                        return
+
                     self.current_cache_index = end_frame - (start_frame - self.current_cache_index - 1)
                 else:
                     self.current_cache_index = start_frame
-                    self.stop_playback()
+                    if self.config.get('advance_playlist_after_loop', False):
+                        self.advance_playlist()
+                    else:
+                        self.stop_playback()
 
         self.current_cache_index = max(0, min(max(0, self.total_frames - 1), self.current_cache_index))
 
