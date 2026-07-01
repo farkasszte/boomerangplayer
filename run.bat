@@ -1,3 +1,2 @@
 @echo on
-python main.py
-
+.venv\Scripts\python main.py

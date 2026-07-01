@@ -5,11 +5,14 @@ LoaderMixin — media file/folder loading, ffprobe metadata extraction, and save
 import os
 import subprocess
 import json
+import logging
 from PyQt6.QtCore import Qt, QUrl, QTimer, QPointF
 from PyQt6.QtMultimedia import QMediaPlayer
 from qfluentwidgets import FluentIcon
 from utils import get_resource_path, format_time, VERSION, get_embedded_video_offset
 from translations import tr
+
+logger = logging.getLogger("Loader")
 
 from typing import TYPE_CHECKING
 
@@ -396,6 +399,7 @@ class LoaderMixin(LoaderMixinBase):
                 self.load_video(files_to_add[0])
 
     def load_video(self, filePath):
+        logger.info(f"load_video started for: {filePath}")
         was_playing = getattr(self, 'is_playing', False)
         self.stop_playback()
         self.was_playing_before_cache_miss = was_playing
@@ -403,6 +407,7 @@ class LoaderMixin(LoaderMixinBase):
         self.last_advance_ms = 0
         self.loop_count = 0
 
+        logger.info("Setting mediaPlayer source to empty and cleaning up cache/markers")
         self.mediaPlayer.setSource(QUrl())
         self.cleanup_cache()
         self.save_current_markers()
@@ -430,9 +435,11 @@ class LoaderMixin(LoaderMixinBase):
             is_image = filePath.lower().endswith(
                 ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
             )
+            logger.info(f"File recognized as image: {is_image}")
 
             embedded_offset = None
             if is_image and filePath.lower().endswith(('.jpg', '.jpeg')):
+                logger.info("Checking for embedded video in JPEG (motion photo)...")
                 embedded_offset = get_embedded_video_offset(filePath)
 
             if embedded_offset is not None:
@@ -444,6 +451,7 @@ class LoaderMixin(LoaderMixinBase):
                 
                 temp_video_path = os.path.join(self.current_temp_dir, "extracted_video.mp4")
                 try:
+                    logger.info(f"Extracting motion photo video data starting at offset {embedded_offset}")
                     with open(filePath, 'rb') as f:
                         f.seek(embedded_offset)
                         video_data = f.read()
@@ -451,11 +459,12 @@ class LoaderMixin(LoaderMixinBase):
                         f.write(video_data)
                     self.currentVideoPath = temp_video_path
                     is_image = False
-                    print(f"Extracted motion photo video to {temp_video_path} (offset: {embedded_offset})")
+                    logger.info(f"Successfully extracted motion photo video to {temp_video_path}")
                 except Exception as ex:
-                    print(f"Error extracting motion photo video: {ex}")
+                    logger.exception(f"Error extracting motion photo video")
 
             if is_image:
+                logger.info("Processing as static image...")
                 self.cached_frame_dict = {0: filePath}
                 self.cached_file_path = filePath
                 self.current_cache_index = 0
@@ -469,13 +478,14 @@ class LoaderMixin(LoaderMixinBase):
                 self.mediaPlayer.stop()
                 self.setWindowTitle(f"Boomerang Player v{VERSION} - {os.path.basename(filePath)}")
             else:
+                logger.info("Extracting video metadata using ffprobe...")
                 fps, duration_ms, total_frames = self.get_video_info(self.currentVideoPath)
                 if self.is_motion_photo:
                     total_frames += 1
 
                 if fps > 0:
                     self.fps = fps
-                    print(f"ffprobe detected FPS: {self.fps}")
+                    logger.info(f"ffprobe detected FPS: {self.fps}")
 
                 if self.is_motion_photo:
                     self.cached_frame_dict = {0: filePath}
@@ -484,6 +494,7 @@ class LoaderMixin(LoaderMixinBase):
 
                 self.current_cache_index = 0
 
+                logger.info(f"Setting QMediaPlayer source to: {self.currentVideoPath}")
                 self.mediaPlayer.setSource(QUrl.fromLocalFile(self.currentVideoPath))
                 if self.is_motion_photo:
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - [Motion Photo] {os.path.basename(filePath)}")
@@ -504,18 +515,22 @@ class LoaderMixin(LoaderMixinBase):
                 self.playButton.setIcon(FluentIcon.PLAY)
                 self.playButton.setEnabled(True)
 
+            logger.info("Loading saved markers for file...")
             self.load_markers_for_current()
 
             if not is_image:
                 if hasattr(self, 'auto_load_subtitles_for_video'):
+                    logger.info("Checking for subtitles...")
                     self.auto_load_subtitles_for_video(filePath)
 
             if not is_image:
                 if self.is_audio_only:
+                    logger.info("Generating placeholder for audio file...")
                     self.generate_audio_placeholder()
                     self.update_pixmap_from_cache()
                     self.apply_transformations(fit=True)
                 else:
+                    logger.info("Initializing cache and starting full video frame extraction...")
                     self.update_pixmap_from_cache()
                     self.start_full_extraction()
 
@@ -530,9 +545,10 @@ class LoaderMixin(LoaderMixinBase):
                         self.isForward = True
                         self.current_cache_index = 0
                     self._start_playback()
+            logger.info(f"load_video completed successfully for: {filePath}")
 
         except Exception as e:
-            print(f"Error opening file: {e}")
+            logger.exception(f"Error opening file: {filePath}")
             from qfluentwidgets import InfoBar, InfoBarPosition
             InfoBar.error(
                 title=tr('file_info_title'),
@@ -551,6 +567,7 @@ class LoaderMixin(LoaderMixinBase):
 
     def get_video_info(self, file_path):
         """Get FPS and duration using ffprobe, supporting both video and audio-only files."""
+        logger.info(f"get_video_info started for: {file_path}")
         try:
             ffprobe_path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
             if not os.path.exists(ffprobe_path):
@@ -635,10 +652,10 @@ class LoaderMixin(LoaderMixinBase):
             codec = stream.get('codec_name', 'unknown')
             self.video_codec = codec
             
-            print(f"[get_video_info] {os.path.basename(file_path)}: codec={codec}, is_audio_only={self.is_audio_only}, fps={fps}, duration={duration}s, nb_frames={nb_frames}")
+            logger.info(f"[get_video_info] {os.path.basename(file_path)}: codec={codec}, is_audio_only={self.is_audio_only}, fps={fps}, duration={duration}s, nb_frames={nb_frames}")
             return fps, duration * 1000, nb_frames
         except Exception as e:
-            print(f"ffprobe error: {e}")
+            logger.error(f"ffprobe error: {e}", exc_info=True)
             return 30.0, 0, 0
 
     def _apply_file_saved_zoom(self):

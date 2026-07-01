@@ -134,9 +134,20 @@ def qt_message_handler(mode, context, message):
         return
     if not message.strip():
         return
-    # Print non-suppressed messages so real Qt errors are visible
-    import sys
-    print(message, file=sys.stderr)
+    import logging
+    qt_logger = logging.getLogger("Qt")
+    
+    # Map PyQt message type/mode to standard logging levels
+    mode_str = str(mode)
+    if "Debug" in mode_str or mode == 0:
+        qt_logger.debug(message)
+    elif "Info" in mode_str or mode == 4:
+        qt_logger.info(message)
+    elif "Warning" in mode_str or mode == 1:
+        qt_logger.warning(message)
+    else:
+        qt_logger.error(message)
+
 
 DEFAULT_CONFIG = {
     'language': 'en',
@@ -355,10 +366,10 @@ def cleanup_old_mem_cache():
 
 
 def log_debug(msg):
-    # Debug logging to file is muted for production/release.
-    # Uncomment print below if console debug logs are needed:
-    # print(f"[DEBUG] {msg}", flush=True)
-    pass
+    import sys
+    if "--debug" in sys.argv:
+        import logging
+        logging.getLogger("BoomerangPlayer").debug(msg)
 
 def send_to_recycle_bin(path):
     """ Moves the specified file to the Windows Recycle Bin (Lomtár) using ctypes SHFileOperationW.
