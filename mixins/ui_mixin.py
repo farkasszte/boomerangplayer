@@ -297,7 +297,9 @@ class UIMixin(
                     x = 0 if side == 'left' else (self.width() - width)
                     container.setGeometry(x, 0, width, sidebar_height)
             
-            # Always raise the bottom controls card above the sidebars in fullscreen so its buttons are fully clickable
+            # Always raise the title bar and controls card above the sidebars in fullscreen
+            if hasattr(self, 'titleBar'):
+                self.titleBar.raise_()
             if hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
                 self.controlsCard.raise_()
         else:

@@ -1,2 +1,2 @@
 @echo on
-.venv\Scripts\python main.py
+.venv\Scripts\python main.py --debug

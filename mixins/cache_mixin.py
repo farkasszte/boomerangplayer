@@ -3,9 +3,14 @@ CacheMixin — frame extraction and cache management.
 """
 
 import os
+import logging
 import tempfile
 import shutil
 from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtCore import Qt, QTimer
+from utils import safe_rmtree, mark_temp_dir_owner
+
+logger = logging.getLogger("BoomerangPlayer")
 
 
 from typing import TYPE_CHECKING
@@ -51,6 +56,30 @@ class CacheMixin(CacheMixinBase):
     # Cache housekeeping                                                   #
     # ------------------------------------------------------------------ #
 
+    def _deferred_fit_in_view(self):
+        """Re-fit the view after layout settles. Needed in fullscreen where geometry may shift."""
+        if not getattr(self, 'is_full_screen', False):
+            return
+        if not hasattr(self, 'view') or not hasattr(self, 'pixmapItem') or not self.pixmapItem:
+            return
+        pix = self.pixmapItem.pixmap()
+        if pix.isNull():
+            logger.warning("[DEBUG _deferred_fit] pixmap is NULL, skipping")
+            return
+        vw = self.view.viewport().width()
+        vh = self.view.viewport().height()
+        logger.warning(f"[DEBUG _deferred_fit] viewport={vw}x{vh}, pixmap={pix.width()}x{pix.height()}, view_size={self.view.width()}x{self.view.height()}, window={self.width()}x{self.height()}")
+        if vw <= 0 or vh <= 0:
+            logger.warning("[DEBUG _deferred_fit] viewport zero, retrying in 200ms")
+            QTimer.singleShot(200, self._deferred_fit_in_view)
+            return
+        self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
+        logger.warning(f"[DEBUG _deferred_fit] fitInView done, view viewport now={self.view.viewport().width()}x{self.view.viewport().height()}")
+        if hasattr(self, 'titleBar') and self.titleBar.isVisible():
+            self.titleBar.raise_()
+        if hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
+            self.controlsCard.raise_()
+
     def cleanup_cache(self, keep_extracted_video=False):
         if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
             
@@ -71,10 +100,7 @@ class CacheMixin(CacheMixinBase):
                             except OSError:
                                 pass
                 else:
-                    try:
-                        shutil.rmtree(self.current_temp_dir, ignore_errors=True)
-                    except OSError:
-                        pass
+                    safe_rmtree(self.current_temp_dir, retries=5, delay=0.15)
                     self.current_temp_dir = None
             else:
                 self.current_temp_dir = None
@@ -170,6 +196,7 @@ class CacheMixin(CacheMixinBase):
         if not self.current_temp_dir:
             import uuid
             self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
+            mark_temp_dir_owner(self.current_temp_dir)
 
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
@@ -247,6 +274,7 @@ class CacheMixin(CacheMixinBase):
         if not self.current_temp_dir:
             import uuid
             self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
+            mark_temp_dir_owner(self.current_temp_dir)
             
         video_path = getattr(self, 'currentVideoPath', self.currentFilePath)
 
@@ -301,6 +329,9 @@ class CacheMixin(CacheMixinBase):
                 self.apply_transformations(fit=True)
                 if hasattr(self, '_apply_file_saved_zoom'):
                     self._apply_file_saved_zoom()
+                # Deferred re-fit for fullscreen: layout may not be settled yet
+                QTimer.singleShot(100, self._deferred_fit_in_view)
+                QTimer.singleShot(500, self._deferred_fit_in_view)
 
             self.sync_progress_bar()
 
@@ -397,6 +428,9 @@ class CacheMixin(CacheMixinBase):
             self.apply_transformations(fit=True)
             if hasattr(self, '_apply_file_saved_zoom'):
                 self._apply_file_saved_zoom()
+            # Deferred re-fit for fullscreen: layout may not be settled yet
+            QTimer.singleShot(100, self._deferred_fit_in_view)
+            QTimer.singleShot(500, self._deferred_fit_in_view)
 
         self.sync_progress_bar()
 

@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QFileDialog, QDialog
 from PyQt6.QtGui import QImage
 from PyQt6.QtCore import Qt
 from translations import tr
+from utils import mark_temp_dir_owner
 from components.marker_dialogs import SaveLoopOptionsDialog
 from utils import get_resource_path, apply_software_adjustments
 from workers.threads import ProcessMonitorThread, FrameExtractionThread
@@ -150,6 +151,7 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                     import tempfile
                     self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
                     os.makedirs(self.current_temp_dir, exist_ok=True)
+                    mark_temp_dir_owner(self.current_temp_dir)
                 
                 loop = QEventLoop()
                 extracted_data = {}

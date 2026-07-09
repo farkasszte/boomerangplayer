@@ -4,6 +4,7 @@ import logging
 import faulthandler
 import traceback
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QImageReader
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 # Determine base directory
@@ -75,6 +76,11 @@ def main():
     
     app = QApplication(sys.argv)
     app.setApplicationName("Boomerang Player")
+    
+    # Raise Qt's internal QImage allocation limit (default 256 MB) to prevent
+    # "Rejecting image as it exceeds the current allocation limit" errors on
+    # large or high-bitrate video frames.
+    QImageReader.setAllocationLimit(0)
     
     if "--test-crash" in sys.argv:
         logger.info("Testing Python unhandled exception crash...")

@@ -284,9 +284,15 @@ class PlayerWindow(
                 y = (self.titleBar.height() - title_lbl.height()) // 2
                 title_lbl.move(x, y)
 
-        if getattr(self, 'is_full_screen', False) and hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
-            h = max(80, self.controlsCard.sizeHint().height())
-            self.controlsCard.setGeometry(0, self.height() - h, self.width(), h)
+        if getattr(self, 'is_full_screen', False):
+            # Reposition title bar overlay in fullscreen
+            if hasattr(self, 'titleBar') and self.titleBar.isVisible():
+                self.titleBar.move(0, 0)
+                self.titleBar.resize(self.width(), self.titleBar.height())
+            # Reposition controls card overlay in fullscreen
+            if hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
+                h = max(80, self.controlsCard.sizeHint().height())
+                self.controlsCard.setGeometry(0, self.height() - h, self.width(), h)
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
         if hasattr(self, 'update_sidebar_margins'):

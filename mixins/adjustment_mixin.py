@@ -4,10 +4,13 @@ AdjustmentMixin — image/video pixel adjustments (brightness, contrast, gamma, 
 """
 
 import os
+import logging
 import numpy as np
 from PyQt6.QtGui import QImage, QPixmap, QPainter, QColor, QFont
 from PyQt6.QtCore import Qt, QRectF, QBuffer, QIODevice
 from translations import tr
+
+logger = logging.getLogger("BoomerangPlayer")
 from utils import apply_software_adjustments
 
 from typing import TYPE_CHECKING
@@ -140,6 +143,8 @@ class AdjustmentMixin(AdjustmentMixinBase):
     def update_pixmap_from_cache(self):
         is_audio = getattr(self, 'is_audio_only', False)
         target_index = 0 if is_audio else self.current_cache_index
+        cache_keys = list(getattr(self, 'cached_frame_dict', {}).keys())
+        logger.warning(f"[DEBUG update_pixmap] target_index={target_index}, cache_keys={cache_keys[:10]}..., is_fullscreen={getattr(self, 'is_full_screen', False)}")
 
         if target_index in getattr(self, 'cached_frame_dict', {}):
             data = self.cached_frame_dict[target_index]
@@ -168,17 +173,18 @@ class AdjustmentMixin(AdjustmentMixinBase):
                         elif isinstance(data, str):
                             image.load(data)
                         
-                        self.pixmapItem.setImage(image)
-                        self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
+                        if not image.isNull():
+                            self.pixmapItem.setImage(image)
+                            self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
                         
-                        fit_val = False
-                        if getattr(self, 'is_motion_photo', False):
-                            last_idx = getattr(self, '_last_rendered_index', -1)
-                            if target_index == 0 or last_idx == 0:
-                                fit_val = True
+                            fit_val = False
+                            if getattr(self, 'is_motion_photo', False):
+                                last_idx = getattr(self, '_last_rendered_index', -1)
+                                if target_index == 0 or last_idx == 0:
+                                    fit_val = True
                         
-                        self.apply_transformations(fit=fit_val)
-                        self._last_rendered_index = target_index
+                            self.apply_transformations(fit=fit_val)
+                            self._last_rendered_index = target_index
             else:
                 # Software rendering path
                 if (hasattr(self, '_last_base_index') and self._last_base_index == target_index 

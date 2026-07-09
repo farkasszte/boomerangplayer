@@ -229,6 +229,13 @@ class ControlsCardUIMixin:
             self.controlsCard.show()
             if hasattr(self, 'position_subtitle_label'):
                 self.position_subtitle_label()
+        
+        # Show title bar as overlay in fullscreen
+        if hasattr(self, 'titleBar'):
+            self.titleBar.show()
+            self.titleBar.raise_()
+            self.titleBar.move(0, 0)
+            self.titleBar.resize(self.width(), self.titleBar.height())
             
         # Restore any sidebars that were hidden by the controls auto-hide in fullscreen
         hidden_sidebars = getattr(self, 'sidebars_hidden_by_controls', None)
@@ -282,8 +289,10 @@ class ControlsCardUIMixin:
                 'audio': hasattr(self, 'audioContainer') and self.audioContainer.isVisible()
             }
             
-            # Hide the controlsCard and all sidebars in fullscreen
+            # Hide the controlsCard, title bar, and all sidebars in fullscreen
             self.controlsCard.hide()
+            if hasattr(self, 'titleBar'):
+                self.titleBar.hide()
             if hasattr(self, 'position_subtitle_label'):
                 self.position_subtitle_label()
                 

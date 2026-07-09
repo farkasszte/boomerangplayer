@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt, QTimer, QUrl, QThread, pyqtSignal
 from qfluentwidgets import InfoBar, InfoBarPosition
 from translations import tr
 from workers.threads import AudioExtractionThread
+from utils import safe_rmtree, mark_temp_dir_owner
 
 
 class AudioMixin:
@@ -196,11 +197,7 @@ class AudioMixin:
             self.mediaPlayer.setSource(QUrl())
 
         if hasattr(self, 'current_temp_dir') and self.current_temp_dir and os.path.exists(self.current_temp_dir):
-            import shutil
-            try:
-                shutil.rmtree(self.current_temp_dir, ignore_errors=True)
-            except Exception as e:
-                print(f"[AudioMixin] Error cleaning up temp audio directory {self.current_temp_dir}: {e}")
+            safe_rmtree(self.current_temp_dir, retries=5, delay=0.15)
             self.current_temp_dir = None
 
     def closeEvent(self, event):
@@ -235,6 +232,7 @@ class AudioMixin:
             import uuid
             import tempfile
             self.current_temp_dir = os.path.join(tempfile.gettempdir(), f"mem_cache_{uuid.uuid4().hex}")
+            mark_temp_dir_owner(self.current_temp_dir)
         os.makedirs(self.current_temp_dir, exist_ok=True)
 
         self.original_audio_path_1 = os.path.normpath(os.path.join(self.current_temp_dir, "original_audio_1.wav"))

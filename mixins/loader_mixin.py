@@ -8,6 +8,7 @@ import json
 import logging
 from PyQt6.QtCore import Qt, QUrl, QTimer, QPointF
 from PyQt6.QtMultimedia import QMediaPlayer
+from utils import mark_temp_dir_owner
 from qfluentwidgets import FluentIcon
 from utils import get_resource_path, format_time, VERSION, get_embedded_video_offset
 from translations import tr
@@ -82,302 +83,322 @@ class LoaderMixin(LoaderMixinBase):
         sync_zoom_ui: callable
 
     def open_media(self):
-        """
-        Unified smart file/folder picker.
-        • Selecting one or more files  → adds those files directly.
-        • Clicking a folder and pressing Open (non-native dialog) → adds ALL
-          matching files from that folder automatically.
-        Supports playlist files (.json / .bpl) as well.
-        """
-        from PyQt6.QtWidgets import QFileDialog
+        """Custom file picker — avoids QFileDialog which corrupts DWM rendering in fullscreen."""
+        from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
+                                      QListWidget, QListWidgetItem, QPushButton,
+                                      QComboBox, QLineEdit, QLabel, QAbstractItemView,
+                                      QTreeWidget, QTreeWidgetItem,
+                                      QSplitter, QHeaderView, QToolButton)
+        from PyQt6.QtGui import QIcon, QColor
+        from PyQt6.QtCore import QDir, Qt, QStorageInfo
 
         video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')
         image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
         audio_exts = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
         playlist_exts = ('.json', '.bpl')
-        
         all_exts = video_exts + image_exts + audio_exts + playlist_exts
-
-        name_filters = [
-            f"{tr('all_media')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v *.webm *.flv *.mpg *.mpeg *.ogv *.jpg *.jpeg *.png *.bmp *.webp *.tiff *.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma *.json *.bpl)",
-            f"{tr('video_files')} (*.mp4 *.mkv *.avi *.mov *.wmv *.m4v *.webm *.flv *.mpg *.mpeg *.ogv)",
-            f"{tr('image_files')} (*.jpg *.jpeg *.png *.bmp *.webp *.tiff)",
-            f"{tr('audio_files')} (*.mp3 *.wav *.aac *.flac *.m4a *.ogg *.wma)",
-            f"{tr('playlist')} (*.bpl *.json)",
-        ]
-        title = tr('add_files_title')
-
-        dialog = QFileDialog(self, title)
-        dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
-        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
-        dialog.setNameFilters(name_filters)
+        filter_map = {0: all_exts, 1: video_exts, 2: image_exts, 3: audio_exts, 4: playlist_exts}
 
         inverse_text = self.config.get('inverse_text', False)
         accent_color = self.config.get('accent_color', '#00f2ff')
         bg_color = self.config.get('bg_color', '#202020')
-
-        from PyQt6.QtGui import QPalette, QColor
-        pal = QPalette()
-        if inverse_text:
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Window,          QColor(bg_color))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.WindowText,      QColor('#1c1c1c'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Base,            QColor('#ffffff'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.AlternateBase,   QColor('#f9f9f9'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Text,            QColor('#1c1c1c'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Button,          QColor('#eaeaea'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ButtonText,      QColor('#1c1c1c'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.BrightText,      QColor('#1c1c1c'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipBase,     QColor('#ffffff'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipText,     QColor('#1c1c1c'))
-        else:
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Window,          QColor(bg_color))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.WindowText,      QColor('#ffffff'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Base,            QColor('#1a1a1a'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.AlternateBase,   QColor('#252525'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Text,            QColor('#ffffff'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Button,          QColor('#3a3a3a'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ButtonText,      QColor('#ffffff'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.BrightText,      QColor('#ffffff'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipBase,     QColor('#3a3a3a'))
-            pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.ToolTipText,     QColor('#ffffff'))
-        
-        accent = QColor(accent_color)
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.Highlight,       accent)
-        pal.setColor(QPalette.ColorGroup.All, QPalette.ColorRole.HighlightedText, QColor('#000000'))
-        dialog.setPalette(pal)
-
         fg_color = "#1c1c1c" if inverse_text else "#ffffff"
         widget_bg = "#ffffff" if inverse_text else "#1a1a1a"
-        widget_border = "rgba(0, 0, 0, 0.15)" if inverse_text else "rgba(255, 255, 255, 0.1)"
-        widget_border_bottom = "rgba(0, 0, 0, 0.25)" if inverse_text else "rgba(255, 255, 255, 0.2)"
-        
-        bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
-        bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
-        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
-        
+        border = "rgba(0,0,0,0.15)" if inverse_text else "rgba(255,255,255,0.1)"
+        hover = "rgba(0,0,0,0.08)" if inverse_text else "rgba(255,255,255,0.1)"
         header_bg = "#eaeaea" if inverse_text else "#252525"
-        
-        dialog_style = f"""
-            QFileDialog {{
-                background-color: {bg_color};
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr('add_files_title'))
+        dialog.setModal(False)
+        dialog.setMinimumSize(850, 500)
+        dialog.setStyleSheet(f"""
+            QDialog, QLabel {{
+                background-color: {bg_color}; color: {fg_color}; font-size: 13px;
             }}
-            QLabel {{
-                color: {fg_color};
+            QListWidget {{
+                background-color: {widget_bg}; color: {fg_color};
+                border: 1px solid {border}; border-radius: 4px; outline: none;
+            }}
+            QListWidget::item {{ padding: 4px 8px; border: none; outline: none; }}
+            QListWidget::item:selected {{ background-color: {accent_color}; color: #000; }}
+            QListWidget::item:hover {{ background-color: {hover}; }}
+            QTreeWidget {{
+                background-color: {widget_bg}; color: {fg_color};
+                border: 1px solid {border}; border-radius: 4px; outline: none;
                 font-size: 13px;
+            }}
+            QTreeWidget::item {{ padding: 2px 4px; border: none; outline: none; }}
+            QTreeWidget::item:selected {{ background-color: {accent_color}; color: #000; }}
+            QTreeWidget::item:hover {{ background-color: {hover}; }}
+            QHeaderView::section {{
+                background-color: {header_bg}; color: {fg_color};
+                border: none; padding: 4px 8px; font-size: 12px; font-weight: bold;
             }}
             QLineEdit {{
-                background-color: {widget_bg};
-                border: 1px solid {widget_border};
-                border-bottom: 1px solid {widget_border_bottom};
-                border-radius: 4px;
-                padding: 5px;
-                color: {fg_color};
-                font-size: 13px;
-            }}
-            QLineEdit:focus {{
-                border: 1px solid {accent_color};
+                border: 1px solid {border}; border-radius: 4px;
+                padding: 5px; background: {widget_bg}; color: {fg_color};
             }}
             QComboBox {{
-                background-color: {widget_bg};
-                border: 1px solid {widget_border};
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: {fg_color};
-                font-size: 13px;
-            }}
-            QComboBox:hover {{
-                background-color: {bg_hover};
-            }}
-            QComboBox::drop-down {{
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 15px;
-                border-left-width: 0px;
-                border-style: solid;
+                border: 1px solid {border}; border-radius: 4px;
+                padding: 4px 8px; background: {widget_bg}; color: {fg_color};
             }}
             QPushButton {{
-                background-color: {bg_translucent};
-                border: 1px solid {widget_border};
-                border-radius: 4px;
-                color: {fg_color};
-                font-size: 13px;
-                font-weight: 500;
-                padding: 6px 12px;
-                min-width: 75px;
+                background: {widget_bg}; border: 1px solid {border};
+                border-radius: 4px; padding: 6px 12px; min-width: 75px;
+                font-weight: 500; color: {fg_color};
             }}
-            QPushButton:hover {{
-                background-color: {bg_hover};
-            }}
-            QPushButton:pressed {{
-                background-color: {bg_pressed};
-            }}
-            QTreeView, QListView {{
-                background-color: {widget_bg};
-                color: {fg_color};
-                border: 1px solid {widget_border};
-                border-radius: 4px;
-                font-size: 13px;
-                outline: none;
-            }}
-            QTreeView::item, QListView::item {{
-                outline: none;
-                border: none;
-            }}
-            QTreeView::item:hover, QListView::item:hover {{
-                background-color: {bg_hover};
-                border: none;
-                outline: none;
-            }}
-            QTreeView::item:selected, QListView::item:selected {{
-                background-color: {accent_color};
-                color: #000000;
-                border: none;
-                outline: none;
-            }}
-            QHeaderView::section {{
-                background-color: {header_bg};
-                color: {fg_color};
-                padding: 4px;
-                border: none;
-                font-size: 12px;
-            }}
-            QToolButton {{
-                background-color: transparent;
-                border: none;
-                border-radius: 4px;
-                padding: 5px;
-                color: {fg_color};
-            }}
-            QToolButton:hover {{
-                background-color: {bg_hover};
-            }}
-        """
-        dialog.setStyleSheet(dialog_style)
+            QPushButton:hover {{ background-color: {hover}; }}
+            QSplitter::handle {{ background: {border}; width: 1px; }}
+        """)
 
-        # Apply Windows 11 title bar styling using DWM API
+        # Windows 11 DWM title bar
         import sys
         if sys.platform == 'win32':
             try:
                 import ctypes
                 hwnd = int(dialog.winId())
-                
-                def qcolor_to_colorref(qcolor):
-                    return qcolor.red() | (qcolor.green() << 8) | (qcolor.blue() << 16)
-                
-                bg_color_ref = qcolor_to_colorref(QColor(bg_color))
-                fg_color_ref = qcolor_to_colorref(QColor(fg_color))
-                
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(ctypes.c_int(bg_color_ref)), 4)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 36, ctypes.byref(ctypes.c_int(fg_color_ref)), 4)
-            except Exception as e:
-                print(f"[DWM] Failed to set custom title bar colors: {e}")
+                def _qcolor_to_ref(c):
+                    return c.red() | (c.green() << 8) | (c.blue() << 16)
+                bg_ref = _qcolor_to_ref(QColor(bg_color))
+                fg_ref = _qcolor_to_ref(QColor(fg_color))
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(ctypes.c_int(bg_ref)), 4)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 36, ctypes.byref(ctypes.c_int(fg_ref)), 4)
+            except Exception:
+                pass
 
-        from PyQt6.QtCore import QDir
-        drive_urls = [QUrl.fromLocalFile(d.absolutePath()) for d in QDir.drives()]
-        dialog.setSidebarUrls(drive_urls)
+        # === State + helper functions (defined before UI uses them) ===
+        dialog._current_path = QDir.rootPath()
+        dialog._history = []
+        dialog._history_idx = -1
+        dialog.selected_files = []
+        dialog._view_mode = "detail"  # "detail" or "list"
 
-        from PyQt6.QtWidgets import QDialogButtonBox, QPushButton, QWidget, QHBoxLayout, QLabel, QToolButton
-        
-        for label in dialog.findChildren(QLabel):
-            text_clean = label.text().replace('&', '')
-            if "File name" in text_clean:
-                label.setText(tr('file_name'))
-            elif "Files of type" in text_clean:
-                label.setText(tr('file_types'))
+        def _format_size(size):
+            if size < 1024: return f"{size} B"
+            elif size < 1048576: return f"{size/1024:.0f} KB"
+            elif size < 1073741824: return f"{size/1048576:.1f} MB"
+            else: return f"{size/1073741824:.2f} GB"
 
-        from PyQt6.QtGui import QPixmap, QIcon, QPainter
-        from PyQt6.QtCore import QSize
-        tool_btns = dialog.findChildren(QToolButton)
-        tool_btns = sorted(tool_btns, key=lambda b: b.x())
-        for idx, btn in enumerate(tool_btns):
-            if idx >= 3:
-                continue
-            icon = btn.icon()
-            if not icon.isNull():
-                sz = btn.iconSize()
-                if sz.width() <= 0 or sz.height() <= 0:
-                    sz = QSize(16, 16)
-                pixmap = icon.pixmap(sz)
-                if not pixmap.isNull():
-                    tinted = QPixmap(pixmap.size())
-                    tinted.fill(Qt.GlobalColor.transparent)
-                    painter = QPainter(tinted)
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-                    painter.drawPixmap(0, 0, pixmap)
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                    painter.fillRect(tinted.rect(), QColor(fg_color))
-                    painter.end()
-                    btn.setIcon(QIcon(tinted))
+        def _format_date(dt):
+            return dt.toString("dd/MM/yyyy HH:mm") if dt.isValid() else ""
 
-        button_box = dialog.findChild(QDialogButtonBox)
-        if button_box:
-            add_folder_btn = QPushButton(tr('add_folder'))
-            
-            open_btn = None
-            for btn in button_box.buttons():
-                role = button_box.buttonRole(btn)
-                if role == QDialogButtonBox.ButtonRole.AcceptRole:
-                    open_btn = btn
-                    btn.setText(tr('open'))
-                elif role == QDialogButtonBox.ButtonRole.RejectRole:
-                    btn.setText(tr('cancel'))
-            
-            def on_add_folder_clicked():
-                current_dir = dialog.directory().absolutePath()
-                dialog.setProperty("selected_folder", current_dir)
-                dialog.done(1)
-            add_folder_btn.clicked.connect(on_add_folder_clicked)
-            
-            layout = button_box.layout()
-            if layout and open_btn:
-                idx = layout.indexOf(open_btn)
-                if idx != -1:
-                    container = QWidget()
-                    h_layout = QHBoxLayout(container)
-                    h_layout.setContentsMargins(0, 0, 0, 0)
-                    h_layout.setSpacing(6)
-                    
-                    layout.removeWidget(open_btn)
-                    h_layout.addWidget(open_btn)
-                    h_layout.addWidget(add_folder_btn)
-                    
-                    layout.insertWidget(idx, container)
+        def _refresh(dlg):
+            path = dlg._current_path
+            dlg._path_bar.setText(path)
+            drive = path[:2].upper() + "\\" if len(path) >= 2 and path[1] == ':' else ""
+            for i in range(dlg._drive_list.count()):
+                if dlg._drive_list.item(i).data(Qt.ItemDataRole.UserRole) == drive:
+                    dlg._drive_list.blockSignals(True)
+                    dlg._drive_list.setCurrentRow(i)
+                    dlg._drive_list.blockSignals(False)
+                    break
+            exts = filter_map.get(dlg._filter_combo.currentIndex(), all_exts)
+            dlg._file_tree.setSortingEnabled(False)
+            dlg._file_tree.clear()
+            d = QDir(path)
+            d.setFilter(QDir.Filter.Dirs | QDir.Filter.Files | QDir.Filter.NoDotAndDotDot)
+            d.setSorting(QDir.SortFlag.Name | QDir.SortFlag.IgnoreCase)
+            dirs = []
+            files = []
+            for info in d.entryInfoList():
+                name = info.fileName()
+                if not info.isDir() and not name.lower().endswith(exts):
+                    continue
+                item = QTreeWidgetItem()
+                item.setData(0, Qt.ItemDataRole.UserRole, info.absoluteFilePath())
+                item.setText(0, name)
+                if info.isDir():
+                    item.setForeground(0, QColor(accent_color))
+                    item.setText(1, "File Folder")
+                    item.setText(2, _format_date(info.lastModified()))
+                    dirs.append(item)
                 else:
-                    button_box.addButton(add_folder_btn, QDialogButtonBox.ButtonRole.ActionRole)
+                    item.setText(1, _format_size(info.size()))
+                    item.setText(2, info.suffix().upper() + " File" if info.suffix() else "File")
+                    item.setText(3, _format_date(info.lastModified()))
+                    files.append(item)
+            for item in dirs:
+                dlg._file_tree.addTopLevelItem(item)
+            for item in files:
+                dlg._file_tree.addTopLevelItem(item)
+
+        def _navigate(dlg, path):
+            if not path or not os.path.isdir(path):
+                return
+            if dlg._current_path != path:
+                if dlg._history_idx < len(dlg._history) - 1:
+                    dlg._history = dlg._history[:dlg._history_idx + 1]
+                dlg._history.append(dlg._current_path)
+                dlg._history_idx = len(dlg._history) - 1
+            dlg._current_path = path
+            _refresh(dlg)
+
+        def _go_back():
+            if dialog._history_idx > 0:
+                dialog._history_idx -= 1
+                dialog._current_path = dialog._history[dialog._history_idx]
+                _refresh(dialog)
+
+        def _go_forward():
+            if dialog._history_idx < len(dialog._history) - 1:
+                dialog._history_idx += 1
+                dialog._current_path = dialog._history[dialog._history_idx]
+                _refresh(dialog)
+
+        def _on_open():
+            selected = [item.data(0, Qt.ItemDataRole.UserRole)
+                        for item in dialog._file_tree.selectedItems()
+                        if os.path.isfile(item.data(0, Qt.ItemDataRole.UserRole))]
+            if selected:
+                dialog.selected_files = selected
+                dialog.accept()
+
+        def _on_add_folder():
+            exts = filter_map.get(dialog._filter_combo.currentIndex(), all_exts)
+            files = [os.path.join(dialog._current_path, f)
+                     for f in sorted(os.listdir(dialog._current_path))
+                     if f.lower().endswith(exts)]
+            if files:
+                dialog.selected_files = files
+                dialog.accept()
+
+        def _toggle_view():
+            dlg = dialog
+            is_detail = dlg._view_mode == "detail"
+            dlg._view_mode = "list" if is_detail else "detail"
+            dlg._view_toggle_btn.setText("☰" if dlg._view_mode == "list" else "≡")
+            header = dlg._file_tree.header()
+            if dlg._view_mode == "list":
+                header.hide()
+                for col in range(1, dlg._file_tree.columnCount()):
+                    dlg._file_tree.setColumnHidden(col, True)
             else:
-                button_box.addButton(add_folder_btn, QDialogButtonBox.ButtonRole.ActionRole)
+                header.show()
+                for col in range(1, dlg._file_tree.columnCount()):
+                    dlg._file_tree.setColumnHidden(col, False)
 
-        if not dialog.exec():
-            return
+        # === UI layout ===
+        root = QVBoxLayout(dialog)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        folder_path = dialog.property("selected_folder")
-        if folder_path:
-            selected = [folder_path]
-        else:
-            selected = dialog.selectedFiles()
+        # Top bar: "Look in:" + path + nav buttons
+        top_bar = QHBoxLayout()
+        top_bar.setContentsMargins(12, 10, 12, 6)
+        top_bar.setSpacing(6)
+        top_bar.addWidget(QLabel(tr('look_in')))
+        dialog._path_bar = QLineEdit()
+        dialog._path_bar.returnPressed.connect(lambda: _navigate(dialog, dialog._path_bar.text()))
+        top_bar.addWidget(dialog._path_bar, 1)
+        def _get_drive_root(path):
+            if len(path) >= 2 and path[1] == ':':
+                return path[:2].upper() + "\\"
+            return QDir.rootPath()
 
-        if not selected:
-            return
+        for text, handler in [('◀', _go_back), ('▶', _go_forward),
+                               ('▲', lambda: _navigate(dialog, os.path.dirname(dialog._current_path))),
+                               ('⌂', lambda: _navigate(dialog, _get_drive_root(dialog._current_path)))]:
+            btn = QPushButton(text)
+            btn.setFixedSize(28, 28)
+            btn.clicked.connect(handler)
+            top_bar.addWidget(btn)
+        dialog._view_toggle_btn = QPushButton("≡")
+        dialog._view_toggle_btn.setFixedSize(28, 28)
+        dialog._view_toggle_btn.setToolTip(tr('view_mode') if hasattr(tr, '__call__') else "Toggle view")
+        dialog._view_toggle_btn.clicked.connect(_toggle_view)
+        top_bar.addWidget(dialog._view_toggle_btn)
+        root.addLayout(top_bar)
+
+        # Main area: drive sidebar | file tree
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
+
+        dialog._drive_list = QListWidget()
+        dialog._drive_list.setFixedWidth(160)
+        for drive in QDir.drives():
+            d_path = drive.path()
+            try:
+                si = QStorageInfo(d_path)
+                vol_name = si.displayName() if si.isValid() and si.name() else d_path
+            except Exception:
+                vol_name = d_path
+            item = QListWidgetItem(f"{vol_name} ({d_path})")
+            item.setData(Qt.ItemDataRole.UserRole, d_path)
+            dialog._drive_list.addItem(item)
+        dialog._drive_list.currentRowChanged.connect(lambda: (
+            _navigate(dialog, dialog._drive_list.currentItem().data(Qt.ItemDataRole.UserRole))
+            if dialog._drive_list.currentItem() else None
+        ))
+        splitter.addWidget(dialog._drive_list)
+
+        dialog._file_tree = QTreeWidget()
+        dialog._file_tree.setHeaderLabels([tr('name'), tr('size'), tr('type'), tr('date_modified')])
+        dialog._file_tree.setRootIsDecorated(False)
+        dialog._file_tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        header = dialog._file_tree.header()
+        header.resizeSection(0, 350)
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        dialog._file_tree.itemDoubleClicked.connect(lambda item, col: (
+            _navigate(dialog, item.data(0, Qt.ItemDataRole.UserRole))
+            if os.path.isdir(item.data(0, Qt.ItemDataRole.UserRole))
+            else (setattr(dialog, 'selected_files', [item.data(0, Qt.ItemDataRole.UserRole)]), dialog.accept())
+        ))
+        splitter.addWidget(dialog._file_tree)
+        splitter.setSizes([160, 690])
+        root.addWidget(splitter, 1)
+
+        # Bottom area: filename + filter + buttons
+        bottom = QHBoxLayout()
+        bottom.setContentsMargins(12, 8, 12, 10)
+        bottom.setSpacing(8)
+        bottom.addWidget(QLabel(tr('file_name')))
+        bottom.addWidget(QLineEdit(), 1)
+        dialog._filter_combo = QComboBox()
+        dialog._filter_combo.addItems([
+            tr('all_media'), tr('video_files'), tr('image_files'),
+            tr('audio_files'), tr('playlist')
+        ])
+        dialog._filter_combo.setMinimumWidth(200)
+        dialog._filter_combo.currentIndexChanged.connect(lambda: _refresh(dialog))
+        bottom.addWidget(dialog._filter_combo)
+        for text, handler, w in [
+            (tr('open'), _on_open, 90),
+            (tr('add_folder'), _on_add_folder, 110),
+            (tr('cancel'), dialog.reject, 90),
+        ]:
+            btn = QPushButton(text)
+            btn.setFixedWidth(w)
+            btn.clicked.connect(handler)
+            bottom.addWidget(btn)
+        root.addLayout(bottom)
+
+        _navigate(dialog, dialog._current_path)
+        dialog.resize(850, 500)
+        dialog.show()
+
+        self._open_media_dialog = dialog
+        dialog.finished.connect(self._on_open_media_finished)
+
+    def _on_open_media_finished(self, result):
+        dialog = self._open_media_dialog
+        if result and hasattr(dialog, 'selected_files') and dialog.selected_files:
+            self._process_selected_files(dialog.selected_files)
+
+    def _process_selected_files(self, selected):
+        video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')
+        image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+        audio_exts = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
+        playlist_exts = ('.json', '.bpl')
+        all_exts = video_exts + image_exts + audio_exts + playlist_exts
 
         files_to_add = []
         playlist_files = []
-
-        selected_filter = dialog.selectedNameFilter()
-        if tr('video_files') in selected_filter:
-            folder_exts = video_exts
-        elif tr('image_files') in selected_filter:
-            folder_exts = image_exts
-        elif tr('audio_files') in selected_filter:
-            folder_exts = audio_exts
-        elif tr('playlist') in selected_filter:
-            folder_exts = playlist_exts
-        else:
-            folder_exts = all_exts
-
         for path in selected:
             if os.path.isdir(path):
                 for f in sorted(os.listdir(path)):
-                    if f.lower().endswith(folder_exts):
+                    if f.lower().endswith(all_exts):
                         fpath = os.path.join(path, f)
                         if f.lower().endswith(playlist_exts):
                             playlist_files.append(fpath)
@@ -448,6 +469,7 @@ class LoaderMixin(LoaderMixinBase):
                 if not self.current_temp_dir:
                     import tempfile
                     self.current_temp_dir = tempfile.mkdtemp(prefix="boomerang_frames_")
+                    mark_temp_dir_owner(self.current_temp_dir)
                 
                 temp_video_path = os.path.join(self.current_temp_dir, "extracted_video.mp4")
                 try:

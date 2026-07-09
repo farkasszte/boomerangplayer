@@ -1,8 +1,21 @@
 import ctypes
-from PyQt6.QtCore import Qt
+import logging
+from PyQt6.QtCore import Qt, QTimer
+
+logger = logging.getLogger("BoomerangPlayer")
+
 
 class FullscreenUIMixin:
     def toggle_full_screen(self):
+        # Sync the flag with actual window state — Windows can force-exit
+        # fullscreen when a modal dialog (e.g. QFileDialog) opens, but the
+        # flag stays stale.  Detect the mismatch before toggling.
+        actually_fs = bool(self.windowState() & Qt.WindowState.WindowFullScreen)
+        if self.is_full_screen != actually_fs:
+            logger.warning(f"[fullscreen] Flag sync: is_full_screen was {self.is_full_screen}, "
+                           f"actual window state is fullscreen={actually_fs}. Correcting.")
+            self.is_full_screen = actually_fs
+
         self.is_full_screen = not self.is_full_screen
         
         if self.is_full_screen:
@@ -22,7 +35,7 @@ class FullscreenUIMixin:
             }
             self.sidebars_hidden_by_controls = self.sidebar_states_before_fs.copy()
             
-            # Hide everything extra
+            # Hide sidebar panels (will be restored as overlays by update_sidebar_fullscreen_state)
             self.playlistContainer.hide()
             self.drawingContainer.hide()
             self.settingsContainer.hide()
@@ -32,8 +45,14 @@ class FullscreenUIMixin:
             if hasattr(self, 'audioContainer'):
                 self.audioContainer.hide()
             
+            # Title bar: reparent to window and show as overlay at the top
             if hasattr(self, 'titleBar'):
-                self.titleBar.hide()
+                if self.titleBar.parent() != self:
+                    self.titleBar.setParent(self)
+                self.titleBar.show()
+                self.titleBar.raise_()
+                self.titleBar.move(0, 0)
+                self.titleBar.resize(self.width(), self.titleBar.height())
             
             # Remove header margin
             if hasattr(self, 'widgetLayout'):
@@ -70,6 +89,27 @@ class FullscreenUIMixin:
                 self.controlsCard.setGeometry(0, self.height() - h, self.width(), h)
 
             self.showFullScreen()
+            
+            # Deferred frame refresh: ensure the layout is settled before refitting the view
+            def _refresh_after_fullscreen():
+                if not self.is_full_screen:
+                    return
+                has_pixmap = hasattr(self, 'pixmapItem') and self.pixmapItem and not self.pixmapItem.pixmap().isNull()
+                vw = self.view.viewport().width() if hasattr(self, 'view') else 0
+                vh = self.view.viewport().height() if hasattr(self, 'view') else 0
+                logger.warning(f"[DEBUG _refresh_fs] is_fs={self.is_full_screen}, has_pixmap={has_pixmap}, viewport={vw}x{vh}, zoom={getattr(self, 'zoomLevel', '?')}")
+                if hasattr(self, 'view') and hasattr(self, 'pixmapItem') and self.pixmapItem:
+                    if not self.pixmapItem.pixmap().isNull():
+                        if getattr(self, 'zoomLevel', 1.0) == 1.0:
+                            self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
+                            logger.warning(f"[DEBUG _refresh_fs] fitInView done, viewport now={self.view.viewport().width()}x{self.view.viewport().height()}")
+                # Re-raise title bar and controlsCard above everything
+                if hasattr(self, 'titleBar'):
+                    self.titleBar.raise_()
+                if hasattr(self, 'controlsCard'):
+                    self.controlsCard.raise_()
+            QTimer.singleShot(100, _refresh_after_fullscreen)
+            QTimer.singleShot(500, _refresh_after_fullscreen)
             
             # Full screen mode: hide panel immediately if mouse is not on it, otherwise show and start timer
             if hasattr(self, 'controlsCard') and self.controlsCard.underMouse():
@@ -112,6 +152,7 @@ class FullscreenUIMixin:
             
             if hasattr(self, 'titleBar'):
                 self.titleBar.show()
+                # Re-parent titleBar back to the fluent window layout if needed
                 
             # Restore header margin
             if hasattr(self, 'widgetLayout'):
@@ -172,7 +213,6 @@ class FullscreenUIMixin:
                 self.view.setCursor(Qt.CursorShape.ArrowCursor)
                 
             # Restore opacity smoothly after a short delay to completely hide OS window frame recreation flashes
-            from PyQt6.QtCore import QTimer
             QTimer.singleShot(150, lambda: self.setWindowOpacity(1.0))
                 
         if hasattr(self, 'update_sidebar_fullscreen_state'):

@@ -2,12 +2,15 @@
 TransformMixin — zoom, mirror, rotate, apply_transformations, resize.
 """
 
+import logging
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QGraphicsView
 from PyQt6.QtGui import QTransform
 
 
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger("BoomerangPlayer")
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QMainWindow, QSlider, QLabel, QSpinBox
@@ -144,6 +147,9 @@ class TransformMixin(TransformMixinBase):
                 self.view.setSceneRect(-max_dim, -max_dim, max_dim * 4, max_dim * 4)
 
             if fit:
+                vw = self.view.viewport().width()
+                vh = self.view.viewport().height()
+                logger.warning(f"[DEBUG apply_transformations] fit=True, is_fullscreen={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={pix.width()}x{pix.height()}")
                 self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
                 self.view.zoomLevel = 1.0
                 self.sync_zoom_ui(1.0)
@@ -184,8 +190,13 @@ class TransformMixin(TransformMixinBase):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         
-        if (hasattr(self, 'pixmapItem') and self.view
+        if (hasattr(self, 'pixmapItem') and self.pixmapItem
+                and not self.pixmapItem.pixmap().isNull()
+                and self.view
                 and getattr(self, 'zoomLevel', 1.0) == 1.0):
+            vw = self.view.viewport().width()
+            vh = self.view.viewport().height()
+            logger.warning(f"[DEBUG resizeEvent] is_fs={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={self.pixmapItem.pixmap().width()}x{self.pixmapItem.pixmap().height()}")
             self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
 
         self.update_loading_overlay_geometry()

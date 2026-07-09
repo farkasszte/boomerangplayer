@@ -1,0 +1,534 @@
+2026-07-09 08:58:25,876 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 08:58:26,098 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 08:58:26,866 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 08:58:26,880 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 08:58:26,894 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x223fedb02e0 at 223fe69f350>
+2026-07-09 08:58:26,895 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x223df902e30 at 223fe70ab50>
+2026-07-09 08:58:26,895 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x223febb0660 at 223fe69f350>
+2026-07-09 08:58:26,902 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x223df6debf0 at 223fe69f350>
+2026-07-09 08:58:26,902 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x223feded0f0 at 223fe70acd0>
+2026-07-09 08:58:27,495 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x223fed8cfd0 at 223fe70ac50>
+2026-07-09 08:58:27,495 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x223df6debf0 at 223fe70abd0>
+2026-07-09 08:58:27,495 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x223febb0660 at 223fe70ab50>
+2026-07-09 08:58:33,326 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 08:58:33,691 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 08:58:45,105 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:46,759 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:48,135 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:49,722 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:51,087 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:51,759 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:55,737 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:58:59,715 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:02,403 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:07,330 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 08:59:07,724 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 08:59:09,734 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:12,058 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:23,953 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:25,078 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:25,861 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:27,608 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:30,985 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:35,011 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 08:59:35,393 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 08:59:36,601 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:37,813 [WARNING] BoomerangPlayer: [lower_from_topmost] SetWindowPos hwnd=28971592 NOTOPMOST result=0
+2026-07-09 08:59:38,693 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 08:59:38,693 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:01:26,053 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:01:26,274 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:01:27,037 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:01:27,050 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:01:27,065 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x2209c5cb040 at 220ff54f350>
+2026-07-09 09:01:27,065 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x220fc982c90 at 220ff5b6b50>
+2026-07-09 09:01:27,065 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x220f9b5da10 at 220ff54f350>
+2026-07-09 09:01:27,065 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x220fc81b000 at 220ff54f350>
+2026-07-09 09:01:27,065 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x220fc81e300 at 220ff5b6cd0>
+2026-07-09 09:01:27,659 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x220fca99660 at 220ff5b6c50>
+2026-07-09 09:01:27,659 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x220fc81b000 at 220ff5b6bd0>
+2026-07-09 09:01:27,659 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x220f9b5da10 at 220ff5b6b50>
+2026-07-09 09:01:29,210 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:01:29,609 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:01:36,082 [INFO] Loader: load_video started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:01:36,082 [INFO] Loader: Setting mediaPlayer source to empty and cleaning up cache/markers
+2026-07-09 09:01:36,082 [INFO] Loader: File recognized as image: False
+2026-07-09 09:01:36,208 [INFO] Loader: Extracting video metadata using ffprobe...
+2026-07-09 09:01:36,208 [INFO] Loader: get_video_info started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:01:36,241 [INFO] Loader: [get_video_info] 1. napunk a bölcsődében.mp4: codec=h264, is_audio_only=False, fps=24.0, duration=326.5s, nb_frames=7836
+2026-07-09 09:01:36,241 [INFO] Loader: ffprobe detected FPS: 24.0
+2026-07-09 09:01:36,241 [INFO] Loader: Setting QMediaPlayer source to: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:01:36,242 [INFO] Loader: Loading saved markers for file...
+2026-07-09 09:01:36,242 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:01:36,242 [INFO] Loader: Checking for subtitles...
+2026-07-09 09:01:36,273 [INFO] Loader: Initializing cache and starting full video frame extraction...
+2026-07-09 09:01:36,275 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:01:36,275 [INFO] Loader: load_video completed successfully for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:01:36,656 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:01:36,662 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:01:36,786 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:01:36,786 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:01:37,192 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:01:37,193 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:01:38,975 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,028 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=1, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,066 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=2, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,113 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=3, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,142 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=4, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,251 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=6, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,276 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=7, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,336 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=8, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,609 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=11, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,743 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=14, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,879 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=16, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:39,984 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=19, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,065 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=21, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,116 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=22, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,226 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=24, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,246 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=25, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,315 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=26, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,326 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=27, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,375 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=28, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,415 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=29, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,456 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=30, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,495 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=31, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,536 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=32, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,576 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=33, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,626 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=34, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:01:40,774 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:01:40,774 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:06:30,096 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:06:30,319 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:06:31,094 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:06:31,107 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:06:31,123 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x19925c83ab0 at 199257f3050>
+2026-07-09 09:06:31,123 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x19925c65ee0 at 199258aa850>
+2026-07-09 09:06:31,123 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x19925b4a310 at 199257f3050>
+2026-07-09 09:06:31,124 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x19906c35110 at 199257f3050>
+2026-07-09 09:06:31,124 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x19906c34b10 at 199258aa9d0>
+2026-07-09 09:06:31,714 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x19925c6bcb0 at 199258aa750>
+2026-07-09 09:06:31,714 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x19906c35110 at 199258aa7d0>
+2026-07-09 09:06:31,714 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x19925b4a310 at 199258aa850>
+2026-07-09 09:06:34,108 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:06:34,509 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:07:02,256 [INFO] Loader: load_video started for: D:/471822376_1154672239996334_1391627929474466407_n.jpg
+2026-07-09 09:07:02,256 [INFO] Loader: Setting mediaPlayer source to empty and cleaning up cache/markers
+2026-07-09 09:07:02,256 [INFO] Loader: File recognized as image: True
+2026-07-09 09:07:02,378 [INFO] Loader: Checking for embedded video in JPEG (motion photo)...
+2026-07-09 09:07:02,378 [INFO] Loader: Processing as static image...
+2026-07-09 09:07:02,379 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:02,390 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=2048x1365
+2026-07-09 09:07:02,391 [INFO] Loader: Loading saved markers for file...
+2026-07-09 09:07:02,391 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:02,391 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=2048x1365
+2026-07-09 09:07:02,391 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=2048x1365
+2026-07-09 09:07:02,391 [INFO] Loader: load_video completed successfully for: D:/471822376_1154672239996334_1391627929474466407_n.jpg
+2026-07-09 09:07:05,474 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:06,954 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:07,943 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:08,953 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:09,944 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:10,953 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:11,943 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:12,943 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:13,954 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:14,527 [INFO] Loader: load_video started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:07:14,527 [INFO] Loader: Setting mediaPlayer source to empty and cleaning up cache/markers
+2026-07-09 09:07:14,530 [INFO] Loader: File recognized as image: False
+2026-07-09 09:07:14,530 [INFO] Loader: Extracting video metadata using ffprobe...
+2026-07-09 09:07:14,530 [INFO] Loader: get_video_info started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:07:14,563 [INFO] Loader: [get_video_info] 1. napunk a bölcsődében.mp4: codec=h264, is_audio_only=False, fps=24.0, duration=326.5s, nb_frames=7836
+2026-07-09 09:07:14,563 [INFO] Loader: ffprobe detected FPS: 24.0
+2026-07-09 09:07:14,563 [INFO] Loader: Setting QMediaPlayer source to: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:07:14,563 [INFO] Loader: Loading saved markers for file...
+2026-07-09 09:07:14,564 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:07:14,564 [INFO] Loader: Checking for subtitles...
+2026-07-09 09:07:14,595 [INFO] Loader: Initializing cache and starting full video frame extraction...
+2026-07-09 09:07:14,595 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:07:14,595 [INFO] Loader: load_video completed successfully for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:07:14,779 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:07:14,785 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:07:14,887 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:07:14,887 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:07:15,285 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:07:15,285 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:07:15,485 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,535 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=1, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,575 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=2, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,615 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=3, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,656 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=4, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,695 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=5, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,745 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=6, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,785 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=7, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,825 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=8, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,866 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=9, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,905 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=10, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,945 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=11, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:15,995 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=12, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,035 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=13, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,075 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=14, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,115 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=15, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,155 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=16, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,195 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=17, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,246 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=18, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,292 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=19, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,325 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=20, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,365 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=21, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,405 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=22, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,446 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=23, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,495 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=24, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,535 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=25, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,575 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=26, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,615 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=27, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,655 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=28, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,695 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=29, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,743 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=30, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,779 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=31, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,830 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=32, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,866 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=33, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,915 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=34, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:16,950 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=35, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,002 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=36, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,028 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=37, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,071 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=38, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,121 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=39, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,153 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=40, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,208 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=41, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,238 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=42, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,294 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=43, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,325 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=44, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,365 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=45, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,406 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=46, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,446 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=47, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,495 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=48, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:17,535 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=49, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:07:33,365 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1064, pixmap=1280x720
+2026-07-09 09:07:33,395 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:07:41,763 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1032, pixmap=1280x720
+2026-07-09 09:07:42,867 [WARNING] BoomerangPlayer: [fullscreen] Flag sync: is_full_screen was True, actual window state is fullscreen=False. Correcting.
+2026-07-09 09:07:42,915 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:07:43,027 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=True, viewport=1920x1080, zoom=1.0
+2026-07-09 09:07:43,027 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] fitInView done, viewport now=1920x1080
+2026-07-09 09:07:43,427 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=True, viewport=1920x1080, zoom=1.0
+2026-07-09 09:07:43,428 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] fitInView done, viewport now=1920x1080
+2026-07-09 09:07:45,834 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=False, viewport=574x507, pixmap=1280x720
+2026-07-09 09:07:45,932 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=False, viewport=1669x1000, pixmap=1280x720
+2026-07-09 09:07:49,274 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=False, viewport=323x427, pixmap=1280x720
+2026-07-09 09:07:51,474 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:07:51,631 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=True, viewport=1920x1080, zoom=1.0
+2026-07-09 09:07:51,631 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] fitInView done, viewport now=1920x1080
+2026-07-09 09:07:52,029 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=True, viewport=1920x1080, zoom=1.0
+2026-07-09 09:07:52,031 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] fitInView done, viewport now=1920x1080
+2026-07-09 09:07:57,688 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1064, pixmap=1280x720
+2026-07-09 09:07:57,721 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:08:00,651 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1920x1079, pixmap=1280x720
+2026-07-09 09:08:00,692 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1899x1063, pixmap=1280x720
+2026-07-09 09:08:00,726 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1825x1023, pixmap=1280x720
+2026-07-09 09:08:00,759 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1714x978, pixmap=1280x720
+2026-07-09 09:08:00,792 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1575x934, pixmap=1280x720
+2026-07-09 09:08:00,826 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1413x885, pixmap=1280x720
+2026-07-09 09:08:00,859 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1257x827, pixmap=1280x720
+2026-07-09 09:08:00,891 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1120x760, pixmap=1280x720
+2026-07-09 09:08:00,921 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=1038x718, pixmap=1280x720
+2026-07-09 09:08:00,950 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=984x689, pixmap=1280x720
+2026-07-09 09:08:00,979 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=939x664, pixmap=1280x720
+2026-07-09 09:08:01,003 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=896x642, pixmap=1280x720
+2026-07-09 09:08:01,028 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=874x631, pixmap=1280x720
+2026-07-09 09:08:01,058 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=867x628, pixmap=1280x720
+2026-07-09 09:08:01,082 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=865x627, pixmap=1280x720
+2026-07-09 09:08:01,107 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=859x624, pixmap=1280x720
+2026-07-09 09:08:01,132 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=851x621, pixmap=1280x720
+2026-07-09 09:08:01,157 [WARNING] BoomerangPlayer: [DEBUG resizeEvent] is_fs=True, viewport=847x619, pixmap=1280x720
+2026-07-09 09:08:08,637 [WARNING] BoomerangPlayer: [fullscreen] Flag sync: is_full_screen was True, actual window state is fullscreen=False. Correcting.
+2026-07-09 09:08:08,816 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:09,211 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:29,631 [WARNING] BoomerangPlayer: [fullscreen] Flag sync: is_full_screen was True, actual window state is fullscreen=False. Correcting.
+2026-07-09 09:08:29,804 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:30,204 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:34,029 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:34,426 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:46,240 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:46,640 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:55,191 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:08:55,588 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:09:20,809 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:09:21,204 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:09:33,471 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:09:33,865 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:09:47,046 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:09:47,427 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:10:00,705 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:10:01,090 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:11:03,267 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:11:03,705 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:11:18,061 [INFO] Loader: load_video started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:11:18,061 [INFO] Loader: Setting mediaPlayer source to empty and cleaning up cache/markers
+2026-07-09 09:11:18,061 [INFO] Loader: File recognized as image: False
+2026-07-09 09:11:18,061 [INFO] Loader: Extracting video metadata using ffprobe...
+2026-07-09 09:11:18,061 [INFO] Loader: get_video_info started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:11:18,095 [INFO] Loader: [get_video_info] 1. napunk a bölcsődében.mp4: codec=h264, is_audio_only=False, fps=24.0, duration=326.5s, nb_frames=7836
+2026-07-09 09:11:18,095 [INFO] Loader: ffprobe detected FPS: 24.0
+2026-07-09 09:11:18,095 [INFO] Loader: Setting QMediaPlayer source to: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:11:18,095 [INFO] Loader: Loading saved markers for file...
+2026-07-09 09:11:18,095 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:11:18,095 [INFO] Loader: Checking for subtitles...
+2026-07-09 09:11:18,128 [INFO] Loader: Initializing cache and starting full video frame extraction...
+2026-07-09 09:11:18,128 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:11:18,128 [INFO] Loader: load_video completed successfully for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:11:18,314 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:11:18,318 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:11:18,420 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:11:18,420 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:11:18,819 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:11:18,819 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:11:19,079 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:12:45,083 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:12:45,083 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:20:24,620 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:20:24,847 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:20:25,629 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:20:25,643 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:20:25,657 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x180bf9e07a0 at 180bf2a72d0>
+2026-07-09 09:20:25,657 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x1809f47a110 at 180bf31aad0>
+2026-07-09 09:20:25,657 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x180bf839a40 at 180bf2a72d0>
+2026-07-09 09:20:25,659 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x180a0720470 at 180bf2a72d0>
+2026-07-09 09:20:25,659 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x180a071f570 at 180bf31abd0>
+2026-07-09 09:20:26,246 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x180bf9a9a70 at 180bf31ac50>
+2026-07-09 09:20:26,246 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x180a0720470 at 180bf31ab50>
+2026-07-09 09:20:26,246 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x180bf839a40 at 180bf31aad0>
+2026-07-09 09:20:27,748 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:20:28,145 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:20:51,055 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:20:51,446 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:21:11,846 [INFO] Loader: load_video started for: D:/egy_cica_szörfözik.mp4
+2026-07-09 09:21:11,846 [INFO] Loader: Setting mediaPlayer source to empty and cleaning up cache/markers
+2026-07-09 09:21:11,846 [INFO] Loader: File recognized as image: False
+2026-07-09 09:21:11,846 [INFO] Loader: Extracting video metadata using ffprobe...
+2026-07-09 09:21:11,846 [INFO] Loader: get_video_info started for: D:/egy_cica_szörfözik.mp4
+2026-07-09 09:21:11,874 [INFO] Loader: [get_video_info] egy_cica_szörfözik.mp4: codec=h264, is_audio_only=False, fps=24.0, duration=8.0s, nb_frames=192
+2026-07-09 09:21:11,874 [INFO] Loader: ffprobe detected FPS: 24.0
+2026-07-09 09:21:11,874 [INFO] Loader: Setting QMediaPlayer source to: D:/egy_cica_szörfözik.mp4
+2026-07-09 09:21:11,875 [INFO] Loader: Loading saved markers for file...
+2026-07-09 09:21:11,875 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:21:11,875 [INFO] Loader: Checking for subtitles...
+2026-07-09 09:21:11,902 [INFO] Loader: Initializing cache and starting full video frame extraction...
+2026-07-09 09:21:11,902 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:21:11,902 [INFO] Loader: load_video completed successfully for: D:/egy_cica_szörfözik.mp4
+2026-07-09 09:21:12,135 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:21:12,142 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:21:12,246 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:21:12,246 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:21:12,430 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:21:12,642 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:21:12,642 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:21:16,728 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:21:16,729 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:26:06,904 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:26:07,124 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:26:07,906 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:26:07,920 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:26:07,935 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x1bfd96455b0 at 1bfd8f733d0>
+2026-07-09 09:26:07,935 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x1bfb90efc20 at 1bfd8fd6bd0>
+2026-07-09 09:26:07,935 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1bfba5060a0 at 1bfd8f733d0>
+2026-07-09 09:26:07,936 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1bfba295820 at 1bfd8f733d0>
+2026-07-09 09:26:07,936 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1bfba295b20 at 1bfd8fd6d50>
+2026-07-09 09:26:08,533 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x1bfd9629650 at 1bfd8fd6cd0>
+2026-07-09 09:26:08,533 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x1bfba295820 at 1bfd8fd6c50>
+2026-07-09 09:26:08,533 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x1bfba5060a0 at 1bfd8fd6bd0>
+2026-07-09 09:26:10,084 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:26:10,485 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:26:11,788 [ERROR] BoomerangPlayer: Unhandled exception:
+Traceback (most recent call last):
+  File "e:\outputs\Antigravity\win11-video-player\mixins\loader_mixin.py", line 276, in open_media
+    _navigate(dialog, dialog._current_path)
+  File "e:\outputs\Antigravity\win11-video-player\mixins\loader_mixin.py", line 234, in _navigate
+    _refresh(dlg)
+  File "e:\outputs\Antigravity\win11-video-player\mixins\loader_mixin.py", line 213, in _refresh
+    d.setFilter(QDir.Dirs | QDir.Files | QDir.NoDotAndDotDot)
+                ^^^^^^^^^
+AttributeError: type object 'QDir' has no attribute 'Dirs'
+
+2026-07-09 09:26:24,413 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:26:24,413 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:27:39,961 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:27:40,198 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:27:41,001 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:27:41,014 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:27:41,030 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x2cb292d2450 at 2cb28bb33d0>
+2026-07-09 09:27:41,030 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x2cb08cf4520 at 2cb28c16b50>
+2026-07-09 09:27:41,030 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x2cb291c7e80 at 2cb28bb33d0>
+2026-07-09 09:27:41,031 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x2cb09ea1220 at 2cb28bb33d0>
+2026-07-09 09:27:41,031 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x2cb09ea0620 at 2cb28c16bd0>
+2026-07-09 09:27:41,641 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x2cb292e0ce0 at 2cb28c16c50>
+2026-07-09 09:27:41,641 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x2cb09ea1220 at 2cb28c16cd0>
+2026-07-09 09:27:41,641 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x2cb291c7e80 at 2cb28c16b50>
+2026-07-09 09:27:43,880 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:27:44,280 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:28:49,870 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:28:49,870 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:31:25,613 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:31:25,842 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:31:26,603 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:31:26,615 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:31:26,630 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x1de5c42e710 at 1de5bd03450>
+2026-07-09 09:31:26,630 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x1de3cffdf00 at 1de5bd76bd0>
+2026-07-09 09:31:26,630 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1de3bf70880 at 1de5bd03450>
+2026-07-09 09:31:26,631 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1de3d26d590 at 1de5bd03450>
+2026-07-09 09:31:26,631 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1de3d26bd90 at 1de5bd76d50>
+2026-07-09 09:31:27,207 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x1de5c2710b0 at 1de5bd76cd0>
+2026-07-09 09:31:27,207 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x1de3d26d590 at 1de5bd76c50>
+2026-07-09 09:31:27,207 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x1de3bf70880 at 1de5bd76bd0>
+2026-07-09 09:31:29,575 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:31:29,974 [WARNING] BoomerangPlayer: [DEBUG _refresh_fs] is_fs=True, has_pixmap=False, viewport=1920x1080, zoom=1.0
+2026-07-09 09:31:38,235 [INFO] Loader: load_video started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:31:38,236 [INFO] Loader: Setting mediaPlayer source to empty and cleaning up cache/markers
+2026-07-09 09:31:38,236 [INFO] Loader: File recognized as image: False
+2026-07-09 09:31:38,325 [INFO] Loader: Extracting video metadata using ffprobe...
+2026-07-09 09:31:38,325 [INFO] Loader: get_video_info started for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:31:38,358 [INFO] Loader: [get_video_info] 1. napunk a bölcsődében.mp4: codec=h264, is_audio_only=False, fps=24.0, duration=326.5s, nb_frames=7836
+2026-07-09 09:31:38,359 [INFO] Loader: ffprobe detected FPS: 24.0
+2026-07-09 09:31:38,359 [INFO] Loader: Setting QMediaPlayer source to: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:31:38,359 [INFO] Loader: Loading saved markers for file...
+2026-07-09 09:31:38,359 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:31:38,359 [INFO] Loader: Checking for subtitles...
+2026-07-09 09:31:38,390 [INFO] Loader: Initializing cache and starting full video frame extraction...
+2026-07-09 09:31:38,390 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[]..., is_fullscreen=True
+2026-07-09 09:31:38,390 [INFO] Loader: load_video completed successfully for: D:/1. napunk a bölcsődében.mp4
+2026-07-09 09:31:39,091 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0]..., is_fullscreen=True
+2026-07-09 09:31:39,111 [WARNING] BoomerangPlayer: [DEBUG apply_transformations] fit=True, is_fullscreen=True, viewport=1920x1080, pixmap=1280x720
+2026-07-09 09:31:39,217 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:31:39,218 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:31:39,614 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] viewport=1920x1080, pixmap=1280x720, view_size=1920x1080, window=1920x1080
+2026-07-09 09:31:39,614 [WARNING] BoomerangPlayer: [DEBUG _deferred_fit] fitInView done, view viewport now=1920x1080
+2026-07-09 09:31:40,196 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=0, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:40,504 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=1, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:40,783 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=4, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:40,909 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=7, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,033 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=9, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,124 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=11, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,200 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=13, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,221 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=14, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,257 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=15, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,365 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=17, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,439 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=19, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,466 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=20, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,508 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=21, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,557 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=22, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,598 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=23, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,638 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=24, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,677 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=25, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,718 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=26, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,768 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=27, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,808 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=28, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,848 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=29, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,888 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=30, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,927 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=31, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:41,967 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=32, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,018 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=33, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,057 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=34, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,097 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=35, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,137 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=36, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,177 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=37, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,218 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=38, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,267 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=39, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,308 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=40, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,348 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=41, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,387 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=42, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,428 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=43, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,468 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=44, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,518 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=45, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,558 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=46, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:31:42,598 [WARNING] BoomerangPlayer: [DEBUG update_pixmap] target_index=47, cache_keys=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]..., is_fullscreen=True
+2026-07-09 09:33:09,839 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:33:09,840 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:51:16,934 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:51:17,161 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:51:17,944 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:51:17,956 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:51:17,972 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x2b4f7411a30 at 2b4f6f635d0>
+2026-07-09 09:51:17,972 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x2b4d83f2d70 at 2b4f701ee50>
+2026-07-09 09:51:17,972 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x2b4f7313de0 at 2b4f6f635d0>
+2026-07-09 09:51:17,972 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x2b4d8228e80 at 2b4f6f635d0>
+2026-07-09 09:51:17,973 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x2b4d822a680 at 2b4f701e950>
+2026-07-09 09:51:18,549 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x2b4f73f6340 at 2b4f701ec50>
+2026-07-09 09:51:18,549 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x2b4d8228e80 at 2b4f701eed0>
+2026-07-09 09:51:18,549 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x2b4f7313de0 at 2b4f701ee50>
+2026-07-09 09:51:24,801 [ERROR] BoomerangPlayer: Unhandled exception:
+Traceback (most recent call last):
+  File "e:\outputs\Antigravity\win11-video-player\mixins\loader_mixin.py", line 244, in open_media
+    (tr('open'), _on_open, 90),
+                 ^^^^^^^^
+UnboundLocalError: cannot access local variable '_on_open' where it is not associated with a value
+
+2026-07-09 09:51:32,781 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:51:32,781 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 09:55:19,234 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 09:55:19,453 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:55:20,216 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 09:55:20,229 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 09:55:20,244 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x2501663b800 at 2507f923850>
+2026-07-09 09:55:20,244 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x25076cc0010 at 2507f9dafd0>
+2026-07-09 09:55:20,244 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x25016495ed0 at 2507f923850>
+2026-07-09 09:55:20,245 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x25076bd8720 at 2507f923850>
+2026-07-09 09:55:20,245 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x25016670cf0 at 2507f9db150>
+2026-07-09 09:55:20,811 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x250165f6ca0 at 2507f9db0d0>
+2026-07-09 09:55:20,813 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x25076bd8720 at 2507f9db050>
+2026-07-09 09:55:20,813 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x25016495ed0 at 2507f9dafd0>
+2026-07-09 09:58:53,076 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 09:58:53,076 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 10:07:48,140 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 10:07:48,362 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:07:49,146 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 10:07:49,159 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:07:49,173 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x26155dcaf40 at 261559738d0>
+2026-07-09 10:07:49,173 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x26136e13cb0 at 26155a2b050>
+2026-07-09 10:07:49,174 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x26135a26a50 at 261559738d0>
+2026-07-09 10:07:49,174 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x26136f7d7b0 at 261559738d0>
+2026-07-09 10:07:49,174 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x26136f7c2b0 at 26155a2b1d0>
+2026-07-09 10:07:49,768 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x26155da95d0 at 26155a2b150>
+2026-07-09 10:07:49,768 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x26136f7d7b0 at 26155a2b0d0>
+2026-07-09 10:07:49,768 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x26135a26a50 at 26155a2b050>
+2026-07-09 10:08:59,971 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 10:08:59,971 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 10:20:51,793 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 10:20:52,011 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:20:52,798 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 10:20:52,811 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:20:52,824 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x22f0cb53bd0 at 22f0c3d38d0>
+2026-07-09 10:20:52,824 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x22f6d5cd340 at 22f0c48b050>
+2026-07-09 10:20:52,824 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x22f0c9487a0 at 22f0c3d38d0>
+2026-07-09 10:20:52,825 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x22f6d799320 at 22f0c3d38d0>
+2026-07-09 10:20:52,825 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x22f6d79c620 at 22f0c48b1d0>
+2026-07-09 10:20:53,391 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x22f0cb41d90 at 22f0c48b150>
+2026-07-09 10:20:53,391 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x22f6d799320 at 22f0c48b0d0>
+2026-07-09 10:20:53,391 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x22f0c9487a0 at 22f0c48b050>
+2026-07-09 10:21:18,342 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 10:21:18,342 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 10:21:29,229 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 10:21:29,450 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:21:30,202 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 10:21:30,215 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:21:30,230 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x1a21c2b9fc0 at 1a27ed9b8d0>
+2026-07-09 10:21:30,230 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x1a27c0aabd0 at 1a27ee3b050>
+2026-07-09 10:21:30,230 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1a27ae490e0 at 1a27ed9b8d0>
+2026-07-09 10:21:30,231 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1a27bffdf40 at 1a27ed9b8d0>
+2026-07-09 10:21:30,231 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x1a27bffe540 at 1a27ee3b1d0>
+2026-07-09 10:21:30,800 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x1a21c26caf0 at 1a27ee3b150>
+2026-07-09 10:21:30,801 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x1a27bffdf40 at 1a27ee3b0d0>
+2026-07-09 10:21:30,801 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x1a27ae490e0 at 1a27ee3b050>
+2026-07-09 10:21:40,290 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 10:21:40,290 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.
+2026-07-09 10:25:09,828 [INFO] BoomerangPlayer: Boomerang Player main execution started.
+2026-07-09 10:25:10,052 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:25:10,819 [INFO] Qt: Using Qt multimedia with FFmpeg version 7.1.3 LGPL version 2.1 or later
+2026-07-09 10:25:10,832 [DEBUG] comtypes: CoInitializeEx(None, 2)
+2026-07-09 10:25:10,846 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IPropertyStore) ptr=0x2431230cec0 at 2437ecb38d0>
+2026-07-09 10:25:10,846 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDeviceEnumerator) ptr=0x24371fbb2b0 at 2437ed6b050>
+2026-07-09 10:25:10,847 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x243120c3280 at 2437ecb38d0>
+2026-07-09 10:25:10,847 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x24371edd820 at 2437ecb38d0>
+2026-07-09 10:25:10,847 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IUnknown) ptr=0x24371eddb20 at 2437ed6b1d0>
+2026-07-09 10:25:11,435 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IMMDevice) ptr=0x24371f652c0 at 2437ed6b150>
+2026-07-09 10:25:11,435 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioEndpointVolume) ptr=0x24371edd820 at 2437ed6b0d0>
+2026-07-09 10:25:11,435 [DEBUG] comtypes._post_coinit.unknwn: Release <POINTER(IAudioSessionManager2) ptr=0x243120c3280 at 2437ed6b050>
+2026-07-09 10:25:25,067 [DEBUG] comtypes._post_coinit.unknwn: Calling CoUninitialize()
+2026-07-09 10:25:25,067 [DEBUG] comtypes._post_coinit.unknwn: CoUninitialize() done.

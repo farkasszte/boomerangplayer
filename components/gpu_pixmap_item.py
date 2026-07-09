@@ -44,9 +44,10 @@ class GPUPixmapItem(QGraphicsPixmapItem):
     def setImage(self, image):
         if not image.isNull():
             self.current_image = image.convertToFormat(QImage.Format.Format_RGBA8888)
-            pix = self.pixmap()
-            if pix.isNull() or pix.width() != image.width() or pix.height() != image.height():
-                super().setPixmap(QPixmap.fromImage(self.current_image))
+            # Always update the pixmap so the fallback (non-GL) paint path
+            # has current data when the OpenGL context is lost (e.g. on
+            # fullscreen toggle under Windows).
+            super().setPixmap(QPixmap.fromImage(self.current_image))
             self._new_image_loaded = True
             self.update()
         else:

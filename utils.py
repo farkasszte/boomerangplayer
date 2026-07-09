@@ -335,11 +335,11 @@ def cleanup_nvidia_dxcache():
 def cleanup_old_mem_cache():
     """ Scans the system temporary directory for any stale mem_cache_ directories
     left over from previous sessions (now unlocked) and deletes them.
+    Skips directories still owned by a running instance.
     Runs asynchronously in a background daemon thread.
     """
     import threading
     import tempfile
-    import shutil
     
     def worker():
         try:
@@ -348,21 +348,69 @@ def cleanup_old_mem_cache():
                 return
             
             cleaned_count = 0
+            skipped_count = 0
             for item in os.listdir(temp_dir):
-                if item.startswith("mem_cache_"):
+                if item.startswith("mem_cache_") or item.startswith("boomerang_frames_"):
                     item_path = os.path.join(temp_dir, item)
                     if os.path.isdir(item_path):
+                        if is_temp_dir_owned_by_running_process(item_path):
+                            skipped_count += 1
+                            continue
                         try:
-                            shutil.rmtree(item_path, ignore_errors=True)
-                            cleaned_count += 1
+                            if safe_rmtree(item_path, retries=3, delay=0.1):
+                                cleaned_count += 1
                         except Exception:
                             pass
             if cleaned_count > 0:
                 print(f"[MemCache GC] Cleaned up {cleaned_count} stale cache directories from previous sessions.")
+            if skipped_count > 0:
+                print(f"[MemCache GC] Skipped {skipped_count} directories still owned by running instances.")
         except Exception as e:
             print(f"[MemCache GC] Error cleaning up stale cache directories: {e}")
             
     threading.Thread(target=worker, daemon=True).start()
+
+
+def safe_rmtree(path, retries=5, delay=0.1):
+    """Remove a directory tree with retries for Windows file lock conflicts."""
+    import shutil, time
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(path, ignore_errors=False)
+            return True
+        except OSError:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                try:
+                    shutil.rmtree(path, ignore_errors=True)
+                except Exception:
+                    pass
+                return False
+    return True
+
+
+def mark_temp_dir_owner(temp_dir):
+    """Write a PID marker file into the temp dir so other instances can skip it."""
+    try:
+        marker = os.path.join(temp_dir, ".owner_pid")
+        with open(marker, "w") as f:
+            f.write(str(os.getpid()))
+    except OSError:
+        pass
+
+
+def is_temp_dir_owned_by_running_process(temp_dir):
+    """Check if a temp dir's owner PID is still alive. Returns True if owned by a running process."""
+    marker = os.path.join(temp_dir, ".owner_pid")
+    try:
+        with open(marker, "r") as f:
+            owner_pid = int(f.read().strip())
+        # os.kill(pid, 0) doesn't kill — it just checks if the process exists
+        os.kill(owner_pid, 0)
+        return True
+    except (OSError, ValueError, ProcessLookupError):
+        return False
 
 
 def log_debug(msg):

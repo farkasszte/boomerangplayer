@@ -50,6 +50,10 @@ class PlaylistMenuMixin:
         selected_count = len(self.playlistList.selectedItems())
 
         menu = QMenu(self)
+        if getattr(self, 'is_full_screen', False):
+            menu.setWindowFlags(
+                menu.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+            )
         menu.setStyleSheet(MENU_STYLE)
 
         if selected_count > 1:
