@@ -36,14 +36,12 @@ ENV/
 *.avi
 *.mov
 *.json
+*.log
 *.html
 ffmpeg.exe
 ffprobe.exe
 temp_frames/
 mem_cache_*
-playlist.json
-settings.json
-config.json
 error_log.txt
 .agents/
 graphify-out/

@@ -233,6 +233,9 @@ TRANSLATIONS_EN = {
     'container': 'Container',
     'fps': 'FPS',
     'size': 'Size',
+    'name': 'Name',
+    'type': 'Type',
+    'date_modified': 'Date modified',
     'path': 'Path',
     
     # Loop modes
@@ -347,5 +350,17 @@ TRANSLATIONS_EN = {
     'preset_pop': 'Pop',
     'preset_rock': 'Rock',
     'preset_jazz': 'Jazz',
-    'preset_classical': 'Classical'
+    'preset_classical': 'Classical',
+    'quick_access': 'Quick Access',
+    'go_back': 'Back',
+    'go_forward': 'Forward',
+    'go_up': 'Up',
+    'go_home': 'Home',
+    'thumbnail_view': 'Thumbnails',
+    'list_view': 'List',
+    'detail_view': 'Details',
+    'search_files': 'Search files...',
+    'set_default_folder': 'Set as default folder',
+    'default_folder_set': 'Default folder set',
+    'default_folder_cleared': 'Default folder cleared'
 }

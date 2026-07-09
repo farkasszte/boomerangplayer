@@ -234,6 +234,9 @@ TRANSLATIONS_HU = {
     'container': 'Konténer',
     'fps': 'Képsebesség',
     'size': 'Méret',
+    'name': 'Név',
+    'type': 'Típus',
+    'date_modified': 'Módosítva',
     'path': 'Útvonal',
     
     # Loop modes
@@ -348,5 +351,17 @@ TRANSLATIONS_HU = {
     'preset_pop': 'Pop',
     'preset_rock': 'Rock',
     'preset_jazz': 'Jazz',
-    'preset_classical': 'Klasszikus'
+    'preset_classical': 'Klasszikus',
+    'quick_access': 'Gyors elérés',
+    'go_back': 'Vissza',
+    'go_forward': 'Előre',
+    'go_up': 'Fel',
+    'go_home': 'Kezdő',
+    'thumbnail_view': 'Bélyegképek',
+    'list_view': 'Lista',
+    'detail_view': 'Részletek',
+    'search_files': 'Fájlok keresése...',
+    'set_default_folder': 'Beállítás alapértelmezett mappának',
+    'default_folder_set': 'Alapértelmezett mappa beállítva',
+    'default_folder_cleared': 'Alapértelmezett mappa törölve'
 }

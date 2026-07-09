@@ -88,9 +88,21 @@ class LoaderMixin(LoaderMixinBase):
                                       QListWidget, QListWidgetItem, QPushButton,
                                       QComboBox, QLineEdit, QLabel, QAbstractItemView,
                                       QTreeWidget, QTreeWidgetItem,
-                                      QSplitter, QHeaderView, QToolButton)
+                                      QSplitter, QHeaderView, QToolButton,
+                                      QStackedWidget, QApplication, QStyle)
         from PyQt6.QtGui import QIcon, QColor
-        from PyQt6.QtCore import QDir, Qt, QStorageInfo
+        from PyQt6.QtWidgets import QHeaderView as _QHVRaw
+        import re
+        from PyQt6.QtCore import QDir, Qt, QStorageInfo, QStandardPaths, QSize, QObject, QTimer, pyqtSignal as _Signal
+        from workers.threads import ThumbnailThread
+
+        class _ClickableHeader(_QHVRaw):
+            sectionClicked = _Signal(int)
+            def mousePressEvent(self, e):
+                idx = self.logicalIndexAt(e.pos())
+                if idx >= 0:
+                    self.sectionClicked.emit(idx)
+                super().mousePressEvent(e)
 
         video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')
         image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
@@ -168,7 +180,8 @@ class LoaderMixin(LoaderMixinBase):
                 pass
 
         # === State + helper functions (defined before UI uses them) ===
-        dialog._current_path = QDir.rootPath()
+        default_folder = self.config.get('default_folder', '')
+        dialog._current_path = default_folder if default_folder and os.path.isdir(default_folder) else QDir.rootPath()
         dialog._history = []
         dialog._history_idx = -1
         dialog.selected_files = []
@@ -183,45 +196,248 @@ class LoaderMixin(LoaderMixinBase):
         def _format_date(dt):
             return dt.toString("dd/MM/yyyy HH:mm") if dt.isValid() else ""
 
+        def _get_special_folders():
+            folders = []
+            try:
+                mapping = [
+                    ('Videos', QStandardPaths.StandardLocation.MoviesLocation),
+                    ('Pictures', QStandardPaths.StandardLocation.PicturesLocation),
+                    ('Desktop', QStandardPaths.StandardLocation.DesktopLocation),
+                    ('Downloads', QStandardPaths.StandardLocation.DownloadLocation),
+                    ('Documents', QStandardPaths.StandardLocation.DocumentsLocation),
+                    ('Music', QStandardPaths.StandardLocation.MusicLocation),
+                ]
+                for label, loc in mapping:
+                    p = QStandardPaths.writableLocation(loc)
+                    if p and os.path.isdir(p):
+                        folders.append((label, p))
+            except Exception:
+                pass
+            # OneDrive (registry first, then common fallback path)
+            od = None
+            try:
+                import winreg
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\OneDrive") as k:
+                    od = winreg.QueryValueEx(k, "UserFolder")[0]
+            except Exception:
+                try:
+                    od = os.path.expandvars(r"%UserProfile%\OneDrive")
+                except Exception:
+                    od = None
+            if od and os.path.isdir(od):
+                folders.append(("OneDrive", od))
+            return folders
+
+        def _highlight_drive(dlg):
+            path = dlg._current_path.lower()
+            best_idx, best_len = None, -1
+            for i in range(dlg._drive_list.count()):
+                d = dlg._drive_list.item(i).data(Qt.ItemDataRole.UserRole)
+                if not d:
+                    continue
+                d = d.lower()
+                if path.startswith(d) and len(d) > best_len:
+                    best_idx, best_len = i, len(d)
+            if best_idx is not None:
+                dlg._drive_list.blockSignals(True)
+                dlg._drive_list.setCurrentRow(best_idx)
+                dlg._drive_list.blockSignals(False)
+
+        def _natural_key(s):
+            # Digit-aware (natural) sort so "2" comes before "10", case-insensitive.
+            return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]
+
+        _DIR_ROLE = Qt.ItemDataRole.UserRole + 1
+        _SIZE_ROLE = Qt.ItemDataRole.UserRole + 2
+        _DATE_ROLE = Qt.ItemDataRole.UserRole + 3
+        _TYPE_ROLE = Qt.ItemDataRole.UserRole + 4
+
+        class _SortTreeItem(QTreeWidgetItem):
+            def __lt__(self, other):
+                tw = self.treeWidget()
+                col = tw.sortColumn() if tw is not None else 0
+                self_dir = bool(self.data(0, _DIR_ROLE))
+                other_dir = bool(other.data(0, _DIR_ROLE))
+                if self_dir != other_dir:
+                    return self_dir and not other_dir  # folders always first
+                if col == 1:  # size
+                    return (self.data(0, _SIZE_ROLE) or 0) < (other.data(0, _SIZE_ROLE) or 0)
+                if col == 3:  # date modified
+                    a = self.data(0, _DATE_ROLE)
+                    b = other.data(0, _DATE_ROLE)
+                    a = a.toMSecsSinceEpoch() if a is not None else 0
+                    b = b.toMSecsSinceEpoch() if b is not None else 0
+                    return a < b
+                if col == 2:  # type
+                    return (self.data(0, _TYPE_ROLE) or '') < (other.data(0, _TYPE_ROLE) or '')
+                return _natural_key(self.text(0)) < _natural_key(other.text(0))
+
+        def _apply_sort(dlg):
+            col = dlg._sort_column
+            rev = dlg._sort_order == 'desc'
+
+            def key(e):
+                if col == 1:
+                    return e['size']
+                if col == 3:
+                    return e['date'].toMSecsSinceEpoch()
+                if col == 2:
+                    return e['suffix'].lower()
+                return _natural_key(e['name'])
+
+            dirs = [e for e in dlg._entries if e['is_dir']]
+            files = [e for e in dlg._entries if not e['is_dir']]
+            dirs.sort(key=key, reverse=rev)
+            files.sort(key=key, reverse=rev)
+            dlg._sorted_entries = dirs + files
+
+        _col_labels = [tr('name'), tr('size'), tr('type'), tr('date_modified')]
+
+        def _update_header_labels(dlg):
+            labels = []
+            for i, base in enumerate(_col_labels):
+                if i == dlg._sort_column:
+                    arrow = ' ▼' if dlg._sort_order == 'desc' else ' ▲'
+                    labels.append(base + arrow)
+                else:
+                    labels.append(base)
+            dlg._file_tree.setHeaderLabels(labels)
+
+        def _on_header_clicked(dlg, idx):
+            if dlg._sort_column == idx:
+                dlg._sort_order = 'desc' if dlg._sort_order == 'asc' else 'asc'
+            else:
+                dlg._sort_column = idx
+                dlg._sort_order = 'asc'
+            _apply_sort(dlg)
+            _render_tree(dlg, dlg._view_mode == 'detail')
+            _update_header_labels(dlg)
+
         def _refresh(dlg):
             path = dlg._current_path
             dlg._path_bar.setText(path)
-            drive = path[:2].upper() + "\\" if len(path) >= 2 and path[1] == ':' else ""
-            for i in range(dlg._drive_list.count()):
-                if dlg._drive_list.item(i).data(Qt.ItemDataRole.UserRole) == drive:
-                    dlg._drive_list.blockSignals(True)
-                    dlg._drive_list.setCurrentRow(i)
-                    dlg._drive_list.blockSignals(False)
-                    break
+            _highlight_drive(dlg)
             exts = filter_map.get(dlg._filter_combo.currentIndex(), all_exts)
-            dlg._file_tree.setSortingEnabled(False)
-            dlg._file_tree.clear()
+            name_filter = dlg._name_filter.text().strip().lower()
             d = QDir(path)
             d.setFilter(QDir.Filter.Dirs | QDir.Filter.Files | QDir.Filter.NoDotAndDotDot)
-            d.setSorting(QDir.SortFlag.Name | QDir.SortFlag.IgnoreCase)
-            dirs = []
-            files = []
+            raw = []
             for info in d.entryInfoList():
                 name = info.fileName()
-                if not info.isDir() and not name.lower().endswith(exts):
+                is_dir = info.isDir()
+                if not is_dir and not name.lower().endswith(exts):
                     continue
-                item = QTreeWidgetItem()
-                item.setData(0, Qt.ItemDataRole.UserRole, info.absoluteFilePath())
-                item.setText(0, name)
-                if info.isDir():
+                if name_filter and name.lower().find(name_filter) == -1:
+                    continue
+                raw.append({
+                    'name': name,
+                    'path': info.absoluteFilePath(),
+                    'is_dir': is_dir,
+                    'size': info.size(),
+                    'date': info.lastModified(),
+                    'suffix': info.suffix(),
+                })
+            dlg._entries = raw
+            _apply_sort(dlg)
+            _render_active(dlg)
+
+        def _item_path(item):
+            # QTreeWidgetItem.data(column, role) vs QListWidgetItem.data(role)
+            try:
+                return item.data(0, Qt.ItemDataRole.UserRole)
+            except TypeError:
+                return item.data(Qt.ItemDataRole.UserRole)
+
+        def _selected_paths(dlg):
+            if dlg._view_mode == 'thumb':
+                items = dlg._thumb_list.selectedItems()
+            else:
+                items = dlg._file_tree.selectedItems()
+            return [_item_path(item) for item in items]
+
+        def _render_active(dlg):
+            if dlg._view_mode == 'thumb':
+                _render_thumb(dlg)
+            else:
+                _render_tree(dlg, dlg._view_mode == 'detail')
+
+        def _render_tree(dlg, detail):
+            dlg._file_tree.clear()
+            for e in dlg._sorted_entries:
+                type_str = "File Folder" if e['is_dir'] else (e['suffix'].upper() + " File" if e['suffix'] else "File")
+                item = _SortTreeItem()
+                item.setData(0, Qt.ItemDataRole.UserRole, e['path'])
+                item.setData(0, _DIR_ROLE, e['is_dir'])
+                item.setData(0, _SIZE_ROLE, e['size'])
+                item.setData(0, _DATE_ROLE, e['date'])
+                item.setData(0, _TYPE_ROLE, type_str)
+                item.setText(0, e['name'])
+                if e['is_dir']:
                     item.setForeground(0, QColor(accent_color))
-                    item.setText(1, "File Folder")
-                    item.setText(2, _format_date(info.lastModified()))
-                    dirs.append(item)
+                    if detail:
+                        item.setText(1, "—")
+                        item.setText(2, type_str)
+                        item.setText(3, _format_date(e['date']))
                 else:
-                    item.setText(1, _format_size(info.size()))
-                    item.setText(2, info.suffix().upper() + " File" if info.suffix() else "File")
-                    item.setText(3, _format_date(info.lastModified()))
-                    files.append(item)
-            for item in dirs:
+                    if detail:
+                        item.setText(1, _format_size(e['size']))
+                        item.setText(2, type_str)
+                        item.setText(3, _format_date(e['date']))
                 dlg._file_tree.addTopLevelItem(item)
-            for item in files:
-                dlg._file_tree.addTopLevelItem(item)
+
+        def _render_thumb(dlg):
+            for t in dlg._thumb_threads:
+                try:
+                    t.cancel()
+                except Exception:
+                    pass
+            dlg._thumb_threads = []
+            dlg._thumb_list.clear()
+            dlg._thumb_items_by_path = {}
+            dlg._thumb_pending = set()
+            dlg._thumb_done = set()
+            for e in dlg._sorted_entries:
+                item = QListWidgetItem()
+                item.setData(Qt.ItemDataRole.UserRole, e['path'])
+                item.setText(e['name'])
+                if e['is_dir']:
+                    item.setIcon(dlg._folder_icon)
+                    dlg._thumb_done.add(e['path'])
+                else:
+                    item.setIcon(dlg._file_icon)
+                dlg._thumb_items_by_path[e['path']] = item
+                dlg._thumb_list.addItem(item)
+            QTimer.singleShot(30, lambda: _ensure_visible_thumbs(dlg))
+
+        def _ensure_visible_thumbs(dlg):
+            if dlg._view_mode != 'thumb':
+                return
+            viewport = dlg._thumb_list.viewport()
+            rect = viewport.rect()
+            max_concurrent = 12
+            for i in range(dlg._thumb_list.count()):
+                if len(dlg._thumb_pending) >= max_concurrent:
+                    break
+                item = dlg._thumb_list.item(i)
+                path = item.data(Qt.ItemDataRole.UserRole)
+                if path in dlg._thumb_done or path in dlg._thumb_pending:
+                    continue
+                r = dlg._thumb_list.visualItemRect(item)
+                if not r.isValid() or not rect.intersects(r):
+                    continue
+                dlg._thumb_pending.add(path)
+                t = ThumbnailThread(path, dlg)
+                t.finished.connect(lambda p, px, _it=item, _p=path: _on_thumb(dlg, _it, _p, px))
+                dlg._thumb_threads.append(t)
+                t.start()
+
+        def _on_thumb(dlg, item, path, pixmap):
+            dlg._thumb_pending.discard(path)
+            dlg._thumb_done.add(path)
+            if pixmap is not None and not pixmap.isNull():
+                item.setIcon(QIcon(pixmap))
+            _ensure_visible_thumbs(dlg)
+
 
         def _navigate(dlg, path):
             if not path or not os.path.isdir(path):
@@ -247,67 +463,112 @@ class LoaderMixin(LoaderMixinBase):
                 _refresh(dialog)
 
         def _on_open():
-            selected = [item.data(0, Qt.ItemDataRole.UserRole)
-                        for item in dialog._file_tree.selectedItems()
-                        if os.path.isfile(item.data(0, Qt.ItemDataRole.UserRole))]
+            selected = [p for p in _selected_paths(dialog) if os.path.isfile(p)]
             if selected:
                 dialog.selected_files = selected
                 dialog.accept()
 
         def _on_add_folder():
             exts = filter_map.get(dialog._filter_combo.currentIndex(), all_exts)
-            files = [os.path.join(dialog._current_path, f)
-                     for f in sorted(os.listdir(dialog._current_path))
-                     if f.lower().endswith(exts)]
+            name_filter = dialog._name_filter.text().strip().lower()
+            files = []
+            for f in sorted(os.listdir(dialog._current_path)):
+                if not f.lower().endswith(exts):
+                    continue
+                if name_filter and f.lower().find(name_filter) == -1:
+                    continue
+                files.append(os.path.join(dialog._current_path, f))
             if files:
                 dialog.selected_files = files
                 dialog.accept()
 
-        def _toggle_view():
-            dlg = dialog
-            is_detail = dlg._view_mode == "detail"
-            dlg._view_mode = "list" if is_detail else "detail"
-            dlg._view_toggle_btn.setText("☰" if dlg._view_mode == "list" else "≡")
-            header = dlg._file_tree.header()
-            if dlg._view_mode == "list":
-                header.hide()
-                for col in range(1, dlg._file_tree.columnCount()):
-                    dlg._file_tree.setColumnHidden(col, True)
-            else:
-                header.show()
-                for col in range(1, dlg._file_tree.columnCount()):
-                    dlg._file_tree.setColumnHidden(col, False)
+        def _apply_view_visibility(dlg):
+            is_thumb = dlg._view_mode == 'thumb'
+            dlg._stack.setCurrentIndex(1 if is_thumb else 0)
+            dlg._file_tree.header().setVisible(dlg._view_mode == 'detail')
+            for mode, btn in dlg._view_btns.items():
+                btn.setChecked(mode == dlg._view_mode)
+
+        def _set_view(mode):
+            dialog._view_mode = mode
+            _apply_view_visibility(dialog)
+            _refresh(dialog)
+
+        def _set_default():
+            self.config['default_folder'] = dialog._current_path
+            from qfluentwidgets import InfoBar, InfoBarPosition
+            InfoBar.success(
+                title='',
+                content=tr('default_folder_set'),
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
 
         # === UI layout ===
         root = QVBoxLayout(dialog)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Top bar: "Look in:" + path + nav buttons
+        # Top bar: path + nav buttons + view buttons + default-folder lock
         top_bar = QHBoxLayout()
         top_bar.setContentsMargins(12, 10, 12, 6)
         top_bar.setSpacing(6)
-        top_bar.addWidget(QLabel(tr('look_in')))
         dialog._path_bar = QLineEdit()
         dialog._path_bar.returnPressed.connect(lambda: _navigate(dialog, dialog._path_bar.text()))
         top_bar.addWidget(dialog._path_bar, 1)
+
+        top_btn_size = 28
+        top_btn_style = "QPushButton { min-width: 0px; padding: 2px; }"
+
         def _get_drive_root(path):
             if len(path) >= 2 and path[1] == ':':
                 return path[:2].upper() + "\\"
             return QDir.rootPath()
 
-        for text, handler in [('◀', _go_back), ('▶', _go_forward),
-                               ('▲', lambda: _navigate(dialog, os.path.dirname(dialog._current_path))),
-                               ('⌂', lambda: _navigate(dialog, _get_drive_root(dialog._current_path)))]:
-            btn = QPushButton(text)
-            btn.setFixedSize(28, 28)
+        home_sp = getattr(QStyle.StandardPixmap, 'SP_DirHomeIcon', None) or QStyle.StandardPixmap.SP_DirHome
+        for icon_sp, handler, tip in [
+            (QStyle.StandardPixmap.SP_ArrowLeft, _go_back, tr('go_back')),
+            (QStyle.StandardPixmap.SP_ArrowRight, _go_forward, tr('go_forward')),
+            (QStyle.StandardPixmap.SP_FileDialogToParent, lambda: _navigate(dialog, os.path.dirname(dialog._current_path)), tr('go_up')),
+            (home_sp, lambda: _navigate(dialog, _get_drive_root(dialog._current_path)), tr('go_home')),
+        ]:
+            btn = QPushButton()
+            btn.setIcon(QApplication.instance().style().standardIcon(icon_sp))
+            btn.setFixedSize(top_btn_size, top_btn_size)
+            btn.setToolTip(tip)
+            btn.setStyleSheet(top_btn_style)
             btn.clicked.connect(handler)
             top_bar.addWidget(btn)
-        dialog._view_toggle_btn = QPushButton("≡")
-        dialog._view_toggle_btn.setFixedSize(28, 28)
-        dialog._view_toggle_btn.setToolTip(tr('view_mode') if hasattr(tr, '__call__') else "Toggle view")
-        dialog._view_toggle_btn.clicked.connect(_toggle_view)
-        top_bar.addWidget(dialog._view_toggle_btn)
+
+        lock_btn = QPushButton("🔒")
+        lock_btn.setFixedSize(top_btn_size, top_btn_size)
+        lock_btn.setToolTip(tr('set_default_folder'))
+        lock_btn.setStyleSheet(top_btn_style)
+        lock_btn.clicked.connect(_set_default)
+        top_bar.addWidget(lock_btn)
+
+        view_labels = {'detail': tr('detail_view'), 'list': tr('list_view'), 'thumb': tr('thumbnail_view')}
+        view_icons = {
+            'detail': QStyle.StandardPixmap.SP_FileDialogDetailedView,
+            'list': QStyle.StandardPixmap.SP_FileDialogListView,
+            'thumb': QStyle.StandardPixmap.SP_FileDialogContentsView,
+        }
+        _app_style = QApplication.instance().style()
+        dialog._view_btns = {}
+        for mode in ['detail', 'list', 'thumb']:
+            btn = QPushButton()
+            btn.setIcon(_app_style.standardIcon(view_icons[mode]))
+            btn.setFixedSize(top_btn_size, top_btn_size)
+            btn.setCheckable(True)
+            btn.setToolTip(view_labels[mode])
+            btn.setStyleSheet(top_btn_style)
+            btn.clicked.connect(lambda _=None, m=mode: _set_view(m))
+            dialog._view_btns[mode] = btn
+            top_bar.addWidget(btn)
+
         root.addLayout(top_bar)
 
         # Main area: drive sidebar | file tree
@@ -316,6 +577,15 @@ class LoaderMixin(LoaderMixinBase):
 
         dialog._drive_list = QListWidget()
         dialog._drive_list.setFixedWidth(160)
+
+        for label, p in _get_special_folders():
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, p)
+            dialog._drive_list.addItem(item)
+        sep = QListWidgetItem("—")
+        sep.setFlags(Qt.ItemFlag.NoItemFlags)
+        dialog._drive_list.addItem(sep)
+
         for drive in QDir.drives():
             d_path = drive.path()
             try:
@@ -333,28 +603,76 @@ class LoaderMixin(LoaderMixinBase):
         splitter.addWidget(dialog._drive_list)
 
         dialog._file_tree = QTreeWidget()
-        dialog._file_tree.setHeaderLabels([tr('name'), tr('size'), tr('type'), tr('date_modified')])
+        dialog._sort_column = 0
+        dialog._sort_order = 'asc'
+        dialog._file_tree.setHeaderLabels([tr('name') + ' ▲', tr('size'), tr('type'), tr('date_modified')])
         dialog._file_tree.setRootIsDecorated(False)
         dialog._file_tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        header = dialog._file_tree.header()
-        header.resizeSection(0, 350)
-        header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-        dialog._file_tree.itemDoubleClicked.connect(lambda item, col: (
-            _navigate(dialog, item.data(0, Qt.ItemDataRole.UserRole))
-            if os.path.isdir(item.data(0, Qt.ItemDataRole.UserRole))
-            else (setattr(dialog, 'selected_files', [item.data(0, Qt.ItemDataRole.UserRole)]), dialog.accept())
-        ))
-        splitter.addWidget(dialog._file_tree)
+        hdr = _ClickableHeader(Qt.Orientation.Horizontal)
+        dialog._file_tree.setHeader(hdr)
+        hdr.setSectionsClickable(True)
+        hdr.sectionClicked.connect(lambda idx: _on_header_clicked(dialog, idx))
+        hdr.resizeSection(0, 350)
+        hdr.setStretchLastSection(False)
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+
+        dialog._thumb_list = QListWidget()
+        dialog._thumb_list.setViewMode(QListWidget.ViewMode.IconMode)
+        dialog._thumb_list.setIconSize(QSize(120, 120))
+        dialog._thumb_list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        dialog._thumb_list.setSpacing(10)
+        dialog._thumb_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        dialog._thumb_list.hide()
+        dialog._thumb_threads = []
+        dialog._thumb_items_by_path = {}
+        dialog._thumb_pending = set()
+        dialog._thumb_done = set()
+        dialog._thumb_list.verticalScrollBar().valueChanged.connect(
+            lambda _=None: _ensure_visible_thumbs(dialog))
+
+        class _ThumbResizeFilter(QObject):
+            def __init__(self, dlg, parent=None):
+                super().__init__(parent)
+                self._dlg = dlg
+            def eventFilter(self, obj, event):
+                if event.type() == event.Type.Resize:
+                    _ensure_visible_thumbs(self._dlg)
+                return super().eventFilter(obj, event)
+        dialog._thumb_list.installEventFilter(_ThumbResizeFilter(dialog))
+
+        try:
+            _style = QApplication.instance().style()
+            dialog._folder_icon = _style.standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon)
+            dialog._file_icon = _style.standardIcon(QStyle.StandardPixmap.SP_FileIcon)
+        except Exception:
+            dialog._folder_icon = QIcon()
+            dialog._file_icon = QIcon()
+
+        def _on_item_double_clicked(item, col=None):
+            p = _item_path(item)
+            if os.path.isdir(p):
+                _navigate(dialog, p)
+            else:
+                dialog.selected_files = [p]
+                dialog.accept()
+        dialog._file_tree.itemDoubleClicked.connect(_on_item_double_clicked)
+        dialog._thumb_list.itemDoubleClicked.connect(_on_item_double_clicked)
+
+        dialog._stack = QStackedWidget()
+        dialog._stack.addWidget(dialog._file_tree)
+        dialog._stack.addWidget(dialog._thumb_list)
+        splitter.addWidget(dialog._stack)
         splitter.setSizes([160, 690])
         root.addWidget(splitter, 1)
 
-        # Bottom area: filename + filter + buttons
+        # Bottom area: search + filter + buttons
         bottom = QHBoxLayout()
         bottom.setContentsMargins(12, 8, 12, 10)
         bottom.setSpacing(8)
-        bottom.addWidget(QLabel(tr('file_name')))
-        bottom.addWidget(QLineEdit(), 1)
+        dialog._name_filter = QLineEdit()
+        dialog._name_filter.setPlaceholderText(tr('search_files'))
+        dialog._name_filter.textChanged.connect(lambda: _refresh(dialog))
+        bottom.addWidget(dialog._name_filter, 1)
         dialog._filter_combo = QComboBox()
         dialog._filter_combo.addItems([
             tr('all_media'), tr('video_files'), tr('image_files'),
@@ -363,17 +681,20 @@ class LoaderMixin(LoaderMixinBase):
         dialog._filter_combo.setMinimumWidth(200)
         dialog._filter_combo.currentIndexChanged.connect(lambda: _refresh(dialog))
         bottom.addWidget(dialog._filter_combo)
-        for text, handler, w in [
-            (tr('open'), _on_open, 90),
-            (tr('add_folder'), _on_add_folder, 110),
-            (tr('cancel'), dialog.reject, 90),
+
+        for text, handler, w, tip in [
+            (tr('open'), _on_open, 90, tr('open')),
+            (tr('add_folder'), _on_add_folder, 110, tr('add_folder')),
+            (tr('cancel'), dialog.reject, 90, tr('cancel')),
         ]:
             btn = QPushButton(text)
             btn.setFixedWidth(w)
+            btn.setToolTip(tip)
             btn.clicked.connect(handler)
             bottom.addWidget(btn)
         root.addLayout(bottom)
 
+        _apply_view_visibility(dialog)
         _navigate(dialog, dialog._current_path)
         dialog.resize(850, 500)
         dialog.show()
