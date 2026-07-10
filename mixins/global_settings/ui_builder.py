@@ -40,7 +40,7 @@ class GlobalSettingsUiBuilderMixin:
 
         self.gsScrollWidget = QWidget()
         self.gsInnerLayout = QVBoxLayout(self.gsScrollWidget)
-        self.gsInnerLayout.setContentsMargins(0, 0, 10, 0)
+        self.gsInnerLayout.setContentsMargins(0, 0, 0, 0)
         self.gsInnerLayout.setSpacing(10)
 
         self.gsGeneralLabel = CaptionLabel(tr('general'))
@@ -177,7 +177,6 @@ class GlobalSettingsUiBuilderMixin:
 
         # Bottom buttons row (Default and Save side-by-side)
         bottomButtonsLayout = QHBoxLayout()
-        bottomButtonsLayout.setContentsMargins(0, 0, 0, 0)
         bottomButtonsLayout.setSpacing(8)
 
         self.gsResetDefaultsBtn = PushButton(tr('default'))
