@@ -4,7 +4,7 @@ WatermarkPropertiesDialog — configuration dialog for watermarks in the drawing
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel
-from components import NoWheelSlider
+from .no_wheel_slider import NoWheelSlider
 from qfluentwidgets import PushButton
 from styles import ACTION_BTN_STYLE, get_color_tokens
 from translations import tr

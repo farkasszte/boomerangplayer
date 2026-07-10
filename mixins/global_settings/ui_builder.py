@@ -244,6 +244,28 @@ class GlobalSettingsUiBuilderMixin:
             'thumbnail_size_index': 1,
             'advance_playlist_after_loop': DEFAULT_CONFIG.get('advance_playlist_after_loop', False),
             'advance_playlist_loop_count': DEFAULT_CONFIG.get('advance_playlist_loop_count', 1),
+            # Audio EQ
+            'audio_eq_enabled': DEFAULT_CONFIG.get('audio_eq_enabled', False),
+            'audio_eq_preset': DEFAULT_CONFIG.get('audio_eq_preset', 'Flat'),
+            'audio_eq_gains': list(DEFAULT_CONFIG.get('audio_eq_gains', [0] * 10)),
+            # Subtitle settings
+            'enable_subtitles': DEFAULT_CONFIG.get('enable_subtitles', True),
+            'subtitle_font_family': DEFAULT_CONFIG.get('subtitle_font_family', 'Segoe UI'),
+            'subtitle_font_size': DEFAULT_CONFIG.get('subtitle_font_size', 24),
+            'subtitle_text_color': DEFAULT_CONFIG.get('subtitle_text_color', 'White'),
+            'subtitle_bg_color': DEFAULT_CONFIG.get('subtitle_bg_color', 'Black'),
+            'subtitle_bg_opacity': DEFAULT_CONFIG.get('subtitle_bg_opacity', 60),
+            'subtitle_outline_enabled': DEFAULT_CONFIG.get('subtitle_outline_enabled', False),
+            'subtitle_outline_width': DEFAULT_CONFIG.get('subtitle_outline_width', 2),
+            'subtitle_outline_color': DEFAULT_CONFIG.get('subtitle_outline_color', 'Black'),
+            'subtitle_shadow_enabled': DEFAULT_CONFIG.get('subtitle_shadow_enabled', False),
+            'subtitle_shadow_blur': DEFAULT_CONFIG.get('subtitle_shadow_blur', 5),
+            'subtitle_shadow_dx': DEFAULT_CONFIG.get('subtitle_shadow_dx', 2),
+            'subtitle_shadow_dy': DEFAULT_CONFIG.get('subtitle_shadow_dy', 2),
+            'subtitle_shadow_color': DEFAULT_CONFIG.get('subtitle_shadow_color', 'Black'),
+            'subtitle_v_offset': DEFAULT_CONFIG.get('subtitle_v_offset', 5),
+            'subtitle_h_offset': DEFAULT_CONFIG.get('subtitle_h_offset', 0),
+            'subtitle_offset': DEFAULT_CONFIG.get('subtitle_offset', 0),
         }
 
         for key, val in factories.items():
@@ -307,6 +329,144 @@ class GlobalSettingsUiBuilderMixin:
             self.update_playlist_layout(force_reload_thumbs=True)
         if hasattr(self, '_update_playlist_list_stylesheet'):
             self._update_playlist_list_stylesheet()
+
+        # ---- Audio EQ ----
+        if hasattr(self, 'audioEqToggle'):
+            self.audioEqToggle.blockSignals(True)
+            self.audioEqToggle.setChecked(factories['audio_eq_enabled'])
+            self.audioEqToggle.blockSignals(False)
+        if hasattr(self, 'audioEqPresetCombo'):
+            self.audioEqPresetCombo.blockSignals(True)
+            idx = self.audioEqPresetCombo.findData(factories['audio_eq_preset'])
+            if idx != -1:
+                self.audioEqPresetCombo.setCurrentIndex(idx)
+            self.audioEqPresetCombo.blockSignals(False)
+        if hasattr(self, 'eq_sliders') and hasattr(self, 'eq_labels'):
+            for i, slider in enumerate(self.eq_sliders):
+                slider.blockSignals(True)
+                slider.setValue(factories['audio_eq_gains'][i])
+                slider.blockSignals(False)
+            for i, label in enumerate(self.eq_labels):
+                g = factories['audio_eq_gains'][i]
+                label.setText(f"{g:+d}" if g != 0 else "0")
+        if hasattr(self, 'update_audio_presets_ui'):
+            self.update_audio_presets_ui()
+
+        # ---- Subtitle settings ----
+        if hasattr(self, 'subEnableToggle'):
+            self.subEnableToggle.blockSignals(True)
+            self.subEnableToggle.setChecked(factories['enable_subtitles'])
+            self.subEnableToggle.blockSignals(False)
+        if hasattr(self, 'subFontCombo'):
+            self.subFontCombo.blockSignals(True)
+            idx = self.subFontCombo.findText(factories['subtitle_font_family'])
+            if idx != -1:
+                self.subFontCombo.setCurrentIndex(idx)
+            self.subFontCombo.blockSignals(False)
+        if hasattr(self, 'subFontSizeSpin'):
+            self.subFontSizeSpin.blockSignals(True)
+            self.subFontSizeSpin.setValue(factories['subtitle_font_size'])
+            self.subFontSizeSpin.blockSignals(False)
+        if hasattr(self, 'subFontSizeSlider'):
+            self.subFontSizeSlider.blockSignals(True)
+            self.subFontSizeSlider.setValue(factories['subtitle_font_size'])
+            self.subFontSizeSlider.blockSignals(False)
+        if hasattr(self, 'subTextColorCombo'):
+            self.subTextColorCombo.blockSignals(True)
+            idx = self.subTextColorCombo.findData(factories['subtitle_text_color'])
+            if idx != -1:
+                self.subTextColorCombo.setCurrentIndex(idx)
+            self.subTextColorCombo.blockSignals(False)
+        if hasattr(self, 'subBgColorCombo'):
+            self.subBgColorCombo.blockSignals(True)
+            idx = self.subBgColorCombo.findData(factories['subtitle_bg_color'])
+            if idx != -1:
+                self.subBgColorCombo.setCurrentIndex(idx)
+            self.subBgColorCombo.blockSignals(False)
+        if hasattr(self, 'subBgOpacitySpin'):
+            self.subBgOpacitySpin.blockSignals(True)
+            self.subBgOpacitySpin.setValue(factories['subtitle_bg_opacity'])
+            self.subBgOpacitySpin.blockSignals(False)
+        if hasattr(self, 'subBgOpacitySlider'):
+            self.subBgOpacitySlider.blockSignals(True)
+            self.subBgOpacitySlider.setValue(factories['subtitle_bg_opacity'])
+            self.subBgOpacitySlider.blockSignals(False)
+        if hasattr(self, 'subOutlineToggle'):
+            self.subOutlineToggle.blockSignals(True)
+            self.subOutlineToggle.setChecked(factories['subtitle_outline_enabled'])
+            self.subOutlineToggle.blockSignals(False)
+        if hasattr(self, 'subOutlineWidthSpin'):
+            self.subOutlineWidthSpin.blockSignals(True)
+            self.subOutlineWidthSpin.setValue(factories['subtitle_outline_width'])
+            self.subOutlineWidthSpin.blockSignals(False)
+        if hasattr(self, 'subOutlineWidthSlider'):
+            self.subOutlineWidthSlider.blockSignals(True)
+            self.subOutlineWidthSlider.setValue(factories['subtitle_outline_width'])
+            self.subOutlineWidthSlider.blockSignals(False)
+        if hasattr(self, 'subOutlineColorCombo'):
+            self.subOutlineColorCombo.blockSignals(True)
+            idx = self.subOutlineColorCombo.findData(factories['subtitle_outline_color'])
+            if idx != -1:
+                self.subOutlineColorCombo.setCurrentIndex(idx)
+            self.subOutlineColorCombo.blockSignals(False)
+        if hasattr(self, 'subShadowToggle'):
+            self.subShadowToggle.blockSignals(True)
+            self.subShadowToggle.setChecked(factories['subtitle_shadow_enabled'])
+            self.subShadowToggle.blockSignals(False)
+        if hasattr(self, 'subShadowBlurSpin'):
+            self.subShadowBlurSpin.blockSignals(True)
+            self.subShadowBlurSpin.setValue(factories['subtitle_shadow_blur'])
+            self.subShadowBlurSpin.blockSignals(False)
+        if hasattr(self, 'subShadowBlurSlider'):
+            self.subShadowBlurSlider.blockSignals(True)
+            self.subShadowBlurSlider.setValue(factories['subtitle_shadow_blur'])
+            self.subShadowBlurSlider.blockSignals(False)
+        if hasattr(self, 'subShadowDxSpin'):
+            self.subShadowDxSpin.blockSignals(True)
+            self.subShadowDxSpin.setValue(factories['subtitle_shadow_dx'])
+            self.subShadowDxSpin.blockSignals(False)
+        if hasattr(self, 'subShadowDxSlider'):
+            self.subShadowDxSlider.blockSignals(True)
+            self.subShadowDxSlider.setValue(factories['subtitle_shadow_dx'])
+            self.subShadowDxSlider.blockSignals(False)
+        if hasattr(self, 'subShadowDySpin'):
+            self.subShadowDySpin.blockSignals(True)
+            self.subShadowDySpin.setValue(factories['subtitle_shadow_dy'])
+            self.subShadowDySpin.blockSignals(False)
+        if hasattr(self, 'subShadowDySlider'):
+            self.subShadowDySlider.blockSignals(True)
+            self.subShadowDySlider.setValue(factories['subtitle_shadow_dy'])
+            self.subShadowDySlider.blockSignals(False)
+        if hasattr(self, 'subShadowColorCombo'):
+            self.subShadowColorCombo.blockSignals(True)
+            idx = self.subShadowColorCombo.findData(factories['subtitle_shadow_color'])
+            if idx != -1:
+                self.subShadowColorCombo.setCurrentIndex(idx)
+            self.subShadowColorCombo.blockSignals(False)
+        if hasattr(self, 'subVOffsetSpin'):
+            self.subVOffsetSpin.blockSignals(True)
+            self.subVOffsetSpin.setValue(factories['subtitle_v_offset'])
+            self.subVOffsetSpin.blockSignals(False)
+        if hasattr(self, 'subVOffsetSlider'):
+            self.subVOffsetSlider.blockSignals(True)
+            self.subVOffsetSlider.setValue(factories['subtitle_v_offset'])
+            self.subVOffsetSlider.blockSignals(False)
+        if hasattr(self, 'subHOffsetSpin'):
+            self.subHOffsetSpin.blockSignals(True)
+            self.subHOffsetSpin.setValue(factories['subtitle_h_offset'])
+            self.subHOffsetSpin.blockSignals(False)
+        if hasattr(self, 'subHOffsetSlider'):
+            self.subHOffsetSlider.blockSignals(True)
+            self.subHOffsetSlider.setValue(factories['subtitle_h_offset'])
+            self.subHOffsetSlider.blockSignals(False)
+        if hasattr(self, 'subOffsetSpin'):
+            self.subOffsetSpin.blockSignals(True)
+            self.subOffsetSpin.setValue(factories['subtitle_offset'])
+            self.subOffsetSpin.blockSignals(False)
+        if hasattr(self, 'subOffsetSlider'):
+            self.subOffsetSlider.blockSignals(True)
+            self.subOffsetSlider.setValue(factories['subtitle_offset'])
+            self.subOffsetSlider.blockSignals(False)
 
         # ---- Reset shortcut buttons ----
         from components import ShortcutButton

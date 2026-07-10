@@ -1,6 +1,7 @@
 import ctypes
 import logging
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QColor, QPalette
 
 logger = logging.getLogger("BoomerangPlayer")
 
@@ -58,12 +59,20 @@ class FullscreenUIMixin:
             if hasattr(self, 'widgetLayout'):
                 self.widgetLayout.setContentsMargins(0, 0, 0, 0)
             
-            # Disable rounded corners and ensure black background to prevent leaks
-            self.setStyleSheet("PlayerWindow { border-radius: 0px; border: none; background: black; }")
+            # Apply title bar background via palette (bypasses FluentWindow QSS and DWM)
+            if hasattr(self, 'titleBar'):
+                bg_color = self.config.get('bg_color', '#202020')
+                self.titleBar.setAutoFillBackground(True)
+                palette = self.titleBar.palette()
+                palette.setColor(QPalette.ColorRole.Window, QColor(bg_color))
+                self.titleBar.setPalette(palette)
+                self.titleBar.update()
+            
+            # Ensure black background behind content without overriding FluentWindow base stylesheet
             if hasattr(self, 'stackedWidget'):
-                self.stackedWidget.setStyleSheet("border-radius: 0px; margin: 0px; padding: 0px;")
+                self.stackedWidget.setStyleSheet("background: black; border-radius: 0px; margin: 0px; padding: 0px;")
             if hasattr(self, 'playerInterface'):
-                self.playerInterface.setStyleSheet("border-radius: 0px; margin: 0px; padding: 0px;")
+                self.playerInterface.setStyleSheet("background: black; border-radius: 0px; margin: 0px; padding: 0px;")
             
             # Windows 11: Disable rounded corners via DWM
             try:
@@ -106,6 +115,13 @@ class FullscreenUIMixin:
                 # Re-raise title bar and controlsCard above everything
                 if hasattr(self, 'titleBar'):
                     self.titleBar.raise_()
+                    # Re-enforce palette after fullscreen layout settles
+                    if self.titleBar.autoFillBackground():
+                        bg_color = self.config.get('bg_color', '#202020')
+                        palette = self.titleBar.palette()
+                        palette.setColor(QPalette.ColorRole.Window, QColor(bg_color))
+                        self.titleBar.setPalette(palette)
+                        self.titleBar.update()
                 if hasattr(self, 'controlsCard'):
                     self.controlsCard.raise_()
             QTimer.singleShot(100, _refresh_after_fullscreen)
@@ -152,8 +168,9 @@ class FullscreenUIMixin:
             
             if hasattr(self, 'titleBar'):
                 self.titleBar.show()
+                # Reset autoFillBackground so it doesn't interfere in windowed mode
+                self.titleBar.setAutoFillBackground(False)
                 # Re-parent titleBar back to the fluent window layout if needed
-                
             # Restore header margin
             if hasattr(self, 'widgetLayout'):
                 self.widgetLayout.setContentsMargins(0, 32, 0, 0)

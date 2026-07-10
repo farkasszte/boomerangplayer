@@ -241,6 +241,15 @@ class ControlsCardUIMixin:
             self.titleBar.raise_()
             self.titleBar.move(0, 0)
             self.titleBar.resize(self.width(), self.titleBar.height())
+            # Re-enforce title bar background via palette (DWM may reset it on show)
+            if not self.titleBar.autoFillBackground():
+                bg_color = self.config.get('bg_color', '#202020')
+                self.titleBar.setAutoFillBackground(True)
+                from PyQt6.QtGui import QColor, QPalette
+                palette = self.titleBar.palette()
+                palette.setColor(QPalette.ColorRole.Window, QColor(bg_color))
+                self.titleBar.setPalette(palette)
+                self.titleBar.update()
             
         # Restore any sidebars that were hidden by the controls auto-hide in fullscreen
         hidden_sidebars = getattr(self, 'sidebars_hidden_by_controls', None)

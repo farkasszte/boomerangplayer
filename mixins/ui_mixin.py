@@ -286,6 +286,7 @@ class UIMixin(
             h = self.controlsCard.height() if (hasattr(self, 'controlsCard') and self.controlsCard.isVisible()) else 0
             sidebar_height = self.height() - h if h > 0 else self.height()
             
+            title_bar_h = self.titleBar.height() if hasattr(self, 'titleBar') and self.titleBar.isVisible() else 0
             for name, container, side, original_idx in sidebars:
                 was_visible = container.isVisible()
                 if container.parent() != self:
@@ -297,7 +298,7 @@ class UIMixin(
                     container.raise_()
                     width = 250
                     x = 0 if side == 'left' else (self.width() - width)
-                    container.setGeometry(x, 0, width, sidebar_height)
+                    container.setGeometry(x, title_bar_h, width, sidebar_height - title_bar_h)
             
             # Always raise the title bar and controls card above the sidebars in fullscreen
             if hasattr(self, 'titleBar'):
