@@ -76,9 +76,23 @@ class GlobalSettingsColorManagerMixin:
         self.update_ui_texts()
 
     def on_panel_opacity_changed(self, value):
-        self.pending_panel_opacity = value
+        snapped = round(value / 5) * 5
+        snapped = max(20, min(100, snapped))
+        self.opacitySlider.blockSignals(True)
+        self.opacitySlider.setValue(snapped)
+        self.opacitySlider.blockSignals(False)
+        self.pending_panel_opacity = snapped
         if hasattr(self, 'opacityValueLabel'):
-            self.opacityValueLabel.setText(f"{value}%")
+            self.opacityValueLabel.setText(f"{snapped}%")
+        if not hasattr(self, '_opacity_debounce'):
+            from PyQt6.QtCore import QTimer
+            self._opacity_debounce = QTimer()
+            self._opacity_debounce.setSingleShot(True)
+            self._opacity_debounce.setInterval(150)
+            self._opacity_debounce.timeout.connect(self._apply_opacity)
+        self._opacity_debounce.start()
+
+    def _apply_opacity(self):
         if hasattr(self, 'refresh_custom_styles'):
             self.refresh_custom_styles()
 

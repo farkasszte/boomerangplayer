@@ -22,7 +22,11 @@ class StyleUIMixin:
         # Update main UI elements
         sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 'qvSlider',
                    'brightnessSlider', 'contrastSlider', 'gammaSlider', 'saturationSlider', 'opacitySlider',
-                   'hueSlider', 'tempSlider', 'exposureSlider', 'sharpenSlider', 'blurSlider']
+                   'hueSlider', 'tempSlider', 'exposureSlider', 'sharpenSlider', 'blurSlider',
+                   'subFontSizeSlider', 'subBgOpacitySlider', 'subOutlineWidthSlider',
+                   'subShadowBlurSlider', 'subShadowDxSlider', 'subShadowDySlider',
+                   'subVOffsetSlider', 'subHOffsetSlider', 'subOffsetSlider',
+                   'loopCountSlider']
         for slider_name in sliders:
             if hasattr(self, slider_name):
                 slider = getattr(self, slider_name)
@@ -145,6 +149,14 @@ class StyleUIMixin:
             self.loopCombo.setStyleSheet(s['COMBO_STYLE'])
         if hasattr(self, 'chunkCombo'):
             self.chunkCombo.setStyleSheet(s['COMBO_STYLE'])
+        if hasattr(self, 'audioTrackCombo'):
+            self.audioTrackCombo.setStyleSheet(s['COMBO_STYLE'])
+        if hasattr(self, 'audioEqPresetCombo'):
+            self.audioEqPresetCombo.setStyleSheet(s['COMBO_STYLE'])
+        for combo_name in ['subTrackCombo', 'subFontCombo', 'subTextColorCombo', 'subBgColorCombo',
+                           'subOutlineColorCombo', 'subShadowColorCombo']:
+            if hasattr(self, combo_name):
+                getattr(self, combo_name).setStyleSheet(s['COMBO_STYLE'])
 
         # Update SpinBoxes
         spinboxes = ['speedValueLabel', 'zoomValueLabel', 'cacheValueLabel', 'qvValueSpinBox',
@@ -257,7 +269,7 @@ class StyleUIMixin:
             
         # Sidebars
         sidebar_containers = ['settingsContainer', 'imageAdjContainer', 'globalSettingsContainer', 
-                              'drawingContainer', 'playlistContainer']
+                              'drawingContainer', 'playlistContainer', 'audioContainer', 'subtitleContainer']
         for container_name in sidebar_containers:
             if hasattr(self, container_name):
                 if container_name == 'drawingContainer':
@@ -282,6 +294,14 @@ class StyleUIMixin:
             self.imageAdjScrollArea.setStyleSheet("background: transparent; border: none;")
         if hasattr(self, 'gsScrollWidget'):
             self.gsScrollWidget.setStyleSheet("background: transparent;")
+        if hasattr(self, 'audioScrollArea'):
+            self.audioScrollArea.setStyleSheet("background: transparent; border: none;")
+        if hasattr(self, 'audioScrollWidget'):
+            self.audioScrollWidget.setStyleSheet("background: transparent;")
+        if hasattr(self, 'subtitleScrollArea'):
+            self.subtitleScrollArea.setStyleSheet("background: transparent; border: none;")
+        if hasattr(self, 'subtitleScrollWidget'):
+            self.subtitleScrollWidget.setStyleSheet("background: transparent;")
 
         # Playlist list selection style
         if hasattr(self, '_update_playlist_list_stylesheet'):
@@ -292,3 +312,9 @@ class StyleUIMixin:
 
         if hasattr(self, 'update_lock_icon'):
             self.update_lock_icon()
+
+        # Refresh EQ slider accent colors
+        if hasattr(self, 'eq_sliders'):
+            for slider in self.eq_sliders:
+                if hasattr(slider, 'setAccentColor'):
+                    slider.setAccentColor(accent_color)

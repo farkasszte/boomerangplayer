@@ -157,9 +157,13 @@ class ControlsCardUIMixin:
         volumeContainerLayout = QHBoxLayout(volumeContainer)
         volumeContainerLayout.setContentsMargins(0, 0, 0, 0)
         volumeContainerLayout.setSpacing(8)
+        volumeContainerLayout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.volumeButton = ToolButton(FluentIcon.VOLUME)
         self.volumeButton.setFixedSize(32, 32)
+        self.volumeButton.setStyleSheet(
+            "ToolButton { min-width: 32px; min-height: 32px; max-height: 32px; }"
+        )
         if self.userMutedIntent:
             self.volumeButton.setIcon(FluentIcon.MUTE)
         

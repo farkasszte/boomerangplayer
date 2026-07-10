@@ -89,11 +89,17 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
         QComboBox::drop-down {{ border: none; width: 0px; }}
         QComboBox::down-arrow {{ image: none; border: none; background: transparent; }}
         QComboBox QAbstractItemView {{
-            background-color: {bg_color};
-            border: 1px solid rgba(0,0,0,0.4);
-            selection-background-color: {accent_color};
-            selection-color: {fg_color};
-            color: {fg_color}; outline: none;
+            background-color: {bg_color}; color: {fg_color};
+            border: 1px solid {border_color}; outline: none;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 4px 10px; min-height: 22px;
+        }}
+        QComboBox QAbstractItemView::item:selected {{
+            background: {accent_color}; color: #000;
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background: {bg_hover};
         }}
     """
 

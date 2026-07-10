@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout,
                                QWidget, QComboBox)
 from components import NoWheelSlider
+from components.eq_band_slider import EqBandSlider
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, BodyLabel)
 from styles import ACTION_BTN_STYLE, get_color_tokens
@@ -113,26 +114,6 @@ class AudioSidebarUIMixin:
         ]
         
         accent_color = self.config.get('accent_color', '#00f2ff')
-        
-        vertical_slider_style = f"""
-        QSlider::groove:vertical {{
-            border: none;
-            width: 4px;
-            background: #444;
-            border-radius: 2px;
-        }}
-        QSlider::handle:vertical {{
-            background: #ffffff;
-            width: 14px;
-            height: 10px;
-            margin: 0 -5px;
-            border-radius: 2px;
-        }}
-        QSlider::sub-page:vertical {{
-            background: {accent_color};
-            border-radius: 2px;
-        }}
-        """
 
         self.eq_sliders = []
         self.eq_labels = []
@@ -151,12 +132,9 @@ class AudioSidebarUIMixin:
             band_layout.addWidget(freq_label)
 
             # Vertical Slider
-            slider = NoWheelSlider(Qt.Orientation.Vertical)
-            slider.setRange(-12, 12)
+            slider = EqBandSlider(accent_color)
             slider.setValue(gains[i])
             slider.setFixedHeight(120)
-            slider.setStyleSheet(vertical_slider_style)
-            # Custom attribute to keep track of band index
             slider.setProperty("band_idx", i)
             slider.valueChanged.connect(self.on_eq_slider_changed)
             

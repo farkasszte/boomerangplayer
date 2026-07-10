@@ -92,6 +92,8 @@ class GlobalSettingsUiBuilderMixin:
 
         self.opacitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.opacitySlider.setRange(20, 100)
+        self.opacitySlider.setSingleStep(5)
+        self.opacitySlider.setPageStep(5)
         self.opacitySlider.setValue(self.pending_panel_opacity)
         self.opacitySlider.setToolTip(tr('tip_panel_opacity'))
         

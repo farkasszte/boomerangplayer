@@ -6,7 +6,7 @@ from PyQt6.QtMultimedia import QMediaMetaData
 from PyQt6.QtWidgets import QMenu, QWidgetAction, QLabel, QVBoxLayout, QWidget
 from translations import tr
 from utils import get_resource_path
-from styles import MENU_STYLE, get_styles
+from styles import MENU_STYLE, get_styles, get_color_tokens
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -124,10 +124,22 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
             menu = QMenu(self)
             
             inverse_text = self.config.get('inverse_text', False)
-            
             accent = self.config.get('accent_color', '#00f2ff')
+            bg_color = self.config.get('bg_color', '#202020')
             fg_color = "#1c1c1c" if inverse_text else "#ffffff"
-            menu.setStyleSheet(MENU_STYLE)
+            t = get_color_tokens(accent, bg_color, inverse_text)
+            menu.setStyleSheet(f"""
+                QMenu {{
+                    background-color: {t['bg']}; color: {t['fg']};
+                    border: 1px solid {t['border']}; border-radius: 5px; padding: 5px;
+                }}
+                QMenu::item {{
+                    padding: 5px 25px 5px 20px; border-radius: 3px; color: {t['fg']};
+                }}
+                QMenu::item:selected {{
+                    background-color: {t['menu_selected_bg']}; color: {t['fg']};
+                }}
+            """)
 
             content = QWidget()
             layout = QVBoxLayout(content)

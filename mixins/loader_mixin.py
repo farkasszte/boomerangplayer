@@ -11,6 +11,7 @@ from PyQt6.QtMultimedia import QMediaPlayer
 from utils import mark_temp_dir_owner
 from qfluentwidgets import FluentIcon
 from utils import get_resource_path, format_time, VERSION, get_embedded_video_offset
+from styles import COMPACT_BTN_STYLE
 from translations import tr
 
 logger = logging.getLogger("Loader")
@@ -123,7 +124,7 @@ class LoaderMixin(LoaderMixinBase):
         dialog = QDialog(self)
         dialog.setWindowTitle(tr('add_files_title'))
         dialog.setModal(False)
-        dialog.setMinimumSize(850, 500)
+        dialog.setMinimumSize(650, 400)
         dialog.setStyleSheet(f"""
             QDialog, QLabel {{
                 background-color: {bg_color}; color: {fg_color}; font-size: 13px;
@@ -153,7 +154,26 @@ class LoaderMixin(LoaderMixinBase):
             }}
             QComboBox {{
                 border: 1px solid {border}; border-radius: 4px;
-                padding: 4px 8px; background: {widget_bg}; color: {fg_color};
+                padding: 6px 8px; background: {widget_bg}; color: {fg_color};
+            }}
+            QComboBox::drop-down {{
+                border: none; width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                border: none;
+            }}
+            QComboBox QAbstractItemView {{
+                background: {widget_bg}; color: {fg_color};
+                border: 1px solid {border}; outline: none;
+            }}
+            QComboBox QAbstractItemView::item {{
+                padding: 4px 8px; min-height: 24px;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background: {accent_color}; color: #000;
+            }}
+            QComboBox QAbstractItemView::item:hover {{
+                background: {hover};
             }}
             QPushButton {{
                 background: {widget_bg}; border: 1px solid {border};
@@ -512,63 +532,61 @@ class LoaderMixin(LoaderMixinBase):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Top bar: path + nav buttons + view buttons + default-folder lock
-        top_bar = QHBoxLayout()
-        top_bar.setContentsMargins(12, 10, 12, 6)
-        top_bar.setSpacing(6)
-        dialog._path_bar = QLineEdit()
-        dialog._path_bar.returnPressed.connect(lambda: _navigate(dialog, dialog._path_bar.text()))
-        top_bar.addWidget(dialog._path_bar, 1)
-
-        top_btn_size = 28
-        top_btn_style = "QPushButton { min-width: 0px; padding: 2px; }"
+        from qfluentwidgets import ToolButton
 
         def _get_drive_root(path):
             if len(path) >= 2 and path[1] == ':':
                 return path[:2].upper() + "\\"
             return QDir.rootPath()
 
-        home_sp = getattr(QStyle.StandardPixmap, 'SP_DirHomeIcon', None) or QStyle.StandardPixmap.SP_DirHome
-        for icon_sp, handler, tip in [
-            (QStyle.StandardPixmap.SP_ArrowLeft, _go_back, tr('go_back')),
-            (QStyle.StandardPixmap.SP_ArrowRight, _go_forward, tr('go_forward')),
-            (QStyle.StandardPixmap.SP_FileDialogToParent, lambda: _navigate(dialog, os.path.dirname(dialog._current_path)), tr('go_up')),
-            (home_sp, lambda: _navigate(dialog, _get_drive_root(dialog._current_path)), tr('go_home')),
+        # Row 1: path bar + nav buttons + lock + view buttons
+        top_bar = QHBoxLayout()
+        top_bar.setContentsMargins(12, 10, 12, 6)
+        top_bar.setSpacing(8)
+
+        dialog._path_bar = QLineEdit()
+        dialog._path_bar.returnPressed.connect(lambda: _navigate(dialog, dialog._path_bar.text()))
+        dialog._path_bar.setMinimumWidth(200)
+        top_bar.addWidget(dialog._path_bar, 1)
+
+        for icon, handler, tip in [
+            (FluentIcon.LEFT_ARROW, _go_back, tr('go_back')),
+            (FluentIcon.RIGHT_ARROW, _go_forward, tr('go_forward')),
+            (FluentIcon.UP, lambda: _navigate(dialog, os.path.dirname(dialog._current_path)), tr('go_up')),
+            (FluentIcon.HOME, lambda: _navigate(dialog, _get_drive_root(dialog._current_path)), tr('go_home')),
         ]:
-            btn = QPushButton()
-            btn.setIcon(QApplication.instance().style().standardIcon(icon_sp))
-            btn.setFixedSize(top_btn_size, top_btn_size)
+            btn = ToolButton(icon)
+            btn.setFixedSize(32, 32)
             btn.setToolTip(tip)
-            btn.setStyleSheet(top_btn_style)
+            btn.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: none; }")
             btn.clicked.connect(handler)
             top_bar.addWidget(btn)
 
-        lock_btn = QPushButton("🔒")
-        lock_btn.setFixedSize(top_btn_size, top_btn_size)
+        lock_btn = ToolButton(FluentIcon.FOLDER)
+        lock_btn.setFixedSize(32, 32)
         lock_btn.setToolTip(tr('set_default_folder'))
-        lock_btn.setStyleSheet(top_btn_style)
+        lock_btn.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: none; }")
         lock_btn.clicked.connect(_set_default)
         top_bar.addWidget(lock_btn)
 
-        view_labels = {'detail': tr('detail_view'), 'list': tr('list_view'), 'thumb': tr('thumbnail_view')}
         view_icons = {
-            'detail': QStyle.StandardPixmap.SP_FileDialogDetailedView,
-            'list': QStyle.StandardPixmap.SP_FileDialogListView,
-            'thumb': QStyle.StandardPixmap.SP_FileDialogContentsView,
+            'detail': FluentIcon.DOCUMENT,
+            'list': FluentIcon.MENU,
+            'thumb': FluentIcon.TILES,
         }
-        _app_style = QApplication.instance().style()
         dialog._view_btns = {}
         for mode in ['detail', 'list', 'thumb']:
-            btn = QPushButton()
-            btn.setIcon(_app_style.standardIcon(view_icons[mode]))
-            btn.setFixedSize(top_btn_size, top_btn_size)
+            btn = ToolButton(view_icons[mode])
+            btn.setFixedSize(32, 32)
             btn.setCheckable(True)
-            btn.setToolTip(view_labels[mode])
-            btn.setStyleSheet(top_btn_style)
+            btn.setToolTip(tr(f'{mode}_view'))
+            btn.setStyleSheet(COMPACT_BTN_STYLE)
             btn.clicked.connect(lambda _=None, m=mode: _set_view(m))
             dialog._view_btns[mode] = btn
             top_bar.addWidget(btn)
 
+        top_bar.addStretch()
+        root.addLayout(top_bar)
         root.addLayout(top_bar)
 
         # Main area: drive sidebar | file tree
@@ -671,14 +689,15 @@ class LoaderMixin(LoaderMixinBase):
         bottom.setSpacing(8)
         dialog._name_filter = QLineEdit()
         dialog._name_filter.setPlaceholderText(tr('search_files'))
+        dialog._name_filter.setMinimumWidth(200)
         dialog._name_filter.textChanged.connect(lambda: _refresh(dialog))
-        bottom.addWidget(dialog._name_filter, 1)
+        bottom.addWidget(dialog._name_filter)
         dialog._filter_combo = QComboBox()
         dialog._filter_combo.addItems([
             tr('all_media'), tr('video_files'), tr('image_files'),
             tr('audio_files'), tr('playlist')
         ])
-        dialog._filter_combo.setMinimumWidth(200)
+        dialog._filter_combo.setMinimumWidth(100)
         dialog._filter_combo.currentIndexChanged.connect(lambda: _refresh(dialog))
         bottom.addWidget(dialog._filter_combo)
 

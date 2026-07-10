@@ -5,4 +5,5 @@ from .zoom_view import ZoomView
 from .shortcut_button import ShortcutButton
 from .safe_spin_box import SafeSpinBox
 from .no_wheel_slider import NoWheelSlider
+from .eq_band_slider import EqBandSlider
 
