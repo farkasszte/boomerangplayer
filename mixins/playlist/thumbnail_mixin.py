@@ -112,13 +112,16 @@ class PlaylistThumbnailMixin:
         
         
         accent = self.config.get('accent_color', '#00f2ff')
-        style = getattr(self, '_MENU_POPUP_STYLE', """
-            QMenu { background-color: #202020; border: none; padding: 4px 0px; }
-            QMenu::item { padding: 8px 25px; color: white; background-color: transparent; }
-            QMenu::item:selected { background-color: rgba(255,255,255,0.1); }
-            QMenu::item:checked { color: %ACCENT%; font-weight: bold; }
-            QMenu::indicator { width: 0px; }
-        """).replace('%ACCENT%', accent)
+        bg_color = self.config.get('bg_color', '#202020')
+        inverse_text = self.config.get('inverse_text', False)
+        fg_color = "#1c1c1c" if inverse_text else "#ffffff"
+        style = getattr(self, '_MENU_POPUP_STYLE', f"""
+            QMenu {{ background-color: {bg_color}; border: none; padding: 4px 0px; }}
+            QMenu::item {{ padding: 8px 25px; color: {fg_color}; background-color: transparent; }}
+            QMenu::item:selected {{ background-color: rgba(255,255,255,0.1); }}
+            QMenu::item:checked {{ color: {accent}; font-weight: bold; }}
+            QMenu::indicator {{ width: 0px; }}
+        """)
         menu.setStyleSheet(style)
 
         

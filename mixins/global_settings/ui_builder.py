@@ -3,13 +3,18 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QGridLayo
 from qfluentwidgets import CaptionLabel, PushButton, SwitchButton, SingleDirectionScrollArea, BodyLabel
 from components import ShortcutButton
 from translations import tr
-from styles import ACTION_BTN_STYLE
+from styles import ACTION_BTN_STYLE, get_color_tokens
 
 class GlobalSettingsUiBuilderMixin:
     def init_global_settings_sidebar(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.globalSettingsContainer = QFrame()
         self.globalSettingsContainer.setMinimumWidth(250)
-        self.globalSettingsContainer.setStyleSheet("background: #202020; border: none;")
+        self.globalSettingsContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.globalSettingsLayout = QVBoxLayout(self.globalSettingsContainer)
         self.globalSettingsLayout.setContentsMargins(10, 10, 4, 10)
         self.globalSettingsLayout.setSpacing(6)
@@ -22,7 +27,7 @@ class GlobalSettingsUiBuilderMixin:
         self.pending_panel_opacity = self.config.get('panel_opacity', 100)
 
         self.globalSettingsTitle = CaptionLabel(tr('settings'))
-        self.globalSettingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.globalSettingsTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.globalSettingsLayout.addWidget(self.globalSettingsTitle)
 
         self.gsScrollArea = SingleDirectionScrollArea(
@@ -38,7 +43,7 @@ class GlobalSettingsUiBuilderMixin:
         self.gsInnerLayout.setSpacing(10)
 
         self.gsGeneralLabel = CaptionLabel(tr('general'))
-        self.gsGeneralLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.gsGeneralLabel.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {t['sec_fg']};")
         self.gsInnerLayout.addWidget(self.gsGeneralLabel)
 
         self.gsLangBtn = PushButton()
@@ -100,7 +105,7 @@ class GlobalSettingsUiBuilderMixin:
         self.gsInnerLayout.addWidget(hline1)
 
         self.playlistSettingsTitle = CaptionLabel(tr('playlist'))
-        self.playlistSettingsTitle.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.playlistSettingsTitle.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {t['sec_fg']};")
         self.gsInnerLayout.addWidget(self.playlistSettingsTitle)
 
         thumbRow = QHBoxLayout()
@@ -246,6 +251,7 @@ class GlobalSettingsUiBuilderMixin:
         self.pending_accent_color = factories['accent_color']
         self.pending_bg_color = factories['bg_color']
         self.pending_panel_opacity = factories['panel_opacity']
+        self.accent_color = factories['accent_color']
 
         # ---- Update UI widgets ----
         if hasattr(self, 'advancePlaylistToggle'):
@@ -362,7 +368,7 @@ class GlobalSettingsUiBuilderMixin:
         from PyQt6.QtWidgets import QDialog, QVBoxLayout, QGridLayout, QHBoxLayout
         from qfluentwidgets import BodyLabel, PushButton
         from components import ShortcutButton
-        from styles import ACTION_BTN_STYLE
+        from styles import ACTION_BTN_STYLE, get_color_tokens
         
         dialog = QDialog(self)
         if hasattr(self, 'style_dialog'):

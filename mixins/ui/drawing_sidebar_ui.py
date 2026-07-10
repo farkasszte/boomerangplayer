@@ -2,27 +2,32 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QSlider
 from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import CaptionLabel, SwitchButton, PushButton, ToolButton
-from styles import TOOL_BTN_STYLE, FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE
+from styles import TOOL_BTN_STYLE, FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE, get_color_tokens
 from translations import tr
 
 class DrawingSidebarUIMixin:
     def _init_drawing_sidebar(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.drawingContainer = QFrame()
         self.drawingContainer.setMinimumWidth(250)
         self.drawingContainer.setStyleSheet(
-            "background: #202020; border: none; QScrollBar { width: 0px; height: 0px; }"
+            f"background: {t['bg']}; border: none; QScrollBar {{ width: 0px; height: 0px; }}"
         )
         self.drawingSidebarLayout = QVBoxLayout(self.drawingContainer)
         self.drawingSidebarLayout.setContentsMargins(10, 10, 4, 10)
         self.drawingSidebarLayout.setSpacing(6)
 
         self.drawingSidebarTitle = CaptionLabel(tr('drawing_settings'))
-        self.drawingSidebarTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.drawingSidebarTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.drawingSidebarLayout.addWidget(self.drawingSidebarTitle)
 
         drawModeToggleLayout = QHBoxLayout()
         self.drawModeToggleLabel = QLabel(tr('drawing_mode'))
-        self.drawModeToggleLabel.setStyleSheet("color: white; font-size: 13px;")
+        self.drawModeToggleLabel.setStyleSheet(f"color: {t['fg']}; font-size: 13px;")
         self.drawModeToggle = SwitchButton()
         self.drawModeToggle.setOnText(tr('on'))
         self.drawModeToggle.setOffText(tr('off'))
@@ -35,7 +40,7 @@ class DrawingSidebarUIMixin:
 
         laserModeToggleLayout = QHBoxLayout()
         self.laserModeToggleLabel = QLabel(tr('laser_mode'))
-        self.laserModeToggleLabel.setStyleSheet("color: white; font-size: 13px;")
+        self.laserModeToggleLabel.setStyleSheet(f"color: {t['fg']}; font-size: 13px;")
         self.laserModeToggle = SwitchButton()
         self.laserModeToggle.setOnText(tr('on'))
         self.laserModeToggle.setOffText(tr('off'))
@@ -48,7 +53,7 @@ class DrawingSidebarUIMixin:
 
         chronometerToggleLayout = QHBoxLayout()
         self.chronometerToggleLabel = QLabel(tr('chronometer_overlay'))
-        self.chronometerToggleLabel.setStyleSheet("color: white; font-size: 13px;")
+        self.chronometerToggleLabel.setStyleSheet(f"color: {t['fg']}; font-size: 13px;")
         self.chronometerToggle = SwitchButton()
         self.chronometerToggle.setOnText(tr('on'))
         self.chronometerToggle.setOffText(tr('off'))
@@ -109,7 +114,7 @@ class DrawingSidebarUIMixin:
 
         # ---- Quick Palette ----
         self.paletteTitle = CaptionLabel(tr('color_palette'))
-        self.paletteTitle.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.paletteTitle.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {t['sec_fg']};")
         self.drawingSidebarLayout.addWidget(self.paletteTitle)
         
         paletteLayout = QHBoxLayout()

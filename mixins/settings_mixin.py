@@ -10,7 +10,7 @@ from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, ToolButton, FluentIcon,
                              FluentIconBase, Theme)
-from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE)
+from styles import (FLUENT_SLIDER_STYLE, TOOL_BTN_STYLE, ACTION_BTN_STYLE, get_color_tokens)
 from translations import tr
 import os
 
@@ -59,15 +59,21 @@ class SettingsMixin(SettingsMixinBase):
         update_pixmap_from_cache: callable
 
     def init_video_settings_sidebar(self):
+        self._color_tokens = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
+        t = self._color_tokens
         self.settingsContainer = QFrame()
         self.settingsContainer.setMinimumWidth(250)
-        self.settingsContainer.setStyleSheet("background: #202020; border: none;")
+        self.settingsContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.settingsLayout = QVBoxLayout(self.settingsContainer)
         self.settingsLayout.setContentsMargins(10, 10, 4, 10)
         self.settingsLayout.setSpacing(6)
 
         self.settingsTitle = CaptionLabel(tr('video_settings'))
-        self.settingsTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.settingsTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.settingsLayout.addWidget(self.settingsTitle)
 
         self.scrollArea = SingleDirectionScrollArea(self.settingsContainer, Qt.Orientation.Vertical)
@@ -88,7 +94,7 @@ class SettingsMixin(SettingsMixinBase):
 
         # Playback Section Header
         self.playbackLabel = CaptionLabel(tr('playback'))
-        self.playbackLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.playbackLabel.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {self._color_tokens['sec_fg']};")
         self.settingsInnerLayout.addWidget(self.playbackLabel)
 
         self._build_speed_section()
@@ -377,7 +383,7 @@ class SettingsMixin(SettingsMixinBase):
 
         # Loop mode header label
         self.loopLabel = CaptionLabel(tr('loop'))
-        self.loopLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.loopLabel.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {self._color_tokens['sec_fg']};")
         loopGroup.addWidget(self.loopLabel)
 
         # The loop mode dropdown combo box
@@ -475,7 +481,7 @@ class SettingsMixin(SettingsMixinBase):
 
         # Markers section header
         self.markersTitleLabel = CaptionLabel(tr('markers_title'))
-        self.markersTitleLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.markersTitleLabel.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {self._color_tokens['sec_fg']};")
         markersGroup.addWidget(self.markersTitleLabel)
 
         # Set up buttons with ACTION_BTN_STYLE
@@ -600,7 +606,7 @@ class SettingsMixin(SettingsMixinBase):
 
         syncHeader = QHBoxLayout()
         self.syncLabel = CaptionLabel(tr('sync_title'))
-        self.syncLabel.setStyleSheet("font-weight: bold; margin-top: 10px; color: #aaaaaa;")
+        self.syncLabel.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {self._color_tokens['sec_fg']};")
         syncHeader.addWidget(self.syncLabel)
         syncGroup.addLayout(syncHeader)
 

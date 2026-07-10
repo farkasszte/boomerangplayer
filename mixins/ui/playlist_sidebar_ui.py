@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon
 from qfluentwidgets import CaptionLabel, PushButton
 from components import DropListWidget
-from styles import MENU_STYLE, _hex_to_rgb
+from styles import MENU_STYLE, _hex_to_rgb, get_color_tokens
 from translations import tr
 
 class PlaylistDelegate(QStyledItemDelegate):
@@ -72,14 +72,19 @@ class PlaylistSidebarUIMixin:
         self.playlistList.setPalette(palette)
 
     def _init_playlist_sidebar(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.playlistContainer = QFrame()
         self.playlistContainer.setMinimumWidth(250)
-        self.playlistContainer.setStyleSheet("background: #202020; border: none;")
+        self.playlistContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
         self.playlistLayout.setContentsMargins(5, 5, 5, 5)
 
         self.playlistLabel = CaptionLabel(tr('playlist'))
-        self.playlistLabel.setStyleSheet("font-size: 16px; font-weight: bold; color: white; background: transparent;")
+        self.playlistLabel.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']}; background: transparent;")
         self.playlistLayout.addWidget(self.playlistLabel)
 
         self.playlistList = DropListWidget()

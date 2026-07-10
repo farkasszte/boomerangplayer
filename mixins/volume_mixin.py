@@ -5,7 +5,7 @@ VolumeMixin — volume control, mute toggle, flyout popup.
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QSlider
 from qfluentwidgets import FluentIcon
-from styles import FLUENT_SLIDER_STYLE
+from styles import FLUENT_SLIDER_STYLE, get_color_tokens
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -43,16 +43,21 @@ class VolumeMixin(VolumeMixinBase):
             self.volumeValueLabel.setText(f"{vol}%")
 
     def show_volume_flyout(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.volumePopup = QFrame(
             None, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint
         )
         self.volumePopup.setObjectName("volumePopup")
-        self.volumePopup.setStyleSheet("""
-            #volumePopup {
-                background: #202020;
+        self.volumePopup.setStyleSheet(f"""
+            #volumePopup {{
+                background: {t['bg']};
                 border: 1px solid #333;
                 border-radius: 8px;
-            }
+            }}
         """)
         layout = QVBoxLayout(self.volumePopup)
         layout.setContentsMargins(10, 15, 10, 15)

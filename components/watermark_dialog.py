@@ -5,7 +5,7 @@ WatermarkPropertiesDialog — configuration dialog for watermarks in the drawing
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider
 from qfluentwidgets import PushButton
-from styles import ACTION_BTN_STYLE
+from styles import ACTION_BTN_STYLE, get_color_tokens
 from translations import tr
 
 
@@ -13,9 +13,19 @@ class WatermarkPropertiesDialog(QDialog):
     def __init__(self, item, parent=None):
         super().__init__(parent)
         self.item = item
+        # Try to get tokens from parent player, fallback to defaults
+        config = getattr(parent, 'config', None)
+        if config:
+            t = get_color_tokens(
+                config.get('accent_color', '#00f2ff'),
+                config.get('bg_color', '#202020'),
+                config.get('inverse_text', False)
+            )
+        else:
+            t = get_color_tokens()
         self.setWindowTitle(tr('watermark_properties'))
         self.setFixedWidth(300)
-        self.setStyleSheet("background: #202020; color: white;")
+        self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -24,7 +34,7 @@ class WatermarkPropertiesDialog(QDialog):
         # Opacity Slider
         opacity_layout = QHBoxLayout()
         self.opacity_lbl = QLabel(f"{tr('watermark_opacity_title')}: {int(item.opacity() * 100)}%")
-        self.opacity_lbl.setStyleSheet("color: white; font-size: 12px; border: none;")
+        self.opacity_lbl.setStyleSheet(f"color: {t['fg']}; font-size: 12px; border: none;")
         opacity_layout.addWidget(self.opacity_lbl)
         
         self.slider = QSlider(Qt.Orientation.Horizontal)
@@ -40,7 +50,7 @@ class WatermarkPropertiesDialog(QDialog):
         # Scale Slider
         scale_layout = QHBoxLayout()
         self.scale_lbl = QLabel(f"{tr('watermark_scale')}: 100%")
-        self.scale_lbl.setStyleSheet("color: white; font-size: 12px; border: none;")
+        self.scale_lbl.setStyleSheet(f"color: {t['fg']}; font-size: 12px; border: none;")
         scale_layout.addWidget(self.scale_lbl)
         
         self.scale_slider = QSlider(Qt.Orientation.Horizontal)

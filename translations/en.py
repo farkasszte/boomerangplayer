@@ -362,5 +362,8 @@ TRANSLATIONS_EN = {
     'search_files': 'Search files...',
     'set_default_folder': 'Set as default folder',
     'default_folder_set': 'Default folder set',
-    'default_folder_cleared': 'Default folder cleared'
+    'default_folder_cleared': 'Default folder cleared',
+    'auto_theme_switch': 'Theme auto-switched',
+    'auto_theme_switch_desc': 'Contrast too low — switched theme for readability.',
+    'not_a_valid_playlist': 'Not a valid Boomerang Player playlist file'
 }

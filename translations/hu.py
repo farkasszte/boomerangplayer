@@ -363,5 +363,8 @@ TRANSLATIONS_HU = {
     'search_files': 'Fájlok keresése...',
     'set_default_folder': 'Beállítás alapértelmezett mappának',
     'default_folder_set': 'Alapértelmezett mappa beállítva',
-    'default_folder_cleared': 'Alapértelmezett mappa törölve'
+    'default_folder_cleared': 'Alapértelmezett mappa törölve',
+    'auto_theme_switch': 'Téma automatikusan váltva',
+    'auto_theme_switch_desc': 'Kontraszt túl alacsony — téma váltva az olvashatóság érdekében.',
+    'not_a_valid_playlist': 'Nem érvényes Boomerang Player lejátszási lista fájl'
 }

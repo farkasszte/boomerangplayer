@@ -3,20 +3,25 @@ from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
                                QWidget, QComboBox)
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, BodyLabel)
-from styles import ACTION_BTN_STYLE
+from styles import ACTION_BTN_STYLE, get_color_tokens
 from translations import tr
 
 class AudioSidebarUIMixin:
     def init_audio_sidebar(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.audioContainer = QFrame()
         self.audioContainer.setMinimumWidth(250)
-        self.audioContainer.setStyleSheet("background: #202020; border: none;")
+        self.audioContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.audioLayout = QVBoxLayout(self.audioContainer)
         self.audioLayout.setContentsMargins(10, 10, 4, 10)
         self.audioLayout.setSpacing(6)
 
         self.audioTitle = CaptionLabel(tr('audio_settings'))
-        self.audioTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.audioTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.audioLayout.addWidget(self.audioTitle)
 
         self.audioScrollArea = SingleDirectionScrollArea(self.audioContainer, Qt.Orientation.Vertical)
@@ -55,7 +60,7 @@ class AudioSidebarUIMixin:
         # 2. Equalizer Header
         eqHeaderLayout = QHBoxLayout()
         self.audioEqLabel = CaptionLabel(tr('audio_eq_enable'))
-        self.audioEqLabel.setStyleSheet("font-weight: bold; color: #aaaaaa;")
+        self.audioEqLabel.setStyleSheet(f"font-weight: bold; color: {t['sec_fg']};")
         self.audioEqToggle = SwitchButton()
         self.audioEqToggle.setChecked(self.config.get('audio_eq_enabled', False))
         self.audioEqToggle.setOnText(tr('on'))

@@ -19,7 +19,7 @@ class PlaylistPersistenceMixin:
                 fileName += '.bpl'
             is_bpl = fileName.lower().endswith('.bpl')
 
-            data = {'files': [], 'markers': self.playlistData}
+            data = {'header': 'boomerangplaylist', 'files': [], 'markers': self.playlistData}
             
             for i in range(self.playlistList.count()):
                 
@@ -54,13 +54,15 @@ class PlaylistPersistenceMixin:
             with open(fileName, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
 
-    def load_playlist_by_path(self, fileName):
+    def load_playlist_by_path(self, fileName, silent=False):
         if fileName and os.path.exists(fileName):
             try:
                 with open(fileName, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.load(f, strict=False)
 
-                
+                if data.get('header') != 'boomerangplaylist':
+                    raise ValueError(tr('not_a_valid_playlist'))
+
                 self.playlistList.clear()
                 self.playlistData = data.get('markers', {})
 
@@ -74,15 +76,16 @@ class PlaylistPersistenceMixin:
                     self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
             except Exception as e:
                 print(f"Error loading playlist: {e}")
-                InfoBar.error(
-                    title=tr('open_project_title'),
-                    content=f"Error: {e}",
-                    orient=Qt.Orientation.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=5000,
-                    parent=self
-                )
+                if not silent:
+                    InfoBar.error(
+                        title=tr('open_project_title'),
+                        content=f"Error: {e}",
+                        orient=Qt.Orientation.Horizontal,
+                        isClosable=True,
+                        position=InfoBarPosition.TOP,
+                        duration=5000,
+                        parent=self
+                    )
 
     def load_playlist_from_file(self):
         filters = f"{tr('playlist')} (*.bpl *.json);;{tr('all_files')} (*)"

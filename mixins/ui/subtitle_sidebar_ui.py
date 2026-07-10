@@ -4,20 +4,25 @@ from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
 from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea)
-from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE)
+from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE, get_color_tokens)
 from translations import tr
 
 class SubtitleSidebarUIMixin:
     def init_subtitle_sidebar(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.subtitleContainer = QFrame()
         self.subtitleContainer.setMinimumWidth(250)
-        self.subtitleContainer.setStyleSheet("background: #202020; border: none;")
+        self.subtitleContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.subtitleLayout = QVBoxLayout(self.subtitleContainer)
         self.subtitleLayout.setContentsMargins(10, 10, 4, 10)
         self.subtitleLayout.setSpacing(6)
 
         self.subtitleTitle = CaptionLabel(tr('subtitles'))
-        self.subtitleTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.subtitleTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.subtitleLayout.addWidget(self.subtitleTitle)
 
         self.subtitleScrollArea = SingleDirectionScrollArea(self.subtitleContainer, Qt.Orientation.Vertical)
@@ -75,7 +80,7 @@ class SubtitleSidebarUIMixin:
 
         # Style Section Header
         self.styleTitleLabel = CaptionLabel(tr('drawing_settings')) # reuse translations or define general style
-        self.styleTitleLabel.setStyleSheet("font-weight: bold; color: #aaaaaa;")
+        self.styleTitleLabel.setStyleSheet(f"font-weight: bold; color: {t['sec_fg']};")
         self.subtitleInnerLayout.addWidget(self.styleTitleLabel)
 
         # 3. Font Family
@@ -382,7 +387,7 @@ class SubtitleSidebarUIMixin:
         self.subtitleInnerLayout.addWidget(hlinePos)
         
         self.positionTitleLabel = CaptionLabel(tr('subtitle_position'))
-        self.positionTitleLabel.setStyleSheet("font-weight: bold; color: #aaaaaa;")
+        self.positionTitleLabel.setStyleSheet(f"font-weight: bold; color: {t['sec_fg']};")
         self.subtitleInnerLayout.addWidget(self.positionTitleLabel)
 
         # Vertical Offset
@@ -455,7 +460,7 @@ class SubtitleSidebarUIMixin:
 
         # Timing Section Header
         self.timingTitleLabel = CaptionLabel(tr('sync_title'))
-        self.timingTitleLabel.setStyleSheet("font-weight: bold; color: #aaaaaa;")
+        self.timingTitleLabel.setStyleSheet(f"font-weight: bold; color: {t['sec_fg']};")
         self.subtitleInnerLayout.addWidget(self.timingTitleLabel)
 
         # 8. Subtitle Offset (ms)

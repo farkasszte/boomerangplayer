@@ -732,7 +732,7 @@ class LoaderMixin(LoaderMixinBase):
                     files_to_add.append(path)
 
         if playlist_files:
-            self.load_playlist_by_path(playlist_files[0])
+            self.load_playlist_by_path(playlist_files[0], silent=True)
             if files_to_add:
                 self.add_files_to_playlist(files_to_add)
         elif files_to_add:

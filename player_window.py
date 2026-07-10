@@ -76,9 +76,9 @@ class PlayerWindow(
         from qfluentwidgets import setTheme, Theme, setThemeColor
         setTheme(Theme.LIGHT if self.config.get('inverse_text', False) else Theme.DARK)
         
-        accent_color = self.config.get('accent_color', '#00f2ff')
+        self.accent_color = self.config.get('accent_color', '#00f2ff')
         from PyQt6.QtGui import QColor
-        setThemeColor(QColor(accent_color))
+        setThemeColor(QColor(self.accent_color))
 
         super().__init__()
         self.setWindowIcon(QIcon(get_resource_path("resources/app_icon.ico")))
@@ -86,7 +86,7 @@ class PlayerWindow(
         self.titleBar.setFixedHeight(32)
         
         # Target the top-level window directly to avoid cascading
-        self.setStyleSheet("PlayerWindow { background-color: #202020; }")
+        self.setStyleSheet(f"PlayerWindow {{ background-color: {self.config.get('bg_color', '#202020')}; }}")
         
         self.setContentsMargins(0, 0, 0, 0)
         self.widgetLayout.setContentsMargins(0, 32, 0, 0)

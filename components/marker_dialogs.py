@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, QSize
 from qfluentwidgets import ToolButton, FluentIcon, PushButton, LineEdit, CaptionLabel
 from translations import tr
 from utils import get_resource_path, format_time, get_ffmpeg_path
-from styles import get_styles, ACTION_BTN_STYLE
+from styles import get_styles, ACTION_BTN_STYLE, get_color_tokens
 
 
 class MarkerRowWidget(QWidget):
@@ -19,6 +19,12 @@ class MarkerRowWidget(QWidget):
         self.frame = frame
         self.parent_dialog = parent_dialog
         self.parent_player = parent_player
+
+        t = get_color_tokens(
+            parent_player.config.get('accent_color', '#00f2ff'),
+            parent_player.config.get('bg_color', '#202020'),
+            parent_player.config.get('inverse_text', False)
+        )
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 2, 5, 2)
@@ -33,7 +39,7 @@ class MarkerRowWidget(QWidget):
 
         # Time label
         self.label = QLabel(f"<b>{time_str}</b>")
-        self.label.setStyleSheet("color: white; font-size: 12px; background: transparent; border: none;")
+        self.label.setStyleSheet(f"color: {t['fg']}; font-size: 12px; background: transparent; border: none;")
         layout.addWidget(self.label)
 
         # Frame LineEdit
@@ -42,16 +48,16 @@ class MarkerRowWidget(QWidget):
         self.frameEdit.setText(str(frame))
         total_f = int(getattr(self.parent_player, 'total_frames', 999999))
         self.frameEdit.setValidator(QIntValidator(0, total_f))
-        self.frameEdit.setStyleSheet("""
-            LineEdit {
-                color: #aaa; 
-                background: rgba(255,255,255,0.06); 
-                border: 1px solid rgba(255,255,255,0.1); 
+        self.frameEdit.setStyleSheet(f"""
+            LineEdit {{
+                color: {t['sec_fg']}; 
+                background: {t['bg_translucent']}; 
+                border: 1px solid {t['border']}; 
                 border-radius: 4px;
                 font-size: 12px;
                 height: 24px;
                 text-align: center;
-            }
+            }}
         """)
         self.frameEdit.returnPressed.connect(self.on_save_clicked)
         layout.addWidget(self.frameEdit)
@@ -60,15 +66,15 @@ class MarkerRowWidget(QWidget):
         self.nameEdit = LineEdit()
         self.nameEdit.setText(name)
         self.nameEdit.setPlaceholderText(tr('marker_name'))
-        self.nameEdit.setStyleSheet("""
-            LineEdit {
-                color: white; 
-                background: rgba(255,255,255,0.06); 
-                border: 1px solid rgba(255,255,255,0.1); 
+        self.nameEdit.setStyleSheet(f"""
+            LineEdit {{
+                color: {t['fg']}; 
+                background: {t['bg_translucent']}; 
+                border: 1px solid {t['border']}; 
                 border-radius: 4px;
                 font-size: 12px;
                 height: 24px;
-            }
+            }}
         """)
         self.nameEdit.returnPressed.connect(self.on_save_clicked)
         layout.addWidget(self.nameEdit)
@@ -110,9 +116,14 @@ class MarkersDialog(QDialog):
     def __init__(self, parent_player):
         super().__init__(parent_player)
         self.parent_player = parent_player
+        t = get_color_tokens(
+            parent_player.config.get('accent_color', '#00f2ff'),
+            parent_player.config.get('bg_color', '#202020'),
+            parent_player.config.get('inverse_text', False)
+        )
         self.setWindowTitle(tr('markers_title'))
         self.setMinimumSize(420, 450)
-        self.setStyleSheet("background: #202020; color: white;")
+        self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 15, 15, 15)
@@ -120,21 +131,21 @@ class MarkersDialog(QDialog):
 
         # List Widget
         self.listWidget = QListWidget()
-        self.listWidget.setStyleSheet("""
-            QListWidget {
-                background: rgba(255,255,255,0.03);
-                border: 1px solid rgba(255,255,255,0.08);
+        self.listWidget.setStyleSheet(f"""
+            QListWidget {{
+                background: {t['bg_translucent']};
+                border: 1px solid {t['border']};
                 border-radius: 6px;
                 padding: 5px;
-            }
-            QListWidget::item {
+            }}
+            QListWidget::item {{
                 background: transparent;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
+                border-bottom: 1px solid {t['border']};
                 padding: 4px;
-            }
-            QListWidget::item:selected {
-                background: rgba(255,255,255,0.06);
-            }
+            }}
+            QListWidget::item:selected {{
+                background: {t['bg_hover']};
+            }}
         """)
         self.listWidget.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.layout.addWidget(self.listWidget)
@@ -254,16 +265,21 @@ class SaveFrameOptionsDialog(QDialog):
     def __init__(self, parent_player):
         super().__init__(parent_player)
         self.parent_player = parent_player
+        t = get_color_tokens(
+            parent_player.config.get('accent_color', '#00f2ff'),
+            parent_player.config.get('bg_color', '#202020'),
+            parent_player.config.get('inverse_text', False)
+        )
         self.setWindowTitle(tr('save_frame_options'))
         self.setMinimumSize(420, 320)
-        self.setStyleSheet("background: #202020; color: white;")
+        self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
         self.layout.setSpacing(15)
 
         self.titleLabel = CaptionLabel(tr('save_frame_options'))
-        self.titleLabel.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.titleLabel.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.layout.addWidget(self.titleLabel)
 
         # Main settings container
@@ -280,12 +296,12 @@ class SaveFrameOptionsDialog(QDialog):
 
         accent_color = getattr(self.parent_player, 'accent_color', '#00f2ff')
         from styles import get_styles
-        styles_dict = get_styles(accent_color=accent_color)
+        styles_dict = get_styles(accent_color=accent_color, bg_color=t['bg'], inverse_text=self.parent_player.config.get('inverse_text', False))
         combo_style = styles_dict.get('COMBO_STYLE', '')
 
         # Format selector
         format_label = QLabel(tr('format') + ":")
-        format_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        format_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         self.formatCombo = QComboBox()
         self.formatCombo.addItems(["BMP (*.bmp)", "JPEG (*.jpg)", "PNG (*.png)", "WebP (*.webp)"])
         self.formatCombo.setCurrentIndex(2)
@@ -295,7 +311,7 @@ class SaveFrameOptionsDialog(QDialog):
 
         # Quality slider
         self.quality_label = QLabel(tr('quality') + ":")
-        self.quality_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        self.quality_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         
         quality_slider_layout = QHBoxLayout()
         from PyQt6.QtWidgets import QSlider
@@ -307,7 +323,7 @@ class SaveFrameOptionsDialog(QDialog):
         self.qualitySlider.setStyleSheet(slider_style)
         
         self.qualityValueLabel = QLabel("95%")
-        self.qualityValueLabel.setStyleSheet("color: white; font-size: 13px; min-width: 35px;")
+        self.qualityValueLabel.setStyleSheet(f"color: {t['fg']}; font-size: 13px; min-width: 35px;")
         self.qualitySlider.valueChanged.connect(lambda v: self.qualityValueLabel.setText(f"{v}%"))
         quality_slider_layout.addWidget(self.qualitySlider)
         quality_slider_layout.addWidget(self.qualityValueLabel)
@@ -317,7 +333,7 @@ class SaveFrameOptionsDialog(QDialog):
 
         # Resolution scale selector
         scale_label = QLabel(tr('resolution_scale') + ":")
-        scale_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        scale_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         self.scaleCombo = QComboBox()
         self.scaleCombo.addItems([
             tr('original') + " (100%)",
@@ -413,9 +429,14 @@ class SaveLoopOptionsDialog(QDialog):
     def __init__(self, parent_player):
         super().__init__(parent_player)
         self.parent_player = parent_player
+        t = get_color_tokens(
+            parent_player.config.get('accent_color', '#00f2ff'),
+            parent_player.config.get('bg_color', '#202020'),
+            parent_player.config.get('inverse_text', False)
+        )
         self.setWindowTitle(tr('save_loop_options'))
         self.setMinimumSize(450, 480)
-        self.setStyleSheet("background: #202020; color: white;")
+        self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
@@ -435,12 +456,12 @@ class SaveLoopOptionsDialog(QDialog):
 
         accent_color = getattr(self.parent_player, 'accent_color', '#00f2ff')
         from styles import get_styles
-        styles_dict = get_styles(accent_color=accent_color)
+        styles_dict = get_styles(accent_color=accent_color, bg_color=t['bg'], inverse_text=self.parent_player.config.get('inverse_text', False))
         combo_style = styles_dict.get('COMBO_STYLE', '')
 
         # Export mode (Lossless vs Custom)
         mode_label = QLabel(tr('export_mode') + ":")
-        mode_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        mode_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         self.modeCombo = QComboBox()
         self.modeCombo.addItems([tr('lossless_copy'), tr('custom_encode')])
         self.modeCombo.setCurrentIndex(0)  # Default to Lossless
@@ -450,7 +471,7 @@ class SaveLoopOptionsDialog(QDialog):
 
         # Format selector
         format_label = QLabel(tr('format') + ":")
-        format_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        format_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         self.formatCombo = QComboBox()
         self.formatCombo.addItems(["MP4 (*.mp4)", "MKV (*.mkv)", "GIF (*.gif)"])
         self.formatCombo.setCurrentIndex(0)
@@ -460,7 +481,7 @@ class SaveLoopOptionsDialog(QDialog):
 
         # Codec selector
         codec_label = QLabel(tr('codec') + ":")
-        codec_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        codec_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         self.codecCombo = QComboBox()
         self.av1_encoder = get_supported_av1_encoder()
         codecs = ["H.264 (AVC)", "H.265 (HEVC)"]
@@ -479,7 +500,7 @@ class SaveLoopOptionsDialog(QDialog):
 
         # Quality slider
         self.quality_label = QLabel(tr('quality') + ":")
-        self.quality_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        self.quality_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         
         quality_slider_layout = QHBoxLayout()
         from PyQt6.QtWidgets import QSlider
@@ -491,7 +512,7 @@ class SaveLoopOptionsDialog(QDialog):
         self.qualitySlider.setStyleSheet(slider_style)
         
         self.qualityValueLabel = QLabel("80%")
-        self.qualityValueLabel.setStyleSheet("color: white; font-size: 13px; min-width: 35px;")
+        self.qualityValueLabel.setStyleSheet(f"color: {t['fg']}; font-size: 13px; min-width: 35px;")
         self.qualitySlider.valueChanged.connect(lambda v: self.qualityValueLabel.setText(f"{v}%"))
         quality_slider_layout.addWidget(self.qualitySlider)
         quality_slider_layout.addWidget(self.qualityValueLabel)
@@ -501,7 +522,7 @@ class SaveLoopOptionsDialog(QDialog):
 
         # Resolution scale selector
         scale_label = QLabel(tr('resolution_scale') + ":")
-        scale_label.setStyleSheet("color: #aaaaaa; font-size: 13px;")
+        scale_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         self.scaleCombo = QComboBox()
         self.scaleCombo.addItems([
             tr('original') + " (100%)",

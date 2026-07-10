@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QSlider, QWidget
 from components import SafeSpinBox as QSpinBox
 from qfluentwidgets import CaptionLabel, PushButton, SingleDirectionScrollArea
-from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE)
+from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE, get_color_tokens)
 from translations import tr
 
 from typing import TYPE_CHECKING
@@ -68,15 +68,20 @@ class ImageAdjSettingsMixin(ImageAdjSettingsMixinBase):
         update_sidebar_fullscreen_state: callable
 
     def init_image_adj_sidebar(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.imageAdjContainer = QFrame()
         self.imageAdjContainer.setMinimumWidth(250)
-        self.imageAdjContainer.setStyleSheet("background: #202020; border: none;")
+        self.imageAdjContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.imageAdjLayout = QVBoxLayout(self.imageAdjContainer)
         self.imageAdjLayout.setContentsMargins(10, 10, 4, 10)
         self.imageAdjLayout.setSpacing(6)
 
         self.imageAdjTitle = CaptionLabel(tr('image_adjustments'))
-        self.imageAdjTitle.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        self.imageAdjTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.adjLabel = self.imageAdjTitle
         self.imageAdjLayout.addWidget(self.imageAdjTitle)
 

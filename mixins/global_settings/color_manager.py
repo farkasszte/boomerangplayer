@@ -14,6 +14,7 @@ class GlobalSettingsColorManagerMixin:
     def apply_accent_color(self, color_hex):
         
         self.config['accent_color'] = color_hex
+        self.accent_color = color_hex
         
         from qfluentwidgets import setThemeColor
         setThemeColor(QColor(color_hex))
@@ -31,6 +32,44 @@ class GlobalSettingsColorManagerMixin:
     def apply_bg_color(self, color_hex):
         
         self.config['bg_color'] = color_hex
+
+        from styles import wcag_contrast_ratio
+        dark_fg = "#ffffff"
+        light_fg = "#1c1c1c"
+
+        ratio_dark = wcag_contrast_ratio(color_hex, dark_fg)
+        ratio_light = wcag_contrast_ratio(color_hex, light_fg)
+
+        current_inverse = self.config.get('inverse_text', False)
+
+        if current_inverse:
+            needs_switch = ratio_light < 1.5 and ratio_dark >= ratio_light
+        else:
+            needs_switch = ratio_dark < 1.5 and ratio_light >= ratio_dark
+
+        if needs_switch:
+            new_inverse = not current_inverse
+            self.config['inverse_text'] = new_inverse
+            if hasattr(self, 'inverseTextToggle'):
+                self.inverseTextToggle.blockSignals(True)
+                self.inverseTextToggle.setChecked(new_inverse)
+                self.inverseTextToggle.blockSignals(False)
+
+            from qfluentwidgets import setTheme, Theme
+            setTheme(Theme.LIGHT if new_inverse else Theme.DARK)
+
+            from PyQt6.QtCore import Qt
+            from qfluentwidgets import InfoBar, InfoBarPosition
+            InfoBar.info(
+                title=tr('auto_theme_switch'),
+                content=tr('auto_theme_switch_desc'),
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+
         if hasattr(self, 'refresh_custom_styles'):
             self.refresh_custom_styles()
         

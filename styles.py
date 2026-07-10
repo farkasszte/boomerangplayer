@@ -14,22 +14,23 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
     bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
     menu_selected_bg = "rgba(0, 0, 0, 0.12)" if inverse_text else "rgba(255, 255, 255, 0.15)"
     
+    slider_groove = "#555555" if inverse_text else "#444444"
     styles['FLUENT_SLIDER_STYLE'] = f"""
     QSlider::groove:horizontal {{
         border: none;
         height: 4px;
-        background: #444;
+        background: {slider_groove};
         margin: 2px 0;
         border-radius: 2px;
     }}
     QSlider::handle:horizontal {{
-        background: #ffffff;
+        background: {fg_color};
         width: 2px;
         height: 16px;
         margin: -6px 0;
     }}
     QSlider::handle:horizontal:hover {{
-        background: #ffffff;
+        background: {fg_color};
     }}
     QSlider::sub-page:horizontal {{
         background: {accent_color};
@@ -225,9 +226,49 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
     
     return styles
 
+def get_color_tokens(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
+    fg_color = "#1c1c1c" if inverse_text else "#ffffff"
+    sec_fg_color = "#555555" if inverse_text else "#aaaaaa"
+    border_color = "rgba(0, 0, 0, 0.35)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+    border_bottom_color = "rgba(0, 0, 0, 0.45)" if inverse_text else "rgba(255, 255, 255, 0.2)"
+    bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
+    bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+    bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+    menu_selected_bg = "rgba(0, 0, 0, 0.12)" if inverse_text else "rgba(255, 255, 255, 0.15)"
+    return {
+        'accent': accent_color,
+        'bg': bg_color,
+        'fg': fg_color,
+        'sec_fg': sec_fg_color,
+        'border': border_color,
+        'border_bottom': border_bottom_color,
+        'bg_translucent': bg_translucent,
+        'bg_hover': bg_hover,
+        'bg_pressed': bg_pressed,
+        'menu_selected_bg': menu_selected_bg,
+    }
+
 def _hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return ",".join([str(int(hex_color[i:i+2], 16)) for i in (0, 2, 4)])
+
+def wcag_contrast_ratio(hex1, hex2):
+    def relative_luminance(hex_color):
+        hex_color = hex_color.lstrip('#')
+        r, g, b = (int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+        channels = []
+        for c in (r, g, b):
+            if c <= 0.04045:
+                channels.append(c / 12.92)
+            else:
+                channels.append(((c + 0.055) / 1.055) ** 2.4)
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+    l1 = relative_luminance(hex1)
+    l2 = relative_luminance(hex2)
+    lighter = max(l1, l2)
+    darker = min(l1, l2)
+    return (lighter + 0.05) / (darker + 0.05)
 
 # Default styles for backward compatibility during initialization
 _default_styles = get_styles()

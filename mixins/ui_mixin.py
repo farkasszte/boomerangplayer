@@ -150,11 +150,13 @@ class UIMixin(
         
         self.chronoTimeLabel = QLabel("00:00.000")
         accent = self.config.get('accent_color', '#00f2ff')
+        inverse_text = self.config.get('inverse_text', False)
+        fg_color = "#1c1c1c" if inverse_text else "#ffffff"
         self.chronoTimeLabel.setStyleSheet(f"font-size: 24px; font-weight: bold; font-family: 'Segoe UI Semibold', 'Courier New'; color: {accent};")
         self.chronoSectionLabel = QLabel("")
-        self.chronoSectionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+        self.chronoSectionLabel.setStyleSheet(f"font-size: 12px; color: {fg_color}; line-height: 140%;")
         self.chronoPositionLabel = QLabel("")
-        self.chronoPositionLabel.setStyleSheet("font-size: 12px; color: #ffffff; line-height: 140%;")
+        self.chronoPositionLabel.setStyleSheet(f"font-size: 12px; color: {fg_color}; line-height: 140%;")
         
         self.chronometerOverlayLayout.addWidget(self.chronoTimeLabel)
         self.chronometerOverlayLayout.addWidget(self.chronoSectionLabel)

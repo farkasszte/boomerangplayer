@@ -3,13 +3,18 @@ from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import CaptionLabel, ToolButton, FluentIcon
 from components import MarkerSlider
-from styles import FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE
+from styles import FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, get_color_tokens
 from translations import tr
 
 class ControlsCardUIMixin:
     def _init_controls_card(self):
+        t = get_color_tokens(
+            self.config.get('accent_color', '#00f2ff'),
+            self.config.get('bg_color', '#202020'),
+            self.config.get('inverse_text', False)
+        )
         self.controlsCard = QFrame()
-        self.controlsCard.setStyleSheet("background-color: #202020; border: none;")
+        self.controlsCard.setStyleSheet(f"background-color: {t['bg']}; border: none;")
         self.controlsLayout = QVBoxLayout(self.controlsCard)
         self.controlsLayout.setContentsMargins(12, 12, 12, 12)
 
