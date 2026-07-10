@@ -3,7 +3,8 @@ VolumeMixin — volume control, mute toggle, flyout popup.
 """
 
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QSlider
+from PyQt6.QtWidgets import QFrame, QVBoxLayout
+from components import NoWheelSlider
 from qfluentwidgets import FluentIcon
 from styles import FLUENT_SLIDER_STYLE, get_color_tokens
 from typing import TYPE_CHECKING
@@ -62,7 +63,7 @@ class VolumeMixin(VolumeMixinBase):
         layout = QVBoxLayout(self.volumePopup)
         layout.setContentsMargins(10, 15, 10, 15)
 
-        slider = QSlider(Qt.Orientation.Vertical)
+        slider = NoWheelSlider(Qt.Orientation.Vertical)
         slider.setRange(0, 100)
 
         current_vol = int(self.audioOutput.volume() * 100)

@@ -4,9 +4,9 @@ SettingsMixin — video settings sidebar builder (speed, zoom, cache,
 """
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
+from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout,
                               QWidget, QComboBox)
-from components import SafeSpinBox as QSpinBox
+from components import SafeSpinBox as QSpinBox, NoWheelSlider
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, ToolButton, FluentIcon,
                              FluentIconBase, Theme)
@@ -155,7 +155,7 @@ class SettingsMixin(SettingsMixinBase):
         speedHeader.addWidget(self.speedLockBtn)
         speedHeader.addWidget(self.speedValueLabel)
 
-        self.speedSlider = QSlider(Qt.Orientation.Horizontal)
+        self.speedSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.speedSlider.setRange(10, 500)
         self.speedSlider.setValue(100)
         self.speedSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -201,7 +201,7 @@ class SettingsMixin(SettingsMixinBase):
         zoomHeader.addWidget(self.zoomValueLabel)
         zoomGroup.addLayout(zoomHeader)
 
-        self.zoomSlider = QSlider(Qt.Orientation.Horizontal)
+        self.zoomSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.zoomSlider.setRange(100, 1000)
         self.zoomSlider.setValue(100)
         self.zoomSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -252,7 +252,7 @@ class SettingsMixin(SettingsMixinBase):
         cacheHeader.addWidget(self.cacheValueLabel)
         cacheGroup.addLayout(cacheHeader)
 
-        self.cacheSlider = QSlider(Qt.Orientation.Horizontal)
+        self.cacheSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.cacheSlider.setRange(100, 3000)
         self.cacheSlider.setSingleStep(10)
         self.cacheSlider.setPageStep(50)
@@ -334,7 +334,7 @@ class SettingsMixin(SettingsMixinBase):
         qvHeader.addWidget(self.qvValueSpinBox)
         qvGroup.addLayout(qvHeader)
 
-        self.qvSlider = QSlider(Qt.Orientation.Horizontal)
+        self.qvSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.qvSlider.setRange(1, 31)
         self.qvSlider.setValue(default_qv)
         self.qvSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -429,7 +429,7 @@ class SettingsMixin(SettingsMixinBase):
         loopGroup.addLayout(loopCountHeader)
 
         # Loop count slider
-        self.loopCountSlider = QSlider(Qt.Orientation.Horizontal)
+        self.loopCountSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.loopCountSlider.setRange(1, 10)
         self.loopCountSlider.setValue(self.config.get('advance_playlist_loop_count', 1))
         self.loopCountSlider.setStyleSheet(FLUENT_SLIDER_STYLE)

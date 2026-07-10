@@ -16,7 +16,7 @@ from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from styles import (FLUENT_SLIDER_STYLE, COMPACT_BTN_STYLE, MENU_STYLE,
                     ACTION_BTN_STYLE, TOOL_BTN_STYLE)
 from translations import tr
-from PyQt6.QtWidgets import QMenu, QButtonGroup, QSlider
+from PyQt6.QtWidgets import QMenu, QButtonGroup
 from PyQt6.QtMultimedia import QMediaDevices
 import qfluentwidgets
 import ctypes

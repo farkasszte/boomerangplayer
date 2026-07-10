@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QSlider
-from components import SafeSpinBox as QSpinBox
-from qfluentwidgets import CaptionLabel, SwitchButton, PushButton, ToolButton
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QButtonGroup, QWidget
+from components import SafeSpinBox as QSpinBox, NoWheelSlider
+from qfluentwidgets import CaptionLabel, SwitchButton, PushButton, ToolButton, SingleDirectionScrollArea
 from styles import TOOL_BTN_STYLE, FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE, get_color_tokens
 from translations import tr
 
@@ -25,6 +25,22 @@ class DrawingSidebarUIMixin:
         self.drawingSidebarTitle.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t['fg']};")
         self.drawingSidebarLayout.addWidget(self.drawingSidebarTitle)
 
+        self.drawingScrollArea = SingleDirectionScrollArea(self.drawingContainer, Qt.Orientation.Vertical)
+        self.drawingScrollArea.setWidgetResizable(True)
+        self.drawingScrollArea.setStyleSheet("background: transparent; border: none;")
+        self.drawingScrollArea.setFrameShape(QFrame.Shape.NoFrame)
+        self.drawingScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.drawingScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        self.drawingScrollWidget = QWidget()
+        self.drawingScrollWidget.setStyleSheet("background: transparent;")
+        self.drawingInnerLayout = QVBoxLayout(self.drawingScrollWidget)
+        self.drawingInnerLayout.setContentsMargins(0, 0, 0, 0)
+        self.drawingInnerLayout.setSpacing(10)
+
+        self.drawingScrollArea.setWidget(self.drawingScrollWidget)
+        self.drawingSidebarLayout.addWidget(self.drawingScrollArea)
+
         drawModeToggleLayout = QHBoxLayout()
         self.drawModeToggleLabel = QLabel(tr('drawing_mode'))
         self.drawModeToggleLabel.setStyleSheet(f"color: {t['fg']}; font-size: 13px;")
@@ -36,7 +52,7 @@ class DrawingSidebarUIMixin:
         drawModeToggleLayout.addWidget(self.drawModeToggleLabel)
         drawModeToggleLayout.addStretch(1)
         drawModeToggleLayout.addWidget(self.drawModeToggle)
-        self.drawingSidebarLayout.addLayout(drawModeToggleLayout)
+        self.drawingInnerLayout.addLayout(drawModeToggleLayout)
 
         laserModeToggleLayout = QHBoxLayout()
         self.laserModeToggleLabel = QLabel(tr('laser_mode'))
@@ -49,7 +65,7 @@ class DrawingSidebarUIMixin:
         laserModeToggleLayout.addWidget(self.laserModeToggleLabel)
         laserModeToggleLayout.addStretch(1)
         laserModeToggleLayout.addWidget(self.laserModeToggle)
-        self.drawingSidebarLayout.addLayout(laserModeToggleLayout)
+        self.drawingInnerLayout.addLayout(laserModeToggleLayout)
 
         chronometerToggleLayout = QHBoxLayout()
         self.chronometerToggleLabel = QLabel(tr('chronometer_overlay'))
@@ -62,7 +78,7 @@ class DrawingSidebarUIMixin:
         chronometerToggleLayout.addWidget(self.chronometerToggleLabel)
         chronometerToggleLayout.addStretch(1)
         chronometerToggleLayout.addWidget(self.chronometerToggle)
-        self.drawingSidebarLayout.addLayout(chronometerToggleLayout)
+        self.drawingInnerLayout.addLayout(chronometerToggleLayout)
 
         toolsLayout = QGridLayout()
         toolsLayout.setSpacing(8)
@@ -109,13 +125,13 @@ class DrawingSidebarUIMixin:
             btn.clicked.connect(lambda checked, t=tool_id: self.set_active_tool(t))
             toolsLayout.addWidget(btn, i // 2, i % 2)
 
-        self.drawingSidebarLayout.addLayout(toolsLayout)
-        self.drawingSidebarLayout.addSpacing(15)
+        self.drawingInnerLayout.addLayout(toolsLayout)
+        self.drawingInnerLayout.addSpacing(15)
 
         # ---- Quick Palette ----
         self.paletteTitle = CaptionLabel(tr('color_palette'))
         self.paletteTitle.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {t['sec_fg']};")
-        self.drawingSidebarLayout.addWidget(self.paletteTitle)
+        self.drawingInnerLayout.addWidget(self.paletteTitle)
         
         paletteLayout = QHBoxLayout()
         paletteLayout.setSpacing(8)
@@ -135,10 +151,10 @@ class DrawingSidebarUIMixin:
             self.paletteButtons.append(p_btn)
             paletteLayout.addWidget(p_btn)
             
-        self.drawingSidebarLayout.addLayout(paletteLayout)
+        self.drawingInnerLayout.addLayout(paletteLayout)
         
         self.update_palette_ui()
-        self.drawingSidebarLayout.addSpacing(15)
+        self.drawingInnerLayout.addSpacing(15)
 
         # Thickness row
         thicknessRow = QHBoxLayout()
@@ -172,9 +188,9 @@ class DrawingSidebarUIMixin:
         
         self.penColorBtn.clicked.connect(self.choose_pen_color)
         thicknessRow.addWidget(self.penColorBtn)
-        self.drawingSidebarLayout.addLayout(thicknessRow)
+        self.drawingInnerLayout.addLayout(thicknessRow)
 
-        self.penSizeSlider = QSlider(Qt.Orientation.Horizontal)
+        self.penSizeSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.penSizeSlider.setRange(1, 60)
         self.penSizeSlider.setValue(3)
         self.penSizeSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -185,8 +201,8 @@ class DrawingSidebarUIMixin:
         
         
         self.penSizeSlider.valueChanged.connect(self.update_pen_width)
-        self.drawingSidebarLayout.addWidget(self.penSizeSlider)
-        self.drawingSidebarLayout.addSpacing(15)
+        self.drawingInnerLayout.addWidget(self.penSizeSlider)
+        self.drawingInnerLayout.addSpacing(15)
 
         # Action grid
         drawingActionsGrid = QGridLayout()
@@ -214,6 +230,6 @@ class DrawingSidebarUIMixin:
         drawingActionsGrid.addWidget(self.saveScreenshotBtn, 0, 0, 1, 2)
         drawingActionsGrid.addWidget(self.sidebarUndoBtn,    1, 0)
         drawingActionsGrid.addWidget(self.sidebarClearBtn,   1, 1)
-        self.drawingSidebarLayout.addLayout(drawingActionsGrid)
-        self.drawingSidebarLayout.addStretch(1)
+        self.drawingInnerLayout.addLayout(drawingActionsGrid)
+        self.drawingInnerLayout.addStretch(1)
         self.drawingContainer.hide()

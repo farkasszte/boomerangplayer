@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
+from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout,
                               QWidget, QComboBox)
-from components import SafeSpinBox as QSpinBox
+from components import SafeSpinBox as QSpinBox, NoWheelSlider
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea)
 from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE, get_color_tokens)
@@ -113,7 +113,7 @@ class SubtitleSidebarUIMixin:
         fontSizeHeader.addWidget(self.subFontSizeSpin)
         fontSizeLayout.addLayout(fontSizeHeader)
 
-        self.subFontSizeSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subFontSizeSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subFontSizeSlider.setRange(12, 72)
         self.subFontSizeSlider.setValue(default_size)
         self.subFontSizeSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -186,7 +186,7 @@ class SubtitleSidebarUIMixin:
         bgOpacityHeader.addWidget(self.subBgOpacitySpin)
         bgOpacityLayout.addLayout(bgOpacityHeader)
 
-        self.subBgOpacitySlider = QSlider(Qt.Orientation.Horizontal)
+        self.subBgOpacitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subBgOpacitySlider.setRange(0, 100)
         self.subBgOpacitySlider.setValue(default_opacity)
         self.subBgOpacitySlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -224,7 +224,7 @@ class SubtitleSidebarUIMixin:
         outlineWidthHeader.addWidget(self.subOutlineWidthSpin)
         outlineWidthLayout.addLayout(outlineWidthHeader)
 
-        self.subOutlineWidthSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subOutlineWidthSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subOutlineWidthSlider.setRange(1, 8)
         self.subOutlineWidthSlider.setValue(default_outline_w)
         self.subOutlineWidthSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -290,7 +290,7 @@ class SubtitleSidebarUIMixin:
         shadowBlurHeader.addWidget(self.subShadowBlurSpin)
         shadowBlurLayout.addLayout(shadowBlurHeader)
 
-        self.subShadowBlurSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subShadowBlurSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subShadowBlurSlider.setRange(0, 30)
         self.subShadowBlurSlider.setValue(default_shadow_blur)
         self.subShadowBlurSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -320,7 +320,7 @@ class SubtitleSidebarUIMixin:
         shadowDxHeader.addWidget(self.subShadowDxSpin)
         shadowDxLayout.addLayout(shadowDxHeader)
 
-        self.subShadowDxSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subShadowDxSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subShadowDxSlider.setRange(-20, 20)
         self.subShadowDxSlider.setValue(default_shadow_dx)
         self.subShadowDxSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -350,7 +350,7 @@ class SubtitleSidebarUIMixin:
         shadowDyHeader.addWidget(self.subShadowDySpin)
         shadowDyLayout.addLayout(shadowDyHeader)
 
-        self.subShadowDySlider = QSlider(Qt.Orientation.Horizontal)
+        self.subShadowDySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subShadowDySlider.setRange(-20, 20)
         self.subShadowDySlider.setValue(default_shadow_dy)
         self.subShadowDySlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -406,7 +406,7 @@ class SubtitleSidebarUIMixin:
         vOffsetHeader.addWidget(self.subVOffsetSpin)
         vOffsetLayout.addLayout(vOffsetHeader)
  
-        self.subVOffsetSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subVOffsetSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subVOffsetSlider.setRange(0, 100)
         self.subVOffsetSlider.setValue(default_v_offset)
         self.subVOffsetSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -437,7 +437,7 @@ class SubtitleSidebarUIMixin:
         hOffsetHeader.addWidget(self.subHOffsetSpin)
         hOffsetLayout.addLayout(hOffsetHeader)
  
-        self.subHOffsetSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subHOffsetSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subHOffsetSlider.setRange(-50, 50)
         self.subHOffsetSlider.setValue(default_h_offset)
         self.subHOffsetSlider.setStyleSheet(FLUENT_SLIDER_STYLE)
@@ -480,7 +480,7 @@ class SubtitleSidebarUIMixin:
         offsetHeader.addWidget(self.subOffsetSpin)
         offsetLayout.addLayout(offsetHeader)
 
-        self.subOffsetSlider = QSlider(Qt.Orientation.Horizontal)
+        self.subOffsetSlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.subOffsetSlider.setRange(-10000, 10000)
         self.subOffsetSlider.setSingleStep(50)
         self.subOffsetSlider.setPageStep(500)

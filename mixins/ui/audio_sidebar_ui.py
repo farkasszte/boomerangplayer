@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QSlider,
+from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout,
                                QWidget, QComboBox)
+from components import NoWheelSlider
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea, BodyLabel)
 from styles import ACTION_BTN_STYLE, get_color_tokens
@@ -150,7 +151,7 @@ class AudioSidebarUIMixin:
             band_layout.addWidget(freq_label)
 
             # Vertical Slider
-            slider = QSlider(Qt.Orientation.Vertical)
+            slider = NoWheelSlider(Qt.Orientation.Vertical)
             slider.setRange(-12, 12)
             slider.setValue(gains[i])
             slider.setFixedHeight(120)

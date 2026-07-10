@@ -314,8 +314,8 @@ class SaveFrameOptionsDialog(QDialog):
         self.quality_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         
         quality_slider_layout = QHBoxLayout()
-        from PyQt6.QtWidgets import QSlider
-        self.qualitySlider = QSlider(Qt.Orientation.Horizontal)
+        from components import NoWheelSlider
+        self.qualitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.qualitySlider.setRange(1, 100)
         self.qualitySlider.setValue(95)
         
@@ -503,8 +503,8 @@ class SaveLoopOptionsDialog(QDialog):
         self.quality_label.setStyleSheet(f"color: {t['sec_fg']}; font-size: 13px;")
         
         quality_slider_layout = QHBoxLayout()
-        from PyQt6.QtWidgets import QSlider
-        self.qualitySlider = QSlider(Qt.Orientation.Horizontal)
+        from components import NoWheelSlider
+        self.qualitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.qualitySlider.setRange(1, 100)
         self.qualitySlider.setValue(80)
         

@@ -3,8 +3,8 @@ ImageAdjSettingsMixin — builds and manages the image adjustments sidebar UI pa
 """
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QSlider, QWidget
-from components import SafeSpinBox as QSpinBox
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget
+from components import SafeSpinBox as QSpinBox, NoWheelSlider
 from qfluentwidgets import CaptionLabel, PushButton, SingleDirectionScrollArea
 from styles import (FLUENT_SLIDER_STYLE, ACTION_BTN_STYLE, get_color_tokens)
 from translations import tr
@@ -140,7 +140,7 @@ class ImageAdjSettingsMixin(ImageAdjSettingsMixinBase):
             header.addStretch(1)
             header.addWidget(spin)
             
-            slider = QSlider(Qt.Orientation.Horizontal)
+            slider = NoWheelSlider(Qt.Orientation.Horizontal)
             slider.setRange(min_val, max_val)
             slider.setValue(default)
             slider.setStyleSheet(FLUENT_SLIDER_STYLE)

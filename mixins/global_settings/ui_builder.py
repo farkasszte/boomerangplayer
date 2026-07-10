@@ -1,5 +1,6 @@
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout, QSlider
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout
+from components import NoWheelSlider
 from qfluentwidgets import CaptionLabel, PushButton, SwitchButton, SingleDirectionScrollArea, BodyLabel
 from components import ShortcutButton
 from translations import tr
@@ -89,7 +90,7 @@ class GlobalSettingsUiBuilderMixin:
         opacityRow.addWidget(self.opacityValueLabel)
         self.gsInnerLayout.addLayout(opacityRow)
 
-        self.opacitySlider = QSlider(Qt.Orientation.Horizontal)
+        self.opacitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.opacitySlider.setRange(20, 100)
         self.opacitySlider.setValue(self.pending_panel_opacity)
         self.opacitySlider.setToolTip(tr('tip_panel_opacity'))

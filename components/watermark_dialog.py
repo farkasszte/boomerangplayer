@@ -3,7 +3,8 @@ WatermarkPropertiesDialog — configuration dialog for watermarks in the drawing
 """
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel
+from components import NoWheelSlider
 from qfluentwidgets import PushButton
 from styles import ACTION_BTN_STYLE, get_color_tokens
 from translations import tr
@@ -37,7 +38,7 @@ class WatermarkPropertiesDialog(QDialog):
         self.opacity_lbl.setStyleSheet(f"color: {t['fg']}; font-size: 12px; border: none;")
         opacity_layout.addWidget(self.opacity_lbl)
         
-        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(0, 100)
         self.slider.setValue(int(item.opacity() * 100))
         
@@ -53,7 +54,7 @@ class WatermarkPropertiesDialog(QDialog):
         self.scale_lbl.setStyleSheet(f"color: {t['fg']}; font-size: 12px; border: none;")
         scale_layout.addWidget(self.scale_lbl)
         
-        self.scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self.scale_slider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.scale_slider.setRange(10, 300)
         self.scale_slider.setValue(100)
         

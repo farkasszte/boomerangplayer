@@ -19,3 +19,6 @@ class SafeSpinBox(QSpinBox):
             self.lineEdit().blockSignals(True)
             self.lineEdit().setCursorPosition(target_pos)
             self.lineEdit().blockSignals(False)
+
+    def wheelEvent(self, event):
+        event.ignore()

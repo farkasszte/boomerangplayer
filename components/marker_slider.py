@@ -1,8 +1,8 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QPen, QColor
-from PyQt6.QtWidgets import QSlider
+from .no_wheel_slider import NoWheelSlider
 
-class MarkerSlider(QSlider):
+class MarkerSlider(NoWheelSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.markers = []
