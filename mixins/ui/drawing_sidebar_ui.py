@@ -101,7 +101,7 @@ class DrawingSidebarUIMixin:
 
         for i, (label, tool_id, tip) in enumerate(all_tools):
             btn = PushButton(label)
-            btn.setFixedSize(115, 38)
+            btn.setFixedSize(114, 38)
             btn.setToolTip(tip)
             btn.setStyleSheet(TOOL_BTN_STYLE)
             btn.setCheckable(True)

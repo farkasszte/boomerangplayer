@@ -468,6 +468,58 @@ class GlobalSettingsLocaleManagerMixin:
             for i, key in enumerate(bg_keys):
                 if i < self.subBgColorCombo.count():
                     self.subBgColorCombo.setItemText(i, tr(key))
+        if hasattr(self, 'trackLabel'):
+            self.trackLabel.setText(tr('track'))
+        if hasattr(self, 'fontFamilyLabel'):
+            self.fontFamilyLabel.setText(tr('font_family'))
+        if hasattr(self, 'fontSizeLabel'):
+            self.fontSizeLabel.setText(tr('font_size'))
+        if hasattr(self, 'textColorLabel'):
+            self.textColorLabel.setText(tr('text_color'))
+        if hasattr(self, 'bgColorLabel'):
+            self.bgColorLabel.setText(tr('bg_color_sub'))
+        if hasattr(self, 'bgOpacityLabel'):
+            self.bgOpacityLabel.setText(tr('bg_opacity'))
+        if hasattr(self, 'outlineEnableLabel'):
+            self.outlineEnableLabel.setText(tr('sub_outline_enabled'))
+        if hasattr(self, 'subOutlineToggle'):
+            self.subOutlineToggle.setOnText(tr('on'))
+            self.subOutlineToggle.setOffText(tr('off'))
+        if hasattr(self, 'outlineWidthLabel'):
+            self.outlineWidthLabel.setText(tr('sub_outline_width'))
+        if hasattr(self, 'outlineColorLabel'):
+            self.outlineColorLabel.setText(tr('sub_outline_color'))
+        if hasattr(self, 'subOutlineColorCombo'):
+            outline_color_keys = ['color_black', 'color_dark_grey', 'color_white', 'color_yellow', 'color_cyan', 'color_green', 'color_magenta', 'color_red']
+            for i, key in enumerate(outline_color_keys):
+                if i < self.subOutlineColorCombo.count():
+                    self.subOutlineColorCombo.setItemText(i, tr(key))
+        if hasattr(self, 'shadowEnableLabel'):
+            self.shadowEnableLabel.setText(tr('sub_shadow_enabled'))
+        if hasattr(self, 'subShadowToggle'):
+            self.subShadowToggle.setOnText(tr('on'))
+            self.subShadowToggle.setOffText(tr('off'))
+        if hasattr(self, 'shadowBlurLabel'):
+            self.shadowBlurLabel.setText(tr('sub_shadow_blur'))
+        if hasattr(self, 'shadowDxLabel'):
+            self.shadowDxLabel.setText(tr('sub_shadow_dx'))
+        if hasattr(self, 'shadowDyLabel'):
+            self.shadowDyLabel.setText(tr('sub_shadow_dy'))
+        if hasattr(self, 'shadowColorLabel'):
+            self.shadowColorLabel.setText(tr('sub_shadow_color'))
+        if hasattr(self, 'subShadowColorCombo'):
+            shadow_color_keys = ['color_black', 'color_dark_grey', 'color_white', 'color_yellow', 'color_cyan', 'color_green', 'color_magenta', 'color_red']
+            for i, key in enumerate(shadow_color_keys):
+                if i < self.subShadowColorCombo.count():
+                    self.subShadowColorCombo.setItemText(i, tr(key))
+        if hasattr(self, 'positionTitleLabel'):
+            self.positionTitleLabel.setText(tr('subtitle_position'))
+        if hasattr(self, 'vOffsetLabel'):
+            self.vOffsetLabel.setText(tr('sub_v_offset'))
+        if hasattr(self, 'hOffsetLabel'):
+            self.hOffsetLabel.setText(tr('sub_h_offset'))
+        if hasattr(self, 'subtitleOffsetLabel'):
+            self.subtitleOffsetLabel.setText(tr('subtitle_offset'))
 
         # Update Audio Panel UI Texts
         if hasattr(self, 'audioTitle'):

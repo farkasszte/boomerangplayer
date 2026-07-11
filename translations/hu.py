@@ -45,7 +45,7 @@ TRANSLATIONS_HU = {
     'hue': 'Színárnyalat',
     'temperature': 'Színhőmérséklet',
     'exposure': 'Expozíció',
-    'invert': 'Színinverz',
+    'invert': 'Negatív színek',
     'sharpen': 'Élesítés',
     'blur': 'Elmosás',
     'reset_image': 'Alaphelyzet',

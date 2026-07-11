@@ -4,7 +4,7 @@ DrawingEraserMixin — handles precision area/object erasure and path conversion
 
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QPen, QBrush, QPainterPath, QPainterPathStroker, QFont, QColor
-from PyQt6.QtWidgets import QGraphicsPathItem, QGraphicsTextItem, QApplication
+from PyQt6.QtWidgets import QGraphicsPathItem, QGraphicsTextItem, QApplication, QGraphicsPixmapItem, QGraphicsItemGroup
 
 from typing import TYPE_CHECKING
 
@@ -34,6 +34,14 @@ class DrawingEraserMixin(DrawingEraserMixinBase):
         hit_rect = QRectF(scene_pos.x()-4, scene_pos.y()-4, 8, 8)
         items = self.scene().items(hit_rect)
         for item in items:
+            # Check if this item is part of a group in strokes (e.g. measurement)
+            group = item.group() or item.parentItem()
+            if isinstance(group, QGraphicsItemGroup) and group in self.strokes:
+                self.current_undo_transaction.append(('delete', group, None, None, None, group.zValue()))
+                self.scene().removeItem(group)
+                self.strokes.remove(group)
+                return
+
             if isinstance(item, QGraphicsPathItem) and item in self.strokes:
                 path = item.path()
                 pieces = self._split_into_logical_pieces(path)
@@ -81,6 +89,11 @@ class DrawingEraserMixin(DrawingEraserMixinBase):
                     self.scene().removeItem(item)
                     self.strokes.remove(item)
                     return
+            elif isinstance(item, QGraphicsPixmapItem) and item in self.strokes:
+                self.current_undo_transaction.append(('delete', item, None, None, None, item.zValue()))
+                self.scene().removeItem(item)
+                self.strokes.remove(item)
+                return
 
     def perform_area_erase(self, scene_pos=None, eraser_path=None):
         if eraser_path is None:
@@ -91,9 +104,25 @@ class DrawingEraserMixin(DrawingEraserMixinBase):
         
         items = self.scene().items(eraser_path.boundingRect())
         for item in items:
+            # Handle text items converted to paths
             if isinstance(item, QGraphicsTextItem) and item in self.strokes:
                 item = self._convert_text_to_path(item)
                 if not item: continue
+
+            # Determine the target item to check (group, watermark or standard path)
+            target_item = item
+            group = item.group() or item.parentItem()
+            if isinstance(group, QGraphicsItemGroup) and group in self.strokes:
+                target_item = group
+
+            if target_item in self.strokes:
+                if isinstance(target_item, (QGraphicsPixmapItem, QGraphicsItemGroup)):
+                    # Check collision for whole group or image
+                    if target_item.collidesWithPath(eraser_path):
+                        self.current_undo_transaction.append(('delete', target_item, None, None, None, target_item.zValue()))
+                        self.scene().removeItem(target_item)
+                        self.strokes.remove(target_item)
+                        continue
 
             if isinstance(item, QGraphicsPathItem) and item in self.strokes:
                 if item.brush().style() == Qt.BrushStyle.NoBrush:

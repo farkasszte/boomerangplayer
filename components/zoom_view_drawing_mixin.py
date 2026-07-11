@@ -374,6 +374,17 @@ class ZoomViewDrawingMixin(ZoomViewDrawingMixinBase):
                         self.strokes.remove(self.current_path_item)
                 except Exception:
                     pass
+
+            if self.laser_mode and self.measure_group:
+                try:
+                    scene = self.scene()
+                    if scene and self.measure_group.scene() == scene:
+                        scene.removeItem(self.measure_group)
+                    
+                    if self.measure_group in self.strokes:
+                        self.strokes.remove(self.measure_group)
+                except Exception:
+                    pass
                     
             self.current_path_item = None
             self.current_path = None
