@@ -153,8 +153,7 @@ class StyleUIMixin:
             self.audioTrackCombo.setStyleSheet(s['COMBO_STYLE'])
         if hasattr(self, 'audioEqPresetCombo'):
             self.audioEqPresetCombo.setStyleSheet(s['COMBO_STYLE'])
-        for combo_name in ['subTrackCombo', 'subFontCombo', 'subTextColorCombo', 'subBgColorCombo',
-                           'subOutlineColorCombo', 'subShadowColorCombo']:
+        for combo_name in ['subTrackCombo', 'subFontCombo']:
             if hasattr(self, combo_name):
                 getattr(self, combo_name).setStyleSheet(s['COMBO_STYLE'])
 

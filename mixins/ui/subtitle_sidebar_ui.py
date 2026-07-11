@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout,
-                              QWidget, QComboBox)
+                              QWidget, QComboBox, QLabel)
 from components import SafeSpinBox as QSpinBox, NoWheelSlider
 from qfluentwidgets import (CaptionLabel, SwitchButton, PushButton,
                              SingleDirectionScrollArea)
@@ -127,53 +127,31 @@ class SubtitleSidebarUIMixin:
         fontSizeLayout.addWidget(self.subFontSizeSlider)
         self.subtitleInnerLayout.addLayout(fontSizeLayout)
 
-        # 5. Text Color
-        textColorLayout = QVBoxLayout()
-        textColorLayout.setSpacing(4)
+        # 5-6. Text & Background Color
+        colorsRow = QHBoxLayout()
+        colorsRow.setSpacing(12)
+        colorsInner = QVBoxLayout()
+        colorsInner.setSpacing(4)
         self.textColorLabel = CaptionLabel(tr('text_color'))
-        textColorLayout.addWidget(self.textColorLabel)
-        self.subTextColorCombo = QComboBox()
-        colors = [
-            ('color_white', 'White'),
-            ('color_yellow', 'Yellow'),
-            ('color_cyan', 'Cyan'),
-            ('color_green', 'Green'),
-            ('color_magenta', 'Magenta'),
-            ('color_red', 'Red')
-        ]
-        for key, val in colors:
-            self.subTextColorCombo.addItem(tr(key), val)
-        
-        default_text_color = self.config.get('subtitle_text_color', 'White')
-        idx = self.subTextColorCombo.findData(default_text_color)
-        if idx != -1:
-            self.subTextColorCombo.setCurrentIndex(idx)
-        self.subTextColorCombo.currentIndexChanged.connect(self.on_sub_text_color_changed)
-        textColorLayout.addWidget(self.subTextColorCombo)
-        self.subtitleInnerLayout.addLayout(textColorLayout)
-
-        # 6. Background Color
-        bgColorLayout = QVBoxLayout()
-        bgColorLayout.setSpacing(4)
+        colorsInner.addWidget(self.textColorLabel)
+        self.subTextColorBtn = PushButton()
+        self.subTextColorBtn.setFixedSize(30, 30)
+        self.subTextColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.subTextColorBtn.clicked.connect(self.choose_sub_text_color)
+        colorsInner.addWidget(self.subTextColorBtn)
+        colorsRow.addLayout(colorsInner)
+        colorsInner2 = QVBoxLayout()
+        colorsInner2.setSpacing(4)
         self.bgColorLabel = CaptionLabel(tr('bg_color_sub'))
-        bgColorLayout.addWidget(self.bgColorLabel)
-        self.subBgColorCombo = QComboBox()
-        bg_colors = [
-            ('color_black', 'Black'),
-            ('color_dark_grey', 'Dark Grey'),
-            ('color_navy_blue', 'Navy Blue'),
-            ('color_none', 'None')
-        ]
-        for key, val in bg_colors:
-            self.subBgColorCombo.addItem(tr(key), val)
-        
-        default_bg_color = self.config.get('subtitle_bg_color', 'Black')
-        idx = self.subBgColorCombo.findData(default_bg_color)
-        if idx != -1:
-            self.subBgColorCombo.setCurrentIndex(idx)
-        self.subBgColorCombo.currentIndexChanged.connect(self.on_sub_bg_color_changed)
-        bgColorLayout.addWidget(self.subBgColorCombo)
-        self.subtitleInnerLayout.addLayout(bgColorLayout)
+        colorsInner2.addWidget(self.bgColorLabel)
+        self.subBgColorBtn = PushButton()
+        self.subBgColorBtn.setFixedSize(30, 30)
+        self.subBgColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.subBgColorBtn.clicked.connect(self.choose_sub_bg_color)
+        colorsInner2.addWidget(self.subBgColorBtn)
+        colorsRow.addLayout(colorsInner2)
+        colorsRow.addStretch(1)
+        self.subtitleInnerLayout.addLayout(colorsRow)
 
         # 7. Background Opacity
         bgOpacityLayout = QVBoxLayout()
@@ -251,25 +229,11 @@ class SubtitleSidebarUIMixin:
         outlineColorLayout.setSpacing(4)
         self.outlineColorLabel = CaptionLabel(tr('sub_outline_color'))
         outlineColorLayout.addWidget(self.outlineColorLabel)
-        self.subOutlineColorCombo = QComboBox()
-        sub_colors = [
-            ('color_black', 'Black'),
-            ('color_dark_grey', 'Dark Grey'),
-            ('color_white', 'White'),
-            ('color_yellow', 'Yellow'),
-            ('color_cyan', 'Cyan'),
-            ('color_green', 'Green'),
-            ('color_magenta', 'Magenta'),
-            ('color_red', 'Red')
-        ]
-        for key, val in sub_colors:
-            self.subOutlineColorCombo.addItem(tr(key), val)
-        default_outline_color = self.config.get('subtitle_outline_color', 'Black')
-        idx = self.subOutlineColorCombo.findData(default_outline_color)
-        if idx != -1:
-            self.subOutlineColorCombo.setCurrentIndex(idx)
-        self.subOutlineColorCombo.currentIndexChanged.connect(self.on_sub_outline_color_changed)
-        outlineColorLayout.addWidget(self.subOutlineColorCombo)
+        self.subOutlineColorBtn = PushButton()
+        self.subOutlineColorBtn.setFixedSize(30, 30)
+        self.subOutlineColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.subOutlineColorBtn.clicked.connect(self.choose_sub_outline_color)
+        outlineColorLayout.addWidget(self.subOutlineColorBtn)
         self.subtitleInnerLayout.addLayout(outlineColorLayout)
 
         # --- SUBTITLE DROP SHADOW SETTINGS ---
@@ -381,15 +345,11 @@ class SubtitleSidebarUIMixin:
         shadowColorLayout.setSpacing(4)
         self.shadowColorLabel = CaptionLabel(tr('sub_shadow_color'))
         shadowColorLayout.addWidget(self.shadowColorLabel)
-        self.subShadowColorCombo = QComboBox()
-        for key, val in sub_colors:
-            self.subShadowColorCombo.addItem(tr(key), val)
-        default_shadow_color = self.config.get('subtitle_shadow_color', 'Black')
-        idx = self.subShadowColorCombo.findData(default_shadow_color)
-        if idx != -1:
-            self.subShadowColorCombo.setCurrentIndex(idx)
-        self.subShadowColorCombo.currentIndexChanged.connect(self.on_sub_shadow_color_changed)
-        shadowColorLayout.addWidget(self.subShadowColorCombo)
+        self.subShadowColorBtn = PushButton()
+        self.subShadowColorBtn.setFixedSize(30, 30)
+        self.subShadowColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.subShadowColorBtn.clicked.connect(self.choose_sub_shadow_color)
+        shadowColorLayout.addWidget(self.subShadowColorBtn)
         self.subtitleInnerLayout.addLayout(shadowColorLayout)
 
         # --- SUBTITLE POSITION OFFSET SETTINGS ---

@@ -458,16 +458,6 @@ class GlobalSettingsLocaleManagerMixin:
             self.styleTitleLabel.setText(tr('drawing_settings'))
         if hasattr(self, 'timingTitleLabel'):
             self.timingTitleLabel.setText(tr('sync_title'))
-        if hasattr(self, 'subTextColorCombo'):
-            color_keys = ['color_white', 'color_yellow', 'color_cyan', 'color_green', 'color_magenta', 'color_red']
-            for i, key in enumerate(color_keys):
-                if i < self.subTextColorCombo.count():
-                    self.subTextColorCombo.setItemText(i, tr(key))
-        if hasattr(self, 'subBgColorCombo'):
-            bg_keys = ['color_black', 'color_dark_grey', 'color_navy_blue', 'color_none']
-            for i, key in enumerate(bg_keys):
-                if i < self.subBgColorCombo.count():
-                    self.subBgColorCombo.setItemText(i, tr(key))
         if hasattr(self, 'trackLabel'):
             self.trackLabel.setText(tr('track'))
         if hasattr(self, 'fontFamilyLabel'):
@@ -489,11 +479,6 @@ class GlobalSettingsLocaleManagerMixin:
             self.outlineWidthLabel.setText(tr('sub_outline_width'))
         if hasattr(self, 'outlineColorLabel'):
             self.outlineColorLabel.setText(tr('sub_outline_color'))
-        if hasattr(self, 'subOutlineColorCombo'):
-            outline_color_keys = ['color_black', 'color_dark_grey', 'color_white', 'color_yellow', 'color_cyan', 'color_green', 'color_magenta', 'color_red']
-            for i, key in enumerate(outline_color_keys):
-                if i < self.subOutlineColorCombo.count():
-                    self.subOutlineColorCombo.setItemText(i, tr(key))
         if hasattr(self, 'shadowEnableLabel'):
             self.shadowEnableLabel.setText(tr('sub_shadow_enabled'))
         if hasattr(self, 'subShadowToggle'):
@@ -507,11 +492,6 @@ class GlobalSettingsLocaleManagerMixin:
             self.shadowDyLabel.setText(tr('sub_shadow_dy'))
         if hasattr(self, 'shadowColorLabel'):
             self.shadowColorLabel.setText(tr('sub_shadow_color'))
-        if hasattr(self, 'subShadowColorCombo'):
-            shadow_color_keys = ['color_black', 'color_dark_grey', 'color_white', 'color_yellow', 'color_cyan', 'color_green', 'color_magenta', 'color_red']
-            for i, key in enumerate(shadow_color_keys):
-                if i < self.subShadowColorCombo.count():
-                    self.subShadowColorCombo.setItemText(i, tr(key))
         if hasattr(self, 'positionTitleLabel'):
             self.positionTitleLabel.setText(tr('subtitle_position'))
         if hasattr(self, 'vOffsetLabel'):

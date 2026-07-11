@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel, QFileDialog
+from PyQt6.QtWidgets import QLabel, QFileDialog, QColorDialog
 from PyQt6.QtGui import QColor, QPainter, QFont
 from translations import tr
 from utils import parse_subtitle_file, get_embedded_subtitles_info, extract_embedded_subtitle, parse_srt
@@ -108,6 +108,26 @@ class SubtitleMixin:
         self.subtitleLabel.hide()
         
         self.update_sub_style()
+        self._update_sub_color_btns()
+
+    def _resolve_color(self, name_or_hex, default='#ffffff'):
+        if name_or_hex.startswith('#'):
+            return name_or_hex
+        color_map = {
+            'White': '#ffffff', 'Yellow': '#ffff00', 'Cyan': '#00ffff',
+            'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000',
+            'Black': '#000000', 'Dark Grey': '#222222', 'Navy Blue': '#000080'
+        }
+        return color_map.get(name_or_hex, default)
+
+    def _resolve_bg_rgb(self, name_or_hex):
+        if name_or_hex.startswith('#'):
+            c = QColor(name_or_hex)
+            return f"{c.red()}, {c.green()}, {c.blue()}"
+        bg_map = {
+            'Black': '0, 0, 0', 'Dark Grey': '34, 34, 34', 'Navy Blue': '0, 0, 128'
+        }
+        return bg_map.get(name_or_hex, '0, 0, 0')
 
     def update_sub_style(self):
         if not hasattr(self, 'subtitleLabel'):
@@ -115,26 +135,13 @@ class SubtitleMixin:
             
         font_family = self.config.get('subtitle_font_family', 'Segoe UI')
         font_size = self.config.get('subtitle_font_size', 24)
-        text_color_name = self.config.get('subtitle_text_color', 'White')
-        bg_color_name = self.config.get('subtitle_bg_color', 'Black')
+        text_color_name = self.config.get('subtitle_text_color', '#ffffff')
+        bg_color_name = self.config.get('subtitle_bg_color', '#000000')
         opacity = self.config.get('subtitle_bg_opacity', 60)
 
-        color_map = {
-            'White': '#ffffff', 'Yellow': '#ffff00', 'Cyan': '#00ffff',
-            'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000',
-            'Black': '#000000', 'Dark Grey': '#222222', 'Navy Blue': '#000080'
-        }
-        bg_map = {
-            'Black': '0, 0, 0', 'Dark Grey': '34, 34, 34', 'Navy Blue': '0, 0, 128'
-        }
-
-        color_hex = color_map.get(text_color_name, '#ffffff')
-        
-        if bg_color_name == 'None':
-            bg_style = "background-color: transparent;"
-        else:
-            rgb = bg_map.get(bg_color_name, '0, 0, 0')
-            bg_style = f"background-color: rgba({rgb}, {opacity / 100.0});"
+        color_hex = self._resolve_color(text_color_name, '#ffffff')
+        rgb = self._resolve_bg_rgb(bg_color_name)
+        bg_style = f"background-color: rgba({rgb}, {opacity / 100.0});"
 
         style = f"""
             QLabel {{
@@ -158,8 +165,8 @@ class SubtitleMixin:
         # Apply outline styling
         outline_enabled = self.config.get('subtitle_outline_enabled', False)
         outline_width = self.config.get('subtitle_outline_width', 2)
-        outline_color_name = self.config.get('subtitle_outline_color', 'Black')
-        outline_color_hex = color_map.get(outline_color_name, '#000000')
+        outline_color_name = self.config.get('subtitle_outline_color', '#000000')
+        outline_color_hex = self._resolve_color(outline_color_name, '#000000')
         self.subtitleLabel.setOutline(outline_enabled, QColor(outline_color_hex), outline_width)
         
         # Apply drop shadow graphics effect
@@ -169,8 +176,8 @@ class SubtitleMixin:
             shadow_blur = self.config.get('subtitle_shadow_blur', 5)
             shadow_dx = self.config.get('subtitle_shadow_dx', 2)
             shadow_dy = self.config.get('subtitle_shadow_dy', 2)
-            shadow_color_name = self.config.get('subtitle_shadow_color', 'Black')
-            shadow_color_hex = color_map.get(shadow_color_name, '#000000')
+            shadow_color_name = self.config.get('subtitle_shadow_color', '#000000')
+            shadow_color_hex = self._resolve_color(shadow_color_name, '#000000')
             
             effect = QGraphicsDropShadowEffect(self)
             effect.setBlurRadius(shadow_blur)
@@ -402,21 +409,71 @@ class SubtitleMixin:
         self.config.save()
         self.update_sub_style()
 
-    def on_sub_text_color_changed(self, idx):
-        color = self.subTextColorCombo.itemData(idx)
-        if not color:
-            color = self.subTextColorCombo.itemText(idx)
-        self.config['subtitle_text_color'] = color
-        self.config.save()
-        self.update_sub_style()
+    def choose_sub_text_color(self):
+        current = self.config.get('subtitle_text_color', '#ffffff')
+        if current.startswith('#'):
+            current_color = QColor(current)
+        else:
+            current_color = QColor(self._resolve_color(current, '#ffffff'))
+        color = QColorDialog.getColor(current_color, self, tr('select_color'))
+        if color.isValid():
+            self.config['subtitle_text_color'] = color.name()
+            self.config.save()
+            self._update_sub_color_btns()
+            self.update_sub_style()
 
-    def on_sub_bg_color_changed(self, idx):
-        color = self.subBgColorCombo.itemData(idx)
-        if not color:
-            color = self.subBgColorCombo.itemText(idx)
-        self.config['subtitle_bg_color'] = color
-        self.config.save()
-        self.update_sub_style()
+    def choose_sub_bg_color(self):
+        current = self.config.get('subtitle_bg_color', '#000000')
+        if current.startswith('#'):
+            current_color = QColor(current)
+        else:
+            current_color = QColor(self._resolve_color(current, '#000000'))
+        color = QColorDialog.getColor(current_color, self, tr('select_color'))
+        if color.isValid():
+            self.config['subtitle_bg_color'] = color.name()
+            self.config.save()
+            self._update_sub_color_btns()
+            self.update_sub_style()
+
+    def choose_sub_outline_color(self):
+        current = self.config.get('subtitle_outline_color', '#000000')
+        if current.startswith('#'):
+            current_color = QColor(current)
+        else:
+            current_color = QColor(self._resolve_color(current, '#000000'))
+        color = QColorDialog.getColor(current_color, self, tr('select_color'))
+        if color.isValid():
+            self.config['subtitle_outline_color'] = color.name()
+            self.config.save()
+            self._update_sub_color_btns()
+            self.update_sub_style()
+
+    def choose_sub_shadow_color(self):
+        current = self.config.get('subtitle_shadow_color', '#000000')
+        if current.startswith('#'):
+            current_color = QColor(current)
+        else:
+            current_color = QColor(self._resolve_color(current, '#000000'))
+        color = QColorDialog.getColor(current_color, self, tr('select_color'))
+        if color.isValid():
+            self.config['subtitle_shadow_color'] = color.name()
+            self.config.save()
+            self._update_sub_color_btns()
+            self.update_sub_style()
+
+    def _update_sub_color_btns(self):
+        for attr, key, default in [
+            ('subTextColorBtn', 'subtitle_text_color', '#ffffff'),
+            ('subBgColorBtn', 'subtitle_bg_color', '#000000'),
+            ('subOutlineColorBtn', 'subtitle_outline_color', '#000000'),
+            ('subShadowColorBtn', 'subtitle_shadow_color', '#000000'),
+        ]:
+            if hasattr(self, attr):
+                val = self.config.get(key, default)
+                hex_c = self._resolve_color(val, default)
+                getattr(self, attr).setStyleSheet(
+                    f"QPushButton {{ background-color: {hex_c}; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; }}"
+                )
 
     def on_sub_opacity_slider_changed(self, val):
         self.subBgOpacitySpin.blockSignals(True)
@@ -523,14 +580,6 @@ class SubtitleMixin:
         self.config.save()
         self.update_sub_style()
 
-    def on_sub_outline_color_changed(self, idx):
-        color = self.subOutlineColorCombo.itemData(idx)
-        if not color:
-            color = self.subOutlineColorCombo.itemText(idx)
-        self.config['subtitle_outline_color'] = color
-        self.config.save()
-        self.update_sub_style()
-
     def on_sub_shadow_changed(self, checked):
         self.config['subtitle_shadow_enabled'] = checked
         self.config.save()
@@ -548,14 +597,6 @@ class SubtitleMixin:
 
     def on_sub_shadow_dy_changed(self, val):
         self.config['subtitle_shadow_dy'] = val
-        self.config.save()
-        self.update_sub_style()
-
-    def on_sub_shadow_color_changed(self, idx):
-        color = self.subShadowColorCombo.itemData(idx)
-        if not color:
-            color = self.subShadowColorCombo.itemText(idx)
-        self.config['subtitle_shadow_color'] = color
         self.config.save()
         self.update_sub_style()
 

@@ -4,6 +4,28 @@ from PyQt6.QtGui import QPainter, QFont, QColor
 
 class SubtitleRenderer:
     """Handles rendering of subtitles onto a QPainter viewport."""
+
+    _COLOR_MAP = {
+        'White': '#ffffff', 'Yellow': '#ffff00', 'Cyan': '#00ffff',
+        'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000',
+        'Black': '#000000', 'Dark Grey': '#222222', 'Navy Blue': '#000080'
+    }
+
+    @staticmethod
+    def _resolve(name_or_hex, default='#ffffff'):
+        if name_or_hex.startswith('#'):
+            return name_or_hex
+        return SubtitleRenderer._COLOR_MAP.get(name_or_hex, default)
+
+    @staticmethod
+    def _resolve_bg_rgb(name_or_hex):
+        if name_or_hex.startswith('#'):
+            c = QColor(name_or_hex)
+            return (c.red(), c.green(), c.blue())
+        bg_map = {
+            'Black': (0, 0, 0), 'Dark Grey': (34, 34, 34), 'Navy Blue': (0, 0, 128)
+        }
+        return bg_map.get(name_or_hex, (0, 0, 0))
     
     @staticmethod
     def draw_subtitles(painter: QPainter, active_text: str, viewport_w: int, viewport_h: int, win: Any) -> None:
@@ -61,34 +83,24 @@ class SubtitleRenderer:
         text_rect = QRectF(block_x + padding_h, block_y + padding_v, text_w, text_h)
 
         # Draw background
-        bg_color_name = win.config.get('subtitle_bg_color', 'Black')
-        if bg_color_name != 'None':
-            bg_map = {
-                'Black': (0, 0, 0), 'Dark Grey': (34, 34, 34), 'Navy Blue': (0, 0, 128)
-            }
-            rgb = bg_map.get(bg_color_name, (0, 0, 0))
-            opacity = win.config.get('subtitle_bg_opacity', 60) # 0 to 100
-            bg_color = QColor(rgb[0], rgb[1], rgb[2], int(255 * (opacity / 100.0)))
-            
-            painter.setBrush(bg_color)
-            painter.setPen(Qt.PenStyle.NoPen)
-            # Draw rounded rect with border-radius 6px
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-            painter.drawRoundedRect(block_rect, 6.0, 6.0)
-
-        color_map = {
-            'White': '#ffffff', 'Yellow': '#ffff00', 'Cyan': '#00ffff',
-            'Green': '#00ff00', 'Magenta': '#ff00ff', 'Red': '#ff0000',
-            'Black': '#000000', 'Dark Grey': '#222222', 'Navy Blue': '#000080'
-        }
+        bg_color_val = win.config.get('subtitle_bg_color', '#000000')
+        rgb = SubtitleRenderer._resolve_bg_rgb(bg_color_val)
+        opacity = win.config.get('subtitle_bg_opacity', 60) # 0 to 100
+        bg_color = QColor(rgb[0], rgb[1], rgb[2], int(255 * (opacity / 100.0)))
+        
+        painter.setBrush(bg_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        # Draw rounded rect with border-radius 6px
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.drawRoundedRect(block_rect, 6.0, 6.0)
 
         # Draw shadow
         shadow_enabled = win.config.get('subtitle_shadow_enabled', False)
         if shadow_enabled:
             shadow_dx = win.config.get('subtitle_shadow_dx', 2)
             shadow_dy = win.config.get('subtitle_shadow_dy', 2)
-            shadow_color_name = win.config.get('subtitle_shadow_color', 'Black')
-            shadow_color_hex = color_map.get(shadow_color_name, '#000000')
+            shadow_color_val = win.config.get('subtitle_shadow_color', '#000000')
+            shadow_color_hex = SubtitleRenderer._resolve(shadow_color_val, '#000000')
             shadow_color = QColor(shadow_color_hex)
             
             painter.setPen(shadow_color)
@@ -98,8 +110,8 @@ class SubtitleRenderer:
         outline_enabled = win.config.get('subtitle_outline_enabled', False)
         if outline_enabled:
             outline_width = win.config.get('subtitle_outline_width', 2)
-            outline_color_name = win.config.get('subtitle_outline_color', 'Black')
-            outline_color_hex = color_map.get(outline_color_name, '#000000')
+            outline_color_val = win.config.get('subtitle_outline_color', '#000000')
+            outline_color_hex = SubtitleRenderer._resolve(outline_color_val, '#000000')
             outline_color = QColor(outline_color_hex)
             
             painter.setPen(outline_color)
@@ -112,8 +124,8 @@ class SubtitleRenderer:
                         painter.drawText(text_rect.translated(dx, dy), flags, active_text)
 
         # Draw foreground text on top
-        text_color_name = win.config.get('subtitle_text_color', 'White')
-        text_color_hex = color_map.get(text_color_name, '#ffffff')
+        text_color_val = win.config.get('subtitle_text_color', '#ffffff')
+        text_color_hex = SubtitleRenderer._resolve(text_color_val, '#ffffff')
         painter.setPen(QColor(text_color_hex))
         painter.drawText(text_rect, flags, active_text)
 

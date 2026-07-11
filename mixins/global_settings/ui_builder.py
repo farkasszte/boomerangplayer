@@ -253,17 +253,17 @@ class GlobalSettingsUiBuilderMixin:
             'enable_subtitles': DEFAULT_CONFIG.get('enable_subtitles', True),
             'subtitle_font_family': DEFAULT_CONFIG.get('subtitle_font_family', 'Segoe UI'),
             'subtitle_font_size': DEFAULT_CONFIG.get('subtitle_font_size', 24),
-            'subtitle_text_color': DEFAULT_CONFIG.get('subtitle_text_color', 'White'),
-            'subtitle_bg_color': DEFAULT_CONFIG.get('subtitle_bg_color', 'Black'),
+            'subtitle_text_color': DEFAULT_CONFIG.get('subtitle_text_color', '#ffffff'),
+            'subtitle_bg_color': DEFAULT_CONFIG.get('subtitle_bg_color', '#000000'),
             'subtitle_bg_opacity': DEFAULT_CONFIG.get('subtitle_bg_opacity', 60),
             'subtitle_outline_enabled': DEFAULT_CONFIG.get('subtitle_outline_enabled', False),
             'subtitle_outline_width': DEFAULT_CONFIG.get('subtitle_outline_width', 2),
-            'subtitle_outline_color': DEFAULT_CONFIG.get('subtitle_outline_color', 'Black'),
+            'subtitle_outline_color': DEFAULT_CONFIG.get('subtitle_outline_color', '#000000'),
             'subtitle_shadow_enabled': DEFAULT_CONFIG.get('subtitle_shadow_enabled', False),
             'subtitle_shadow_blur': DEFAULT_CONFIG.get('subtitle_shadow_blur', 5),
             'subtitle_shadow_dx': DEFAULT_CONFIG.get('subtitle_shadow_dx', 2),
             'subtitle_shadow_dy': DEFAULT_CONFIG.get('subtitle_shadow_dy', 2),
-            'subtitle_shadow_color': DEFAULT_CONFIG.get('subtitle_shadow_color', 'Black'),
+            'subtitle_shadow_color': DEFAULT_CONFIG.get('subtitle_shadow_color', '#000000'),
             'subtitle_v_offset': DEFAULT_CONFIG.get('subtitle_v_offset', 5),
             'subtitle_h_offset': DEFAULT_CONFIG.get('subtitle_h_offset', 0),
             'subtitle_offset': DEFAULT_CONFIG.get('subtitle_offset', 0),
@@ -378,18 +378,12 @@ class GlobalSettingsUiBuilderMixin:
             self.subFontSizeSlider.blockSignals(True)
             self.subFontSizeSlider.setValue(factories['subtitle_font_size'])
             self.subFontSizeSlider.blockSignals(False)
-        if hasattr(self, 'subTextColorCombo'):
-            self.subTextColorCombo.blockSignals(True)
-            idx = self.subTextColorCombo.findData(factories['subtitle_text_color'])
-            if idx != -1:
-                self.subTextColorCombo.setCurrentIndex(idx)
-            self.subTextColorCombo.blockSignals(False)
-        if hasattr(self, 'subBgColorCombo'):
-            self.subBgColorCombo.blockSignals(True)
-            idx = self.subBgColorCombo.findData(factories['subtitle_bg_color'])
-            if idx != -1:
-                self.subBgColorCombo.setCurrentIndex(idx)
-            self.subBgColorCombo.blockSignals(False)
+        if hasattr(self, 'subTextColorBtn'):
+            self.config['subtitle_text_color'] = factories['subtitle_text_color']
+        if hasattr(self, 'subBgColorBtn'):
+            self.config['subtitle_bg_color'] = factories['subtitle_bg_color']
+        if hasattr(self, '_update_sub_color_btns'):
+            self._update_sub_color_btns()
         if hasattr(self, 'subBgOpacitySpin'):
             self.subBgOpacitySpin.blockSignals(True)
             self.subBgOpacitySpin.setValue(factories['subtitle_bg_opacity'])
@@ -410,12 +404,8 @@ class GlobalSettingsUiBuilderMixin:
             self.subOutlineWidthSlider.blockSignals(True)
             self.subOutlineWidthSlider.setValue(factories['subtitle_outline_width'])
             self.subOutlineWidthSlider.blockSignals(False)
-        if hasattr(self, 'subOutlineColorCombo'):
-            self.subOutlineColorCombo.blockSignals(True)
-            idx = self.subOutlineColorCombo.findData(factories['subtitle_outline_color'])
-            if idx != -1:
-                self.subOutlineColorCombo.setCurrentIndex(idx)
-            self.subOutlineColorCombo.blockSignals(False)
+        if hasattr(self, 'subOutlineColorBtn'):
+            self.config['subtitle_outline_color'] = factories['subtitle_outline_color']
         if hasattr(self, 'subShadowToggle'):
             self.subShadowToggle.blockSignals(True)
             self.subShadowToggle.setChecked(factories['subtitle_shadow_enabled'])
@@ -444,12 +434,8 @@ class GlobalSettingsUiBuilderMixin:
             self.subShadowDySlider.blockSignals(True)
             self.subShadowDySlider.setValue(factories['subtitle_shadow_dy'])
             self.subShadowDySlider.blockSignals(False)
-        if hasattr(self, 'subShadowColorCombo'):
-            self.subShadowColorCombo.blockSignals(True)
-            idx = self.subShadowColorCombo.findData(factories['subtitle_shadow_color'])
-            if idx != -1:
-                self.subShadowColorCombo.setCurrentIndex(idx)
-            self.subShadowColorCombo.blockSignals(False)
+        if hasattr(self, 'subShadowColorBtn'):
+            self.config['subtitle_shadow_color'] = factories['subtitle_shadow_color']
         if hasattr(self, 'subVOffsetSpin'):
             self.subVOffsetSpin.blockSignals(True)
             self.subVOffsetSpin.setValue(factories['subtitle_v_offset'])
