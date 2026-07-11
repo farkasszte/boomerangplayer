@@ -294,6 +294,37 @@ class MediaFileDialog(QDialog):
         self._path_bar.setMinimumWidth(200)
         lay.addWidget(self._path_bar, 1)
 
+        # Style definition for round edge buttons
+        inverse_text = self._config.get('inverse_text', False)
+        bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
+        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+        
+        def hex_to_rgb(hex_str):
+            hex_str = hex_str.lstrip('#')
+            return ",".join([str(int(hex_str[i:i+2], 16)) for i in (0, 2, 4)])
+            
+        btn_style = f"""
+            ToolButton {{
+                border: 1px solid {c['bdr']};
+                border-radius: 4px;
+                background: {bg_translucent};
+                color: {c['fg']};
+                min-width: 32px;
+                min-height: 32px;
+            }}
+            ToolButton:hover {{
+                background: {c['hov']};
+            }}
+            ToolButton:pressed {{
+                background: {bg_pressed};
+            }}
+            ToolButton:checked {{
+                background: rgba({hex_to_rgb(c['accent'])}, 0.15);
+                border: 1px solid {c['accent']};
+                color: {c['accent']};
+            }}
+        """
+
         for icon, handler, tip in [
             (FluentIcon.LEFT_ARROW, self._go_back, tr('go_back')),
             (FluentIcon.RIGHT_ARROW, self._go_forward, tr('go_forward')),
@@ -305,14 +336,14 @@ class MediaFileDialog(QDialog):
             btn = ToolButton(icon)
             btn.setFixedSize(32, 32)
             btn.setToolTip(tip)
-            btn.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: none; }")
+            btn.setStyleSheet(btn_style)
             btn.clicked.connect(handler)
             lay.addWidget(btn)
 
         lock_btn = ToolButton(FluentIcon.FOLDER)
         lock_btn.setFixedSize(32, 32)
         lock_btn.setToolTip(tr('set_default_folder'))
-        lock_btn.setStyleSheet(COMPACT_BTN_STYLE + "ToolButton { border-right: none; }")
+        lock_btn.setStyleSheet(btn_style)
         lock_btn.clicked.connect(self._set_default)
         lay.addWidget(lock_btn)
 
@@ -325,7 +356,7 @@ class MediaFileDialog(QDialog):
             btn.setFixedSize(32, 32)
             btn.setCheckable(True)
             btn.setToolTip(tr(f'{mode}_view'))
-            btn.setStyleSheet(COMPACT_BTN_STYLE)
+            btn.setStyleSheet(btn_style)
             btn.clicked.connect(lambda _=None, m=mode: self._set_view(m))
             self._view_btns[mode] = btn
             lay.addWidget(btn)

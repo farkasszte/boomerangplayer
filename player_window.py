@@ -88,7 +88,6 @@ class PlayerWindow(
         # Target the top-level window directly to avoid cascading
         self.setStyleSheet(f"PlayerWindow {{ background-color: {self.config.get('bg_color', '#202020')}; }}")
         
-        self.setContentsMargins(0, 0, 0, 0)
         self.widgetLayout.setContentsMargins(0, 32, 0, 0)
 
         # Add a left margin to the logo by inserting spacing at the beginning of the layout (prevents squeezing)

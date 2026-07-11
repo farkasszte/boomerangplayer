@@ -154,6 +154,7 @@ class ControlsCardUIMixin:
 
         # Volume
         volumeContainer = QWidget()
+        volumeContainer.setFixedHeight(36)
         volumeContainerLayout = QHBoxLayout(volumeContainer)
         volumeContainerLayout.setContentsMargins(0, 0, 0, 0)
         volumeContainerLayout.setSpacing(8)

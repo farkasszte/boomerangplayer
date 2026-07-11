@@ -192,6 +192,18 @@ class SubtitleSidebarUIMixin:
         outlineHeader.addWidget(self.subOutlineToggle)
         self.subtitleInnerLayout.addLayout(outlineHeader)
 
+        # Outline Color
+        outlineColorLayout = QVBoxLayout()
+        outlineColorLayout.setSpacing(4)
+        self.outlineColorLabel = CaptionLabel(tr('sub_outline_color'))
+        outlineColorLayout.addWidget(self.outlineColorLabel)
+        self.subOutlineColorBtn = PushButton()
+        self.subOutlineColorBtn.setFixedSize(30, 30)
+        self.subOutlineColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.subOutlineColorBtn.clicked.connect(self.choose_sub_outline_color)
+        outlineColorLayout.addWidget(self.subOutlineColorBtn)
+        self.subtitleInnerLayout.addLayout(outlineColorLayout)
+
         # Outline thickness
         outlineWidthLayout = QVBoxLayout()
         outlineWidthLayout.setSpacing(4)
@@ -224,18 +236,6 @@ class SubtitleSidebarUIMixin:
         outlineWidthLayout.addWidget(self.subOutlineWidthSlider)
         self.subtitleInnerLayout.addLayout(outlineWidthLayout)
 
-        # Outline Color
-        outlineColorLayout = QVBoxLayout()
-        outlineColorLayout.setSpacing(4)
-        self.outlineColorLabel = CaptionLabel(tr('sub_outline_color'))
-        outlineColorLayout.addWidget(self.outlineColorLabel)
-        self.subOutlineColorBtn = PushButton()
-        self.subOutlineColorBtn.setFixedSize(30, 30)
-        self.subOutlineColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.subOutlineColorBtn.clicked.connect(self.choose_sub_outline_color)
-        outlineColorLayout.addWidget(self.subOutlineColorBtn)
-        self.subtitleInnerLayout.addLayout(outlineColorLayout)
-
         # --- SUBTITLE DROP SHADOW SETTINGS ---
         shadowHeader = QHBoxLayout()
         self.shadowEnableLabel = CaptionLabel(tr('sub_shadow_enabled'))
@@ -246,6 +246,18 @@ class SubtitleSidebarUIMixin:
         shadowHeader.addStretch(1)
         shadowHeader.addWidget(self.subShadowToggle)
         self.subtitleInnerLayout.addLayout(shadowHeader)
+
+        # Shadow Color
+        shadowColorLayout = QVBoxLayout()
+        shadowColorLayout.setSpacing(4)
+        self.shadowColorLabel = CaptionLabel(tr('sub_shadow_color'))
+        shadowColorLayout.addWidget(self.shadowColorLabel)
+        self.subShadowColorBtn = PushButton()
+        self.subShadowColorBtn.setFixedSize(30, 30)
+        self.subShadowColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.subShadowColorBtn.clicked.connect(self.choose_sub_shadow_color)
+        shadowColorLayout.addWidget(self.subShadowColorBtn)
+        self.subtitleInnerLayout.addLayout(shadowColorLayout)
 
         # Shadow Blur
         shadowBlurLayout = QVBoxLayout()
@@ -339,18 +351,6 @@ class SubtitleSidebarUIMixin:
         
         shadowDyLayout.addWidget(self.subShadowDySlider)
         self.subtitleInnerLayout.addLayout(shadowDyLayout)
-
-        # Shadow Color
-        shadowColorLayout = QVBoxLayout()
-        shadowColorLayout.setSpacing(4)
-        self.shadowColorLabel = CaptionLabel(tr('sub_shadow_color'))
-        shadowColorLayout.addWidget(self.shadowColorLabel)
-        self.subShadowColorBtn = PushButton()
-        self.subShadowColorBtn.setFixedSize(30, 30)
-        self.subShadowColorBtn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.subShadowColorBtn.clicked.connect(self.choose_sub_shadow_color)
-        shadowColorLayout.addWidget(self.subShadowColorBtn)
-        self.subtitleInnerLayout.addLayout(shadowColorLayout)
 
         # --- SUBTITLE POSITION OFFSET SETTINGS ---
         hlinePos = QFrame()
