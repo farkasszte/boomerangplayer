@@ -139,8 +139,9 @@ class _ThumbResizeFilter(QObject):
 
     def eventFilter(self, obj, event):
         if event.type() == event.Type.Resize and self._dlg_ref is not None:
-            self._ensure_fn(self._dlg_ref)
+            self._ensure_fn()
         return super().eventFilter(obj, event)
+
 
 
 # ── Main dialog class ────────────────────────────────────────────────────────

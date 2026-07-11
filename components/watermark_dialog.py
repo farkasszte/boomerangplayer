@@ -10,6 +10,25 @@ from styles import ACTION_BTN_STYLE, get_color_tokens
 from translations import tr
 
 
+def _apply_dwm(dialog, bg, fg):
+    import sys
+    if sys.platform != 'win32':
+        return
+    try:
+        import ctypes
+        from PyQt6.QtGui import QColor
+        hwnd = int(dialog.winId())
+        def _ref(c):
+            color = QColor(c)
+            return color.red() | (color.green() << 8) | (color.blue() << 16)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 35, ctypes.byref(ctypes.c_int(_ref(bg))), 4)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 36, ctypes.byref(ctypes.c_int(_ref(fg))), 4)
+    except Exception:
+        pass
+
+
 class WatermarkPropertiesDialog(QDialog):
     def __init__(self, item, parent=None):
         super().__init__(parent)
@@ -27,10 +46,12 @@ class WatermarkPropertiesDialog(QDialog):
         self.setWindowTitle(tr('watermark_properties'))
         self.setFixedWidth(300)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
+        _apply_dwm(self, t['bg'], t['fg'])
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(12)
+
         
         # Opacity Slider
         opacity_layout = QHBoxLayout()

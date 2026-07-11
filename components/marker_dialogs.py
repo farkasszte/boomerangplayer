@@ -112,6 +112,25 @@ class MarkerRowWidget(QWidget):
         self.parent_dialog.delete_marker(self.frame)
 
 
+def _apply_dwm(dialog, bg, fg):
+    import sys
+    if sys.platform != 'win32':
+        return
+    try:
+        import ctypes
+        from PyQt6.QtGui import QColor
+        hwnd = int(dialog.winId())
+        def _ref(c):
+            color = QColor(c)
+            return color.red() | (color.green() << 8) | (color.blue() << 16)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 35, ctypes.byref(ctypes.c_int(_ref(bg))), 4)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 36, ctypes.byref(ctypes.c_int(_ref(fg))), 4)
+    except Exception:
+        pass
+
+
 class MarkersDialog(QDialog):
     def __init__(self, parent_player):
         super().__init__(parent_player)
@@ -124,10 +143,12 @@ class MarkersDialog(QDialog):
         self.setWindowTitle(tr('markers_title'))
         self.setMinimumSize(420, 450)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
+        _apply_dwm(self, t['bg'], t['fg'])
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 15, 15, 15)
         self.layout.setSpacing(10)
+
 
         # List Widget
         self.listWidget = QListWidget()
@@ -273,9 +294,11 @@ class SaveFrameOptionsDialog(QDialog):
         self.setWindowTitle(tr('save_frame_options'))
         self.setMinimumSize(420, 320)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
+        _apply_dwm(self, t['bg'], t['fg'])
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
+
         self.layout.setSpacing(15)
 
         self.titleLabel = CaptionLabel(tr('save_frame_options'))
@@ -437,10 +460,12 @@ class SaveLoopOptionsDialog(QDialog):
         self.setWindowTitle(tr('save_loop_options'))
         self.setMinimumSize(450, 480)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
+        _apply_dwm(self, t['bg'], t['fg'])
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
         self.layout.setSpacing(15)
+
 
         # Main settings container
         settings_widget = QWidget()

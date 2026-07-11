@@ -20,6 +20,24 @@ class PlaylistCrudMixin:
         
         fg_color = "#1c1c1c" if inverse_text else "#ffffff"
         border_color = "rgba(0, 0, 0, 0.35)" if inverse_text else "rgba(255, 255, 255, 0.1)"
+        
+        # Apply Windows DWM title bar styling
+        import sys
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                from PyQt6.QtGui import QColor
+                hwnd = int(dialog.winId())
+                def _ref(c):
+                    color = QColor(c)
+                    return color.red() | (color.green() << 8) | (color.blue() << 16)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, 35, ctypes.byref(ctypes.c_int(_ref(bg_color))), 4)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, 36, ctypes.byref(ctypes.c_int(_ref(fg_color))), 4)
+            except Exception:
+                pass
+
         bg_button = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
         bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
         bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"

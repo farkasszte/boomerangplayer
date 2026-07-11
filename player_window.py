@@ -98,8 +98,10 @@ class PlayerWindow(
             self.titleBar.hBoxLayout.removeWidget(self.titleBar.titleLabel)
 
         # ---- Application state ----------------------------------------
+        self.active_skins_dialog = None
         self.currentFilePath = None
         self.currentVideoPath = None
+
         self.playlistData = load_markers()
         self.isPingPong = True
         self.isForward = True

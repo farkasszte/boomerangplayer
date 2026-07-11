@@ -403,14 +403,9 @@ class GlobalSettingsLocaleManagerMixin:
         if hasattr(self, 'gsResetDefaultsBtn') and self.gsResetDefaultsBtn:
             self.gsResetDefaultsBtn.setText(tr('default'))
 
-        
-        self.gsAccentBtn.setText(tr('accent_color'))
-        
-        self.gsBgBtn.setText(tr('bg_color'))
-        if hasattr(self, 'opacityTitleLabel') and self.opacityTitleLabel:
-            self.opacityTitleLabel.setText(tr('panel_opacity'))
-        if hasattr(self, 'opacitySlider') and self.opacitySlider:
-            self.opacitySlider.setToolTip(tr('tip_panel_opacity'))
+        if hasattr(self, 'gsSkinsBtn') and self.gsSkinsBtn:
+            self.gsSkinsBtn.setText(tr('skins'))
+
         
         if hasattr(self, 'zoomToLoopToggle') and self.zoomToLoopToggle:
             self.zoomToLoopToggle.setOnText(tr('on'))

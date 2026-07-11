@@ -193,7 +193,9 @@ class StyleUIMixin:
             """)
 
         # Update Global Settings Trigger buttons
-        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsAccentBtn', 'gsBgBtn', 'gsShortcutsBtn', 'gsFileInfoBtn', 'gsAboutBtn']
+        gs_btns = ['gsLangBtn', 'gsAudioBtn', 'gsSkinsBtn', 'gsShortcutsBtn', 'gsFileInfoBtn', 'gsAboutBtn']
+
+
         for btn_name in gs_btns:
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
@@ -317,3 +319,10 @@ class StyleUIMixin:
             for slider in self.eq_sliders:
                 if hasattr(slider, 'setAccentColor'):
                     slider.setAccentColor(accent_color)
+
+        if hasattr(self, 'active_skins_dialog') and self.active_skins_dialog:
+            try:
+                self.active_skins_dialog.refresh_dialog_styles()
+            except Exception:
+                pass
+

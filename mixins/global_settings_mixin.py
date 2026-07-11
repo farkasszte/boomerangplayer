@@ -8,6 +8,7 @@ from mixins.global_settings.locale_manager import GlobalSettingsLocaleManagerMix
 from mixins.global_settings.color_manager import GlobalSettingsColorManagerMixin
 from mixins.global_settings.shortcut_manager import GlobalSettingsShortcutManagerMixin
 from mixins.global_settings.gpu_manager import GlobalSettingsGpuManagerMixin
+from mixins.global_settings.skin_manager import GlobalSettingsSkinManagerMixin
 
 class GlobalSettingsMixin(
     GlobalSettingsUiBuilderMixin,
@@ -15,7 +16,9 @@ class GlobalSettingsMixin(
     GlobalSettingsLocaleManagerMixin,
     GlobalSettingsColorManagerMixin,
     GlobalSettingsShortcutManagerMixin,
-    GlobalSettingsGpuManagerMixin
+    GlobalSettingsGpuManagerMixin,
+    GlobalSettingsSkinManagerMixin
 ):
+
     """Builds self.globalSettingsContainer and handles all global settings logic."""
     pass
