@@ -657,5 +657,3 @@ class SettingsMixin(SettingsMixinBase):
             unlocked_color = '#1c1c1c' if self.config.get('inverse_text', False) else '#ffffff'
             self.speedLockBtn.setIcon(UNLOCK_ICON.icon(color=QColor(unlocked_color)))
             self.speedLockBtn.setToolTip(tr('tip_speed_unlocked'))
-
-

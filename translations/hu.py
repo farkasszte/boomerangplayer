@@ -126,7 +126,7 @@ TRANSLATIONS_HU = {
     'color_palette': 'Gyors paletta',
     'obj_eraser': 'Radír (O)',
     'area_eraser': 'Radír (A)',
-    'measure': 'Mérés / Vonalzó',
+    'measure': 'Mérés',
     
     # Tooltips
     'tip_add': 'Média hozzáadása vagy lista betöltése',

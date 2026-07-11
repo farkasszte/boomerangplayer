@@ -1,13 +1,19 @@
+import sys
+from typing import Any, Dict
+
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout
-from components import NoWheelSlider
-from qfluentwidgets import CaptionLabel, PushButton, SwitchButton, SingleDirectionScrollArea, BodyLabel
-from components import ShortcutButton
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout, QDialog
+from qfluentwidgets import CaptionLabel, PushButton, SwitchButton, SingleDirectionScrollArea, BodyLabel, InfoBar, InfoBarPosition, setTheme, Theme
+
+from components import NoWheelSlider, ShortcutButton
 from translations import tr
 from styles import ACTION_BTN_STYLE, get_color_tokens
 
+
 class GlobalSettingsUiBuilderMixin:
-    def init_global_settings_sidebar(self):
+    """Mixin class to build the global settings UI elements and handle setting resets."""
+
+    def init_global_settings_sidebar(self) -> None:
         t = get_color_tokens(
             self.config.get('accent_color', '#00f2ff'),
             self.config.get('bg_color', '#202020'),
@@ -20,11 +26,8 @@ class GlobalSettingsUiBuilderMixin:
         self.globalSettingsLayout.setContentsMargins(10, 10, 4, 10)
         self.globalSettingsLayout.setSpacing(6)
 
-        
         self.pending_accent_color = self.config.get('accent_color', '#00f2ff')
-        
         self.pending_bg_color = self.config.get('bg_color', '#202020')
-        
         self.pending_panel_opacity = self.config.get('panel_opacity', 100)
 
         self.globalSettingsTitle = CaptionLabel(tr('settings'))
@@ -43,43 +46,65 @@ class GlobalSettingsUiBuilderMixin:
         self.gsInnerLayout.setContentsMargins(0, 0, 0, 0)
         self.gsInnerLayout.setSpacing(10)
 
+        # Build individual UI sections
+        self._init_general_section(self.gsInnerLayout, t)
+        
+        # Horizontal divider
+        hline1 = QFrame()
+        hline1.setFrameShape(QFrame.Shape.HLine)
+        hline1.setFrameShadow(QFrame.Shadow.Sunken)
+        self.gsInnerLayout.addWidget(hline1)
+
+        self._init_playlist_section(self.gsInnerLayout, t)
+        
+        # Horizontal divider
+        hline2 = QFrame()
+        hline2.setFrameShape(QFrame.Shape.HLine)
+        hline2.setFrameShadow(QFrame.Shadow.Sunken)
+        self.gsInnerLayout.addWidget(hline2)
+
+        self._init_other_buttons(self.gsInnerLayout)
+
+        self.gsScrollArea.setWidget(self.gsScrollWidget)
+        self.globalSettingsLayout.addWidget(self.gsScrollArea)
+
+        # Bottom actions (Save and Reset Defaults)
+        self._init_bottom_buttons(self.globalSettingsLayout)
+
+        self.globalSettingsContainer.hide()
+
+    def _init_general_section(self, layout: QVBoxLayout, t: dict) -> None:
         self.gsGeneralLabel = CaptionLabel(tr('general'))
         self.gsGeneralLabel.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {t['sec_fg']};")
-        self.gsInnerLayout.addWidget(self.gsGeneralLabel)
+        layout.addWidget(self.gsGeneralLabel)
 
         self.gsLangBtn = PushButton()
-        
         self.gsLangBtn.clicked.connect(self.show_language_menu)
-        self.gsInnerLayout.addWidget(self.gsLangBtn)
+        layout.addWidget(self.gsLangBtn)
 
         self.gsAudioBtn = PushButton()
-        
         self.gsAudioBtn.clicked.connect(self.show_audio_menu)
-        self.gsInnerLayout.addWidget(self.gsAudioBtn)
+        layout.addWidget(self.gsAudioBtn)
 
         self.gsAccentBtn = PushButton()
-        
         self.gsAccentBtn.clicked.connect(self.choose_accent_color)
-        self.gsInnerLayout.addWidget(self.gsAccentBtn)
+        layout.addWidget(self.gsAccentBtn)
 
         self.gsBgBtn = PushButton()
-        
         self.gsBgBtn.clicked.connect(self.choose_bg_color)
-        self.gsInnerLayout.addWidget(self.gsBgBtn)
+        layout.addWidget(self.gsBgBtn)
 
         inverseTextRow = QHBoxLayout()
         self.inverseTextLabel = CaptionLabel(tr('inverse_text'))
         self.inverseTextToggle = SwitchButton()
-        
         self.inverseTextToggle.setChecked(self.config.get('inverse_text', False))
         self.inverseTextToggle.setOnText(tr('on'))
         self.inverseTextToggle.setOffText(tr('off'))
-        
         self.inverseTextToggle.checkedChanged.connect(self.on_inverse_text_changed)
         inverseTextRow.addWidget(self.inverseTextLabel)
         inverseTextRow.addStretch(1)
         inverseTextRow.addWidget(self.inverseTextToggle)
-        self.gsInnerLayout.addLayout(inverseTextRow)
+        layout.addLayout(inverseTextRow)
 
         opacityRow = QHBoxLayout()
         self.opacityTitleLabel = CaptionLabel(tr('panel_opacity'))
@@ -88,7 +113,7 @@ class GlobalSettingsUiBuilderMixin:
         opacityRow.addWidget(self.opacityTitleLabel)
         opacityRow.addStretch(1)
         opacityRow.addWidget(self.opacityValueLabel)
-        self.gsInnerLayout.addLayout(opacityRow)
+        layout.addLayout(opacityRow)
 
         self.opacitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
         self.opacitySlider.setRange(20, 100)
@@ -96,86 +121,64 @@ class GlobalSettingsUiBuilderMixin:
         self.opacitySlider.setPageStep(5)
         self.opacitySlider.setValue(self.pending_panel_opacity)
         self.opacitySlider.setToolTip(tr('tip_panel_opacity'))
-        
         self.opacitySlider.valueChanged.connect(self.on_panel_opacity_changed)
-        self.gsInnerLayout.addWidget(self.opacitySlider)
+        layout.addWidget(self.opacitySlider)
 
-
-
-        hline1 = QFrame()
-        hline1.setFrameShape(QFrame.Shape.HLine)
-        hline1.setFrameShadow(QFrame.Shadow.Sunken)
-        self.gsInnerLayout.addWidget(hline1)
-
+    def _init_playlist_section(self, layout: QVBoxLayout, t: dict) -> None:
         self.playlistSettingsTitle = CaptionLabel(tr('playlist'))
         self.playlistSettingsTitle.setStyleSheet(f"font-weight: bold; margin-top: 10px; color: {t['sec_fg']};")
-        self.gsInnerLayout.addWidget(self.playlistSettingsTitle)
+        layout.addWidget(self.playlistSettingsTitle)
 
         thumbRow = QHBoxLayout()
         self.thumbLabel = CaptionLabel(tr('show_thumbnails'))
         self.thumbToggle = SwitchButton()
-        
         self.thumbToggle.setChecked(self.config.get('show_thumbnails', True))
         self.thumbToggle.setOnText(tr('on'))
         self.thumbToggle.setOffText(tr('off'))
-        
         self.thumbToggle.checkedChanged.connect(self.on_thumb_toggle_changed)
         thumbRow.addWidget(self.thumbLabel)
         thumbRow.addStretch(1)
         thumbRow.addWidget(self.thumbToggle)
-        self.gsInnerLayout.addLayout(thumbRow)
+        layout.addLayout(thumbRow)
 
         fileNameRow = QHBoxLayout()
         self.fileNameLabel = CaptionLabel(tr('show_filenames'))
         self.fileNameToggle = SwitchButton()
-        
         self.fileNameToggle.setChecked(self.config.get('show_filenames', True))
         self.fileNameToggle.setOnText(tr('on'))
         self.fileNameToggle.setOffText(tr('off'))
-        
         self.fileNameToggle.checkedChanged.connect(self.on_filename_toggle_changed)
         fileNameRow.addWidget(self.fileNameLabel)
         fileNameRow.addStretch(1)
         fileNameRow.addWidget(self.fileNameToggle)
-        self.gsInnerLayout.addLayout(fileNameRow)
+        layout.addLayout(fileNameRow)
 
         sizeRow = QHBoxLayout()
         self.thumbSizeLabel = CaptionLabel(tr('thumbnail_size'))
         self.thumbSizeBtn = PushButton()
-        
         self.thumbSizeBtn.clicked.connect(self.show_thumb_size_menu)
         sizeRow.addWidget(self.thumbSizeLabel)
         sizeRow.addStretch(1)
         sizeRow.addWidget(self.thumbSizeBtn)
-        self.gsInnerLayout.addLayout(sizeRow)
+        layout.addLayout(sizeRow)
 
-        
         self.update_thumb_size_btn_text()
 
-        # (Reset defaults button moved to bottom next to save button)
-
-        hline2 = QFrame()
-        hline2.setFrameShape(QFrame.Shape.HLine)
-        hline2.setFrameShadow(QFrame.Shadow.Sunken)
-        self.gsInnerLayout.addWidget(hline2)
-
+    def _init_other_buttons(self, layout: QVBoxLayout) -> None:
         self.gsShortcutsBtn = PushButton()
         self.gsShortcutsBtn.clicked.connect(self.show_shortcuts_dialog)
-        self.gsInnerLayout.addWidget(self.gsShortcutsBtn)
+        layout.addWidget(self.gsShortcutsBtn)
 
         self.gsFileInfoBtn = PushButton()
         self.gsFileInfoBtn.clicked.connect(self.show_file_info)
-        self.gsInnerLayout.addWidget(self.gsFileInfoBtn)
+        layout.addWidget(self.gsFileInfoBtn)
 
         self.gsAboutBtn = PushButton()
         self.gsAboutBtn.clicked.connect(self.show_about_dialog)
-        self.gsInnerLayout.addWidget(self.gsAboutBtn)
-        self.gsInnerLayout.addStretch(1)
+        layout.addWidget(self.gsAboutBtn)
+        layout.addStretch(1)
 
-        self.gsScrollArea.setWidget(self.gsScrollWidget)
-        self.globalSettingsLayout.addWidget(self.gsScrollArea)
-
-        # Bottom buttons row (Default and Save side-by-side)
+    def _init_bottom_buttons(self, layout: QVBoxLayout) -> None:
         bottomButtonsLayout = QHBoxLayout()
         bottomButtonsLayout.setSpacing(8)
 
@@ -184,17 +187,14 @@ class GlobalSettingsUiBuilderMixin:
         self.gsResetDefaultsBtn.setStyleSheet(ACTION_BTN_STYLE)
 
         self.gsSaveBtn = PushButton(tr('save'))
-        
         self.gsSaveBtn.clicked.connect(self.save_global_settings)
         self.gsSaveBtn.setStyleSheet(ACTION_BTN_STYLE)
 
         bottomButtonsLayout.addWidget(self.gsResetDefaultsBtn)
         bottomButtonsLayout.addWidget(self.gsSaveBtn)
-        self.globalSettingsLayout.addLayout(bottomButtonsLayout)
+        layout.addLayout(bottomButtonsLayout)
 
-        self.globalSettingsContainer.hide()
-
-    def show_global_settings(self):
+    def show_global_settings(self) -> None:
         is_visible = self.globalSettingsContainer.isVisible()
         if not is_visible:
             self.settingsContainer.hide()
@@ -203,6 +203,7 @@ class GlobalSettingsUiBuilderMixin:
             if hasattr(self, 'subtitleContainer'):
                 self.subtitleContainer.hide()
         self.globalSettingsContainer.setVisible(not is_visible)
+        
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
 
@@ -224,11 +225,10 @@ class GlobalSettingsUiBuilderMixin:
 
             self.update_ui_texts()
 
-    def reset_all_defaults(self):
+    def reset_all_defaults(self) -> None:
         """Reset all settings to factory defaults: HW, GPU, accents, palette, shortcuts, playlist."""
         from utils import DEFAULT_CONFIG
 
-        # Factory default values
         factories = {
             'language': DEFAULT_CONFIG['language'],
             'audio_device': DEFAULT_CONFIG['audio_device'],
@@ -269,6 +269,38 @@ class GlobalSettingsUiBuilderMixin:
             'subtitle_offset': DEFAULT_CONFIG.get('subtitle_offset', 0),
         }
 
+        # Apply settings and state
+        self._reset_config_defaults(factories)
+        
+        # Reset UI Widgets grouped by feature
+        self._reset_playlist_defaults_ui(factories)
+        self._reset_audio_eq_defaults_ui(factories)
+        self._reset_subtitle_defaults_ui(factories)
+        self._reset_shortcut_defaults_ui(factories)
+        self._reset_theme_defaults_ui(factories)
+
+        # Refresh styles, palette, UI texts
+        if hasattr(self, 'refresh_custom_styles'):
+            self.refresh_custom_styles(
+                accent_color=factories['accent_color'],
+                bg_color=factories['bg_color']
+            )
+        if hasattr(self, 'update_palette_ui'):
+            self.update_palette_ui()
+        if hasattr(self, 'update_ui_texts'):
+            self.update_ui_texts()
+
+        InfoBar.success(
+            title=tr('settings'),
+            content=tr('reset_defaults_done'),
+            orient=Qt.Orientation.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self
+        )
+
+    def _reset_config_defaults(self, factories: dict) -> None:
         for key, val in factories.items():
             self.config[key] = val
 
@@ -277,7 +309,7 @@ class GlobalSettingsUiBuilderMixin:
         self.pending_panel_opacity = factories['panel_opacity']
         self.accent_color = factories['accent_color']
 
-        # ---- Update UI widgets ----
+    def _reset_playlist_defaults_ui(self, factories: dict) -> None:
         if hasattr(self, 'advancePlaylistToggle'):
             self.advancePlaylistToggle.blockSignals(True)
             self.advancePlaylistToggle.setChecked(factories['advance_playlist_after_loop'])
@@ -290,32 +322,6 @@ class GlobalSettingsUiBuilderMixin:
             self.loopCountSlider.blockSignals(True)
             self.loopCountSlider.setValue(factories['advance_playlist_loop_count'])
             self.loopCountSlider.blockSignals(False)
-
-        if hasattr(self, 'gsLangBtn'):
-            self.gsLangBtn.setText(tr('lang_en'))
-        if hasattr(self, 'gsAudioBtn'):
-            self.gsAudioBtn.setText(tr('default'))
-        if hasattr(self, 'gsAccentBtn'):
-            self.apply_accent_color(factories['accent_color'])
-        if hasattr(self, 'opacitySlider'):
-            self.opacitySlider.blockSignals(True)
-            self.opacitySlider.setValue(factories['panel_opacity'])
-            self.opacitySlider.blockSignals(False)
-        if hasattr(self, 'opacityValueLabel'):
-            self.opacityValueLabel.setText(f"{factories['panel_opacity']}%")
-        if hasattr(self, 'gsGPUToggle'):
-            self.gsGPUToggle.blockSignals(True)
-            self.gsGPUToggle.setChecked(False)
-            self.gsGPUToggle.blockSignals(False)
-        if hasattr(self, 'inverseTextToggle'):
-            self.inverseTextToggle.blockSignals(True)
-            self.inverseTextToggle.setChecked(False)
-            self.inverseTextToggle.blockSignals(False)
-        # Reset theme to dark when inverse_text is turned off
-        from qfluentwidgets import setTheme, Theme
-        setTheme(Theme.DARK)
-
-        # Playlist
         if hasattr(self, 'thumbToggle'):
             self.thumbToggle.blockSignals(True)
             self.thumbToggle.setChecked(True)
@@ -331,7 +337,7 @@ class GlobalSettingsUiBuilderMixin:
         if hasattr(self, '_update_playlist_list_stylesheet'):
             self._update_playlist_list_stylesheet()
 
-        # ---- Audio EQ ----
+    def _reset_audio_eq_defaults_ui(self, factories: dict) -> None:
         if hasattr(self, 'audioEqToggle'):
             self.audioEqToggle.blockSignals(True)
             self.audioEqToggle.setChecked(factories['audio_eq_enabled'])
@@ -353,7 +359,7 @@ class GlobalSettingsUiBuilderMixin:
         if hasattr(self, 'update_audio_presets_ui'):
             self.update_audio_presets_ui()
 
-        # ---- Subtitle settings ----
+    def _reset_subtitle_defaults_ui(self, factories: dict) -> None:
         if hasattr(self, 'subEnableToggle'):
             self.subEnableToggle.blockSignals(True)
             self.subEnableToggle.setChecked(factories['enable_subtitles'])
@@ -469,14 +475,13 @@ class GlobalSettingsUiBuilderMixin:
             self.subOffsetSlider.setValue(factories['subtitle_offset'])
             self.subOffsetSlider.blockSignals(False)
 
-        # ---- Reset shortcut buttons ----
-        from components import ShortcutButton
+    def _reset_shortcut_defaults_ui(self, factories: dict) -> None:
         dialog_btns = getattr(self, 'dialog_shortcut_buttons', None)
         for act in [
             'play_pause', 'smart_mark', 'toggle_loop', 'next_frame', 'prev_frame',
             'toggle_mute', 'act_full_screen', 'sub_delay_minus', 'sub_delay_plus'
         ]:
-            default_key = DEFAULT_CONFIG['shortcuts'].get(act, 0)
+            default_key = factories['shortcuts'].get(act, 0)
             self.config['shortcuts'][act] = default_key
             if dialog_btns and act in dialog_btns:
                 btn = dialog_btns[act]
@@ -485,29 +490,30 @@ class GlobalSettingsUiBuilderMixin:
         if hasattr(self, 'setup_shortcuts'):
             self.setup_shortcuts()
 
-        # ---- Refresh styles, palette, UI texts ----
-        if hasattr(self, 'refresh_custom_styles'):
-            self.refresh_custom_styles(
-                accent_color=factories['accent_color'],
-                bg_color=factories['bg_color']
-            )
-        if hasattr(self, 'update_palette_ui'):
-            self.update_palette_ui()
-        if hasattr(self, 'update_ui_texts'):
-            self.update_ui_texts()
+    def _reset_theme_defaults_ui(self, factories: dict) -> None:
+        if hasattr(self, 'gsLangBtn'):
+            self.gsLangBtn.setText(tr('lang_en'))
+        if hasattr(self, 'gsAudioBtn'):
+            self.gsAudioBtn.setText(tr('default'))
+        if hasattr(self, 'gsAccentBtn'):
+            self.apply_accent_color(factories['accent_color'])
+        if hasattr(self, 'opacitySlider'):
+            self.opacitySlider.blockSignals(True)
+            self.opacitySlider.setValue(factories['panel_opacity'])
+            self.opacitySlider.blockSignals(False)
+        if hasattr(self, 'opacityValueLabel'):
+            self.opacityValueLabel.setText(f"{factories['panel_opacity']}%")
+        if hasattr(self, 'gsGPUToggle'):
+            self.gsGPUToggle.blockSignals(True)
+            self.gsGPUToggle.setChecked(False)
+            self.gsGPUToggle.blockSignals(False)
+        if hasattr(self, 'inverseTextToggle'):
+            self.inverseTextToggle.blockSignals(True)
+            self.inverseTextToggle.setChecked(False)
+            self.inverseTextToggle.blockSignals(False)
+        setTheme(Theme.DARK)
 
-        from qfluentwidgets import InfoBar, InfoBarPosition
-        InfoBar.success(
-            title=tr('settings'),
-            content=tr('reset_defaults_done'),
-            orient=Qt.Orientation.Horizontal,
-            isClosable=True,
-            position=InfoBarPosition.TOP,
-            duration=3000,
-            parent=self
-        )
-
-    def toggle_settings(self):
+    def toggle_settings(self) -> None:
         is_visible = self.settingsContainer.isVisible()
         if not is_visible:
             self.globalSettingsContainer.hide()
@@ -526,38 +532,16 @@ class GlobalSettingsUiBuilderMixin:
                 sizes[1] = 250
                 self.mainSplitter.setSizes(sizes)
 
-    def show_shortcuts_dialog(self):
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QGridLayout, QHBoxLayout
-        from qfluentwidgets import BodyLabel, PushButton
-        from components import ShortcutButton
-        from styles import ACTION_BTN_STYLE, get_color_tokens
-        
+    def show_shortcuts_dialog(self) -> None:
         dialog = QDialog(self)
         if hasattr(self, 'style_dialog'):
             self.style_dialog(dialog)
         dialog.setWindowTitle(tr('playback_shortcuts'))
         dialog.setMinimumWidth(320)
         
-        # Apply Windows 11 title bar styling using DWM API
-        import sys
-        if sys.platform == 'win32':
-            try:
-                import ctypes
-                hwnd = int(dialog.winId())
-                bg_color = self.config.get('bg_color', '#202020')
-                from PyQt6.QtGui import QColor
-                def qcolor_to_colorref(qcolor):
-                    return qcolor.red() | (qcolor.green() << 8) | (qcolor.blue() << 16)
-                bg_color_ref = qcolor_to_colorref(QColor(bg_color))
-                # DWMWA_CAPTION_COLOR = 35 (Windows 11 Build 22000+)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd,
-                    35,
-                    ctypes.byref(ctypes.c_int(bg_color_ref)),
-                    4
-                )
-            except Exception as e:
-                print(f"[DWM] Failed to set shortcuts dialog title bar color: {e}")
+        # Apply Windows 11 title bar styling
+        bg_color = self.config.get('bg_color', '#202020')
+        self._apply_dialog_win11_style(dialog, bg_color)
                 
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(24, 24, 24, 20)
@@ -605,3 +589,26 @@ class GlobalSettingsUiBuilderMixin:
         
         dialog.exec()
         self.dialog_shortcut_buttons = None
+
+    @staticmethod
+    def _apply_dialog_win11_style(dialog: QDialog, bg_color: str) -> None:
+        """Applies Windows 11 DWM title bar styling to a QDialog on Windows platforms."""
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                from PyQt6.QtGui import QColor
+                hwnd = int(dialog.winId())
+                
+                # Convert QColor to COLORREF (0x00BBGGRR)
+                qcolor = QColor(bg_color)
+                bg_color_ref = qcolor.red() | (qcolor.green() << 8) | (qcolor.blue() << 16)
+                
+                # DWMWA_CAPTION_COLOR = 35 (Windows 11 Build 22000+)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    35,
+                    ctypes.byref(ctypes.c_int(bg_color_ref)),
+                    4
+                )
+            except Exception as e:
+                print(f"[DWM] Failed to set shortcuts dialog title bar color: {e}")

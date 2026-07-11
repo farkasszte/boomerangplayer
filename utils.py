@@ -841,8 +841,3 @@ def apply_software_adjustments(arr, b, c, g, s, hue_val, temp_val, exposure_mult
     # 7. Invert / Negative
     if invert_val > 0.5:
         arr[:, :, :3] = 255 - arr[:, :, :3]
-
-
-
-
-

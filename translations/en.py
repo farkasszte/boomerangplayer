@@ -125,7 +125,7 @@ TRANSLATIONS_EN = {
     'color_palette': 'Quick palette',
     'obj_eraser': 'Eraser (O)',
     'area_eraser': 'Eraser (A)',
-    'measure': 'Measure / Ruler',
+    'measure': 'Measure',
     
     # Tooltips
     'tip_add': 'Add media or load playlist',
