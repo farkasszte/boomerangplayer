@@ -29,12 +29,13 @@ class IPCSyncMixin:
         self.udp_socket.joinMulticastGroup(self.multicast_group)
         
         self.udp_socket.readyRead.connect(self.handle_incoming_sync)
-        print(f"[IPCSync] Bound UDP socket and joined multicast 239.255.43.21 on port 28357. Instance ID: {self.sync_instance_id}")
+        import logging
+        logging.getLogger("BoomerangPlayer").info(f"[IPCSync] Bound UDP socket and joined multicast 239.255.43.21 on port 28357. Instance ID: {self.sync_instance_id}")
         if hasattr(self, 'update_sync_lock_button_style'):
             self.update_sync_lock_button_style()
 
     def broadcast_sync_event(self, action, value=None):
-        if not getattr(self, 'isSyncLocked', True) or getattr(self, '_block_broadcast', False):
+        if not getattr(self, 'isSyncLocked', False) or getattr(self, '_block_broadcast', False):
             return
             
         payload = {
@@ -73,32 +74,43 @@ class IPCSyncMixin:
                 self.multicast_group, 
                 28357
             )
-            print(f"[IPCSync] Broadcasted force_frame_sync at frame: {payload['frame']}")
+            import logging
+            logging.getLogger("BoomerangPlayer").info(f"[IPCSync] Broadcasted force_frame_sync at frame: {payload['frame']}")
 
     def handle_incoming_sync(self):
         while self.udp_socket.hasPendingDatagrams():
-            datagram, host, port = self.udp_socket.readDatagram(
-                self.udp_socket.pendingDatagramSize()
-            )
+            size = self.udp_socket.pendingDatagramSize()
+            if size > 8192 or size < 2:
+                # Discard oversized or malformed datagrams
+                self.udp_socket.readDatagram(size)
+                continue
+
+            datagram, host, port = self.udp_socket.readDatagram(size)
             
             try:
-                # datagram is a bytes object in PyQt6
                 payload = json.loads(datagram.decode('utf-8'))
+                if not isinstance(payload, dict):
+                    raise ValueError("Datagram payload is not a JSON object")
             except Exception as e:
-                print(f"[IPCSync] Error decoding UDP datagram: {e}")
+                import logging
+                logging.getLogger("BoomerangPlayer").error(f"[IPCSync] Error decoding UDP datagram: {e}")
                 continue
                 
             sender_id = payload.get("sender_id")
             action = payload.get("action")
             value = payload.get("value")
             remote_frame = payload.get("frame", 0)
-            
+
+            # Schema validation
+            if not isinstance(sender_id, str) or not isinstance(action, str) or not isinstance(remote_frame, (int, float)):
+                continue
+                
             # 1. Ignore own echoed packets
             if sender_id == self.sync_instance_id:
                 continue
                 
             # 2. Ignore if sync lock is disabled locally
-            if not getattr(self, 'isSyncLocked', True):
+            if not getattr(self, 'isSyncLocked', False):
                 continue
                 
             # Block broadcast loop recursion
@@ -108,10 +120,12 @@ class IPCSyncMixin:
                 # 3. Synchronize Offset on seek/play/sync_state/sync_reply
                 if action in ["sync_state", "sync_reply"]:
                     self.sync_offset = getattr(self, 'current_cache_index', 0) - remote_frame
-                    print(f"[IPCSync] Offset synchronized via {action} to: {self.sync_offset} frames relative to remote")
+                    import logging
+                    logging.getLogger("BoomerangPlayer").info(f"[IPCSync] Offset synchronized via {action} to: {self.sync_offset} frames relative to remote")
                 elif action in ["seek", "play"] and self.sync_offset is None:
                     self.sync_offset = getattr(self, 'current_cache_index', 0) - remote_frame
-                    print(f"[IPCSync] Offset synchronized via {action} to: {self.sync_offset} frames relative to remote")
+                    import logging
+                    logging.getLogger("BoomerangPlayer").info(f"[IPCSync] Offset synchronized via {action} to: {self.sync_offset} frames relative to remote")
 
                 if action == "sync_state":
                     # Send our state back so the sender can establish theirs
@@ -178,6 +192,7 @@ class IPCSyncMixin:
                             self.set_position(target_frame)
 
             except Exception as e:
-                print(f"[IPCSync] Error processing action {action}: {e}")
+                import logging
+                logging.getLogger("BoomerangPlayer").error(f"[IPCSync] Error processing action {action}: {e}")
             finally:
                 self._block_broadcast = False

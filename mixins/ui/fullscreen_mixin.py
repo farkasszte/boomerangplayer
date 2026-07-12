@@ -13,8 +13,8 @@ class FullscreenUIMixin:
         # flag stays stale.  Detect the mismatch before toggling.
         actually_fs = bool(self.windowState() & Qt.WindowState.WindowFullScreen)
         if self.is_full_screen != actually_fs:
-            logger.warning(f"[fullscreen] Flag sync: is_full_screen was {self.is_full_screen}, "
-                           f"actual window state is fullscreen={actually_fs}. Correcting.")
+            logger.debug(f"[fullscreen] Flag sync: is_full_screen was {self.is_full_screen}, "
+                         f"actual window state is fullscreen={actually_fs}. Correcting.")
             self.is_full_screen = actually_fs
 
         self.is_full_screen = not self.is_full_screen
@@ -106,12 +106,12 @@ class FullscreenUIMixin:
                 has_pixmap = hasattr(self, 'pixmapItem') and self.pixmapItem and not self.pixmapItem.pixmap().isNull()
                 vw = self.view.viewport().width() if hasattr(self, 'view') else 0
                 vh = self.view.viewport().height() if hasattr(self, 'view') else 0
-                logger.warning(f"[DEBUG _refresh_fs] is_fs={self.is_full_screen}, has_pixmap={has_pixmap}, viewport={vw}x{vh}, zoom={getattr(self, 'zoomLevel', '?')}")
+                logger.debug(f"[DEBUG _refresh_fs] is_fs={self.is_full_screen}, has_pixmap={has_pixmap}, viewport={vw}x{vh}, zoom={getattr(self, 'zoomLevel', '?')}")
                 if hasattr(self, 'view') and hasattr(self, 'pixmapItem') and self.pixmapItem:
                     if not self.pixmapItem.pixmap().isNull():
                         if getattr(self, 'zoomLevel', 1.0) == 1.0:
                             self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
-                            logger.warning(f"[DEBUG _refresh_fs] fitInView done, viewport now={self.view.viewport().width()}x{self.view.viewport().height()}")
+                            logger.debug(f"[DEBUG _refresh_fs] fitInView done, viewport now={self.view.viewport().width()}x{self.view.viewport().height()}")
                 # Re-raise title bar and controlsCard above everything
                 if hasattr(self, 'titleBar'):
                     self.titleBar.raise_()

@@ -3,6 +3,7 @@ import os
 import logging
 import faulthandler
 import traceback
+import atexit
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QImageReader
 from PyQt6.QtWidgets import QApplication, QMessageBox
@@ -22,6 +23,7 @@ if is_debug:
     try:
         crash_log_file = open(crash_log_path, "w", encoding="utf-8")
         faulthandler.enable(file=crash_log_file)
+        atexit.register(crash_log_file.close)
     except Exception as e:
         sys.stderr.write(f"Failed to enable faulthandler: {e}\n")
 
@@ -51,12 +53,24 @@ def exception_hook(exctype, value, tb):
     logger.error(f"Unhandled exception:\n{tb_text}")
     try:
         if QApplication.instance():
+            lang = 'en'
+            try:
+                from utils import load_config
+                config = load_config()
+                lang = config.get('language', 'en')
+            except Exception:
+                pass
+
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setText("Egy váratlan hiba történt a program futása során.")
+            if lang == 'hu':
+                msg.setText("Egy váratlan hiba történt a program futása során.")
+                msg.setWindowTitle("Váratlan hiba")
+            else:
+                msg.setText("An unexpected error occurred during execution.")
+                msg.setWindowTitle("Unexpected Error")
             msg.setInformativeText(str(value))
             msg.setDetailedText(tb_text)
-            msg.setWindowTitle("Váratlan hiba")
             msg.exec()
     except Exception as dialog_err:
         sys.stderr.write(f"Failed to show crash dialog: {dialog_err}\n")
@@ -79,7 +93,9 @@ def main():
     
     # Raise Qt's internal QImage allocation limit (default 256 MB) to prevent
     # "Rejecting image as it exceeds the current allocation limit" errors on
-    # large or high-bitrate video frames.
+    # large or high-bitrate video frames. 
+    # NOTE: Disabling this limit (0) allows reading extremely large frames but removes the memory cap,
+    # which is a deliberate trade-off where memory usage might spike for very high-resolution inputs.
     QImageReader.setAllocationLimit(0)
     
     if "--test-crash" in sys.argv:

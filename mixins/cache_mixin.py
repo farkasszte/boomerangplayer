@@ -64,17 +64,17 @@ class CacheMixin(CacheMixinBase):
             return
         pix = self.pixmapItem.pixmap()
         if pix.isNull():
-            logger.warning("[DEBUG _deferred_fit] pixmap is NULL, skipping")
+            logger.debug("[DEBUG _deferred_fit] pixmap is NULL, skipping")
             return
         vw = self.view.viewport().width()
         vh = self.view.viewport().height()
-        logger.warning(f"[DEBUG _deferred_fit] viewport={vw}x{vh}, pixmap={pix.width()}x{pix.height()}, view_size={self.view.width()}x{self.view.height()}, window={self.width()}x{self.height()}")
+        logger.debug(f"[DEBUG _deferred_fit] viewport={vw}x{vh}, pixmap={pix.width()}x{pix.height()}, view_size={self.view.width()}x{self.view.height()}, window={self.width()}x{self.height()}")
         if vw <= 0 or vh <= 0:
-            logger.warning("[DEBUG _deferred_fit] viewport zero, retrying in 200ms")
+            logger.debug("[DEBUG _deferred_fit] viewport zero, retrying in 200ms")
             QTimer.singleShot(200, self._deferred_fit_in_view)
             return
         self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
-        logger.warning(f"[DEBUG _deferred_fit] fitInView done, view viewport now={self.view.viewport().width()}x{self.view.viewport().height()}")
+        logger.debug(f"[DEBUG _deferred_fit] fitInView done, view viewport now={self.view.viewport().width()}x{self.view.viewport().height()}")
         if hasattr(self, 'titleBar') and self.titleBar.isVisible():
             self.titleBar.raise_()
         if hasattr(self, 'controlsCard') and self.controlsCard.isVisible():

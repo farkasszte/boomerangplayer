@@ -59,6 +59,14 @@ class PlayerWindow(
     SubtitleMixin, AdjustmentMixin, ImageAdjSettingsMixin,
     FluentWindow
 ):
+    """
+    Main application window inheriting 18 mixins.
+    
+    WARNING: cooperative multiple inheritance is used here. Lifecycle methods like closeEvent
+    and load_video depend on Method Resolution Order (MRO) chaining (e.g. calling super().closeEvent(event)
+    or super().load_video(filePath)). Altering the order of mixins or introducing new ones
+    might break the chaining and lifecycle hooks if not carefully managed.
+    """
     def __init__(self):
         # Load config & language
         from config import Configuration

@@ -144,7 +144,7 @@ class AdjustmentMixin(AdjustmentMixinBase):
         is_audio = getattr(self, 'is_audio_only', False)
         target_index = 0 if is_audio else self.current_cache_index
         cache_keys = list(getattr(self, 'cached_frame_dict', {}).keys())
-        logger.warning(f"[DEBUG update_pixmap] target_index={target_index}, cache_keys={cache_keys[:10]}..., is_fullscreen={getattr(self, 'is_full_screen', False)}")
+        logger.debug(f"[DEBUG update_pixmap] target_index={target_index}, cache_keys={cache_keys[:10]}..., is_fullscreen={getattr(self, 'is_full_screen', False)}")
 
         if target_index in getattr(self, 'cached_frame_dict', {}):
             data = self.cached_frame_dict[target_index]

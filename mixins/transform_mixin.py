@@ -149,7 +149,7 @@ class TransformMixin(TransformMixinBase):
             if fit:
                 vw = self.view.viewport().width()
                 vh = self.view.viewport().height()
-                logger.warning(f"[DEBUG apply_transformations] fit=True, is_fullscreen={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={pix.width()}x{pix.height()}")
+                logger.debug(f"[DEBUG apply_transformations] fit=True, is_fullscreen={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={pix.width()}x{pix.height()}")
                 self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
                 self.view.zoomLevel = 1.0
                 self.sync_zoom_ui(1.0)
@@ -196,7 +196,7 @@ class TransformMixin(TransformMixinBase):
                 and getattr(self, 'zoomLevel', 1.0) == 1.0):
             vw = self.view.viewport().width()
             vh = self.view.viewport().height()
-            logger.warning(f"[DEBUG resizeEvent] is_fs={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={self.pixmapItem.pixmap().width()}x{self.pixmapItem.pixmap().height()}")
+            logger.debug(f"[DEBUG resizeEvent] is_fs={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={self.pixmapItem.pixmap().width()}x{self.pixmapItem.pixmap().height()}")
             self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
 
         self.update_loading_overlay_geometry()

@@ -335,9 +335,9 @@ class PlaylistCrudMixin:
 
         except Exception as e:
             log_debug(f"Exception caught in delete_playlist_item: {e}")
-            # If error occurred and it was the current file, restore player source
+            # If error occurred and it was the current file, restore player source and UI
             if is_current:
-                self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
+                self.load_video(path)
             
             InfoBar.error(
                 title=tr('delete_file_confirm_title'),
@@ -348,7 +348,8 @@ class PlaylistCrudMixin:
                 duration=5000,
                 parent=self
             )
-            print(f"Error deleting file: {e}")
+            import logging
+            logging.getLogger("BoomerangPlayer").error(f"Error deleting file: {e}")
 
     def delete_selected_playlist_items(self):
         """Delete multiple selected playlist items (move to Recycle Bin)."""
@@ -485,20 +486,17 @@ class PlaylistCrudMixin:
                     errors.append(os.path.basename(path))
                     if is_current:
                         current_was_deleted = False
-                        self.currentFilePath = path
-                        self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
-                        self.setWindowTitle(f"{os.path.basename(path)} - Boomerang Player v{VERSION}")
+                        self.load_video(path)
 
             except Exception as e:
                 log_debug(f"Exception in bulk delete for {path}: {e}")
                 error_count += 1
                 errors.append(f"{os.path.basename(path)} ({e})")
-                print(f"Error deleting {path}: {e}")
+                import logging
+                logging.getLogger("BoomerangPlayer").error(f"Error deleting {path}: {e}")
                 if is_current:
                     current_was_deleted = False
-                    self.currentFilePath = path
-                    self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
-                    self.setWindowTitle(f"{os.path.basename(path)} - Boomerang Player v{VERSION}")
+                    self.load_video(path)
 
         # Remove items from playlist view in reverse order to maintain valid row indices
         rows_to_remove = []
