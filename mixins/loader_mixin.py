@@ -365,7 +365,7 @@ class LoaderMixin(LoaderMixinBase):
             if self.is_audio_only:
                 fps = 30.0
             else:
-                fps_str = stream.get('r_frame_rate', stream.get('avg_frame_rate', '30/1'))
+                fps_str = stream.get('avg_frame_rate') or stream.get('r_frame_rate') or '30/1'
                 if '/' in fps_str:
                     num, den = map(int, fps_str.split('/'))
                     fps = num / den if den != 0 else 30.0
@@ -376,7 +376,14 @@ class LoaderMixin(LoaderMixinBase):
             f_dur = fmt.get('duration')
             duration = float(s_dur if s_dur is not None else (f_dur if f_dur is not None else 0))
             
-            nb_frames = int(stream.get('nb_frames', 0))
+            nb_frames_val = stream.get('nb_frames', 0)
+            if nb_frames_val == 'N/A' or nb_frames_val is None:
+                nb_frames = 0
+            else:
+                try:
+                    nb_frames = int(nb_frames_val)
+                except (ValueError, TypeError):
+                    nb_frames = 0
             if nb_frames == 0 and duration > 0:
                 nb_frames = int(duration * fps)
             

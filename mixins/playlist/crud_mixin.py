@@ -414,6 +414,7 @@ class PlaylistCrudMixin:
         success_count = 0
         error_count = 0
         errors = []
+        successfully_deleted_items = []
 
         for item, path in valid_items:
             is_current = False   # pre-initialise so the except block always has it bound
@@ -478,30 +479,35 @@ class PlaylistCrudMixin:
                     if path in self.playlistData:
                         del self.playlistData[path]
                     success_count += 1
+                    successfully_deleted_items.append(item)
                 else:
                     error_count += 1
                     errors.append(os.path.basename(path))
                     if is_current:
                         current_was_deleted = False
+                        self.currentFilePath = path
+                        self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
+                        self.setWindowTitle(f"{os.path.basename(path)} - Boomerang Player v{VERSION}")
 
             except Exception as e:
                 log_debug(f"Exception in bulk delete for {path}: {e}")
                 error_count += 1
                 errors.append(f"{os.path.basename(path)} ({e})")
                 print(f"Error deleting {path}: {e}")
-                if current_was_deleted and is_current:
+                if is_current:
                     current_was_deleted = False
+                    self.currentFilePath = path
+                    self.mediaPlayer.setSource(QUrl.fromLocalFile(path))
+                    self.setWindowTitle(f"{os.path.basename(path)} - Boomerang Player v{VERSION}")
 
         # Remove items from playlist view in reverse order to maintain valid row indices
         rows_to_remove = []
-        for item, _ in valid_items:
-            
+        for item in successfully_deleted_items:
             row = self.playlistList.row(item)
             if row >= 0:
                 rows_to_remove.append(row)
 
         for row in sorted(rows_to_remove, reverse=True):
-            
             self.playlistList.takeItem(row)
 
         # Show result
