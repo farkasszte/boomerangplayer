@@ -77,10 +77,19 @@ class GlobalSettingsColorManagerMixin:
 
     def on_panel_opacity_changed(self, value):
         snapped = round(value / 5) * 5
-        snapped = max(20, min(100, snapped))
-        self.opacitySlider.blockSignals(True)
-        self.opacitySlider.setValue(snapped)
-        self.opacitySlider.blockSignals(False)
+        snapped = max(50, min(100, snapped))
+        if hasattr(self, 'opacitySlider'):
+            self.opacitySlider.blockSignals(True)
+            self.opacitySlider.setValue(snapped)
+            self.opacitySlider.blockSignals(False)
+        if getattr(self, 'active_skins_dialog', None) is not None:
+            dialog = self.active_skins_dialog
+            if hasattr(dialog, 'opacitySlider'):
+                dialog.opacitySlider.blockSignals(True)
+                dialog.opacitySlider.setValue(snapped)
+                dialog.opacitySlider.blockSignals(False)
+            if hasattr(dialog, 'opacityValueLabel'):
+                dialog.opacityValueLabel.setText(f"{snapped}%")
         self.pending_panel_opacity = snapped
         if hasattr(self, 'opacityValueLabel'):
             self.opacityValueLabel.setText(f"{snapped}%")

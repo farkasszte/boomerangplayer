@@ -38,6 +38,10 @@ class PlaylistCrudMixin:
             except Exception:
                 pass
 
+        # Apply window opacity to standard dialogs
+        opacity = self.config.get('panel_opacity', 100)
+        dialog.setWindowOpacity(opacity / 100.0)
+
         bg_button = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
         bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
         bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"

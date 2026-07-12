@@ -149,9 +149,10 @@ class _ThumbResizeFilter(QObject):
 class MediaFileDialog(QDialog):
     """Custom file picker with drive sidebar, tree/thumbnail views, and filter."""
 
-    def __init__(self, parent, config):
+    def __init__(self, parent, config, save_mode=False):
         super().__init__(parent)
         self._config = config
+        self._save_mode = save_mode
         self.selected_files = []
         self._setup_ui()
 
@@ -176,8 +177,12 @@ class MediaFileDialog(QDialog):
         hov = "rgba(0,0,0,0.08)" if inverse_text else "rgba(255,255,255,0.1)"
         hdr = "#eaeaea" if inverse_text else "#252525"
 
-        self.setWindowTitle(tr('add_files_title'))
-        self.setModal(False)
+        if self._save_mode:
+            self.setWindowTitle(tr('save_project_title'))
+            self.setModal(True)
+        else:
+            self.setWindowTitle(tr('add_files_title'))
+            self.setModal(False)
         self.setMinimumSize(650, 400)
         self.setStyleSheet(f"""
             QDialog, QLabel {{
@@ -229,6 +234,7 @@ class MediaFileDialog(QDialog):
         """)
 
         self._apply_dwm(bg, fg)
+        self.setWindowOpacity(self._config.get('panel_opacity', 100) / 100.0)
 
         # State
         default_folder = self._config.get('default_folder', '')
@@ -437,6 +443,8 @@ class MediaFileDialog(QDialog):
 
         self._file_tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._thumb_list.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self._file_tree.itemClicked.connect(self._on_item_clicked)
+        self._thumb_list.itemClicked.connect(self._on_item_clicked)
 
         self._stack = QStackedWidget()
         self._stack.addWidget(self._file_tree)
@@ -453,24 +461,38 @@ class MediaFileDialog(QDialog):
         lay.setSpacing(8)
 
         self._name_filter = QLineEdit()
-        self._name_filter.setPlaceholderText(tr('search_files'))
+        self._name_filter.setPlaceholderText(tr('search_files') if not self._save_mode else tr('file_name'))
         self._name_filter.setMinimumWidth(200)
-        self._name_filter.textChanged.connect(lambda: self._refresh())
+        if not self._save_mode:
+            self._name_filter.textChanged.connect(lambda: self._refresh())
         lay.addWidget(self._name_filter)
 
         self._filter_combo = QComboBox()
-        self._filter_combo.addItems([
-            tr('all_media'), tr('video_files'), tr('image_files'),
-            tr('audio_files'), tr('playlist')])
+        if self._save_mode:
+            self._filter_combo.addItems([
+                f"{tr('bpl_files')} (*.bpl)", f"{tr('json_files')} (*.json)"
+            ])
+        else:
+            self._filter_combo.addItems([
+                tr('all_media'), tr('video_files'), tr('image_files'),
+                tr('audio_files'), tr('playlist')])
         self._filter_combo.setMinimumWidth(100)
         self._filter_combo.currentIndexChanged.connect(lambda: self._refresh())
         lay.addWidget(self._filter_combo)
 
-        for text, handler, w, tip in [
-            (tr('open'), self._on_open, 90, tr('open')),
-            (tr('add_folder'), self._on_add_folder, 110, tr('add_folder')),
-            (tr('cancel'), self.reject, 90, tr('cancel')),
-        ]:
+        if self._save_mode:
+            buttons = [
+                (tr('save'), self._on_save_clicked, 120, tr('save')),
+                (tr('cancel'), self.reject, 120, tr('cancel')),
+            ]
+        else:
+            buttons = [
+                (tr('open'), self._on_open, 120, tr('open')),
+                (tr('add_folder'), self._on_add_folder, 120, tr('add_folder')),
+                (tr('cancel'), self.reject, 120, tr('cancel')),
+            ]
+
+        for text, handler, w, tip in buttons:
             btn = QPushButton(text)
             btn.setFixedWidth(w)
             btn.setToolTip(tip)
@@ -514,8 +536,12 @@ class MediaFileDialog(QDialog):
     def _refresh(self):
         self._path_bar.setText(self._current_path)
         self._highlight_drive()
-        exts = FILTER_MAP.get(self._filter_combo.currentIndex(), ALL_EXTS)
-        nf = self._name_filter.text().strip().lower()
+        if self._save_mode:
+            exts = ('.bpl',) if self._filter_combo.currentIndex() == 0 else ('.json',)
+            nf = ""
+        else:
+            exts = FILTER_MAP.get(self._filter_combo.currentIndex(), ALL_EXTS)
+            nf = self._name_filter.text().strip().lower()
         d = QDir(self._current_path)
         d.setFilter(QDir.Filter.Dirs | QDir.Filter.Files
                     | QDir.Filter.NoDotAndDotDot)
@@ -685,6 +711,23 @@ class MediaFileDialog(QDialog):
         else:
             self.selected_files = [p]
             self.accept()
+
+    def _on_item_clicked(self, item, col=None):
+        p = _item_path(item)
+        if not os.path.isdir(p):
+            self._name_filter.setText(os.path.basename(p))
+
+    def _on_save_clicked(self):
+        name = self._name_filter.text().strip()
+        if not name:
+            return
+        if not name.lower().endswith(('.bpl', '.json')):
+            if self._filter_combo.currentIndex() == 0:
+                name += '.bpl'
+            else:
+                name += '.json'
+        self.selected_files = [os.path.join(self._current_path, name)]
+        self.accept()
 
     def _on_drive_changed(self):
         cur = self._drive_list.currentItem()

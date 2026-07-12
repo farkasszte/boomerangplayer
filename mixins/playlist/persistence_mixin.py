@@ -7,16 +7,11 @@ from translations import tr
 
 class PlaylistPersistenceMixin:
     def save_playlist_to_file(self):
-        filters = f"{tr('bpl_files')} (*.bpl);;{tr('json_files')} (*.json)"
-        fileName, selectedFilter = QFileDialog.getSaveFileName(
-            self, tr('save_project_title'), "", filters
-        )
-        if fileName:
-            is_json = fileName.lower().endswith('.json') or 'json_files' in selectedFilter
-            if is_json and not fileName.lower().endswith('.json'):
-                fileName += '.json'
-            elif not is_json and not fileName.lower().endswith('.bpl'):
-                fileName += '.bpl'
+        from mixins.file_dialog import MediaFileDialog
+        dialog = MediaFileDialog(self, self.config, save_mode=True)
+        if dialog.exec() == MediaFileDialog.DialogCode.Accepted:
+            fileName = dialog.selected_files[0]
+            is_json = fileName.lower().endswith('.json')
             is_bpl = fileName.lower().endswith('.bpl')
 
             data = {'header': 'boomerangplaylist', 'files': [], 'markers': self.playlistData}
@@ -88,9 +83,9 @@ class PlaylistPersistenceMixin:
                     )
 
     def load_playlist_from_file(self):
-        filters = f"{tr('playlist')} (*.bpl *.json);;{tr('all_files')} (*)"
-        fileName, _ = QFileDialog.getOpenFileName(
-            self, tr('open_project_title'), "", filters
-        )
-        if fileName:
+        from mixins.file_dialog import MediaFileDialog
+        dialog = MediaFileDialog(self, self.config, save_mode=False)
+        dialog._filter_combo.setCurrentIndex(4)
+        if dialog.exec() == MediaFileDialog.DialogCode.Accepted:
+            fileName = dialog.selected_files[0]
             self.load_playlist_by_path(fileName)

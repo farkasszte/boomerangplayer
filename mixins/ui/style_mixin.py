@@ -245,14 +245,24 @@ class StyleUIMixin:
         rgb_bg = hex_to_rgb(bg_color)
         transparent_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"
 
+        # Apply window opacity to the main window
+        self.setWindowOpacity(opacity_float)
+
+        # Also apply to active skins dialog if present
+        if getattr(self, 'active_skins_dialog', None) is not None:
+            try:
+                self.active_skins_dialog.setWindowOpacity(opacity_float)
+            except Exception:
+                pass
+
         # Update Background Colors
         # Main window (PlayerWindow)
         
-        self.setStyleSheet(f"PlayerWindow {{ background-color: {bg_color}; }}")
+        self.setStyleSheet(f"PlayerWindow {{ background-color: rgba({rgb_bg}, {opacity_float}); }}")
         
         # Title bar
         if hasattr(self, 'titleBar'):
-            self.titleBar.setStyleSheet(f"background-color: {bg_color}; border: none;")
+            self.titleBar.setStyleSheet(f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;")
             
         # Set playerInterface background to black so transparent sidebars and controlsCard show high-contrast glass effect
         if hasattr(self, 'playerInterface'):

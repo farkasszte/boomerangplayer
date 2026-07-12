@@ -144,6 +144,8 @@ class MarkersDialog(QDialog):
         self.setMinimumSize(420, 450)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
         _apply_dwm(self, t['bg'], t['fg'])
+        opacity = parent_player.config.get('panel_opacity', 100)
+        self.setWindowOpacity(opacity / 100.0)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 15, 15, 15)
@@ -295,6 +297,8 @@ class SaveFrameOptionsDialog(QDialog):
         self.setMinimumSize(420, 320)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
         _apply_dwm(self, t['bg'], t['fg'])
+        opacity = parent_player.config.get('panel_opacity', 100)
+        self.setWindowOpacity(opacity / 100.0)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
@@ -461,6 +465,8 @@ class SaveLoopOptionsDialog(QDialog):
         self.setMinimumSize(450, 480)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
         _apply_dwm(self, t['bg'], t['fg'])
+        opacity = parent_player.config.get('panel_opacity', 100)
+        self.setWindowOpacity(opacity / 100.0)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)

@@ -47,6 +47,9 @@ class WatermarkPropertiesDialog(QDialog):
         self.setFixedWidth(300)
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
         _apply_dwm(self, t['bg'], t['fg'])
+        if config:
+            opacity = config.get('panel_opacity', 100)
+            self.setWindowOpacity(opacity / 100.0)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(15, 15, 15, 15)

@@ -16,7 +16,8 @@ class GlobalSettingsLocaleManagerMixin:
         accent = self.config.get('accent_color', '#00f2ff')
         
         bg_color = self.config.get('bg_color', '#202020')
-        style = get_styles(accent, bg_color)['MENU_POPUP_STYLE']
+        inverse_text = self.config.get('inverse_text', False)
+        style = get_styles(accent, bg_color, inverse_text)['MENU_POPUP_STYLE']
         menu.setStyleSheet(style)
 
         

@@ -20,6 +20,11 @@ class SkinRowWidget(QWidget):
             parent_player.config.get('bg_color', '#202020'),
             parent_player.config.get('inverse_text', False)
         )
+        styles_dict = get_styles(
+            parent_player.config.get('accent_color', '#00f2ff'),
+            parent_player.config.get('bg_color', '#202020'),
+            parent_player.config.get('inverse_text', False)
+        )
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 2, 5, 2)
@@ -53,12 +58,14 @@ class SkinRowWidget(QWidget):
         # Apply Button
         self.applyBtn = ToolButton(FluentIcon.ACCEPT)
         self.applyBtn.setFixedSize(28, 28)
+        self.applyBtn.setStyleSheet(styles_dict.get('TOOL_BTN_STYLE', ''))
         self.applyBtn.clicked.connect(self.on_apply_clicked)
         layout.addWidget(self.applyBtn)
 
         # Delete Button
         self.deleteBtn = ToolButton(FluentIcon.DELETE)
         self.deleteBtn.setFixedSize(28, 28)
+        self.deleteBtn.setStyleSheet(styles_dict.get('TOOL_BTN_STYLE', ''))
         self.deleteBtn.clicked.connect(self.on_delete_clicked)
         layout.addWidget(self.deleteBtn)
 
@@ -78,6 +85,12 @@ class SkinsDialog(QDialog):
         
         # Keep reference to active dialog on the player window
         self.parent_player.active_skins_dialog = self
+
+        # Remember entry state for Cancel
+        self.original_accent = parent_player.config.get('accent_color', '#00f2ff')
+        self.original_bg = parent_player.config.get('bg_color', '#202020')
+        self.original_inverse = parent_player.config.get('inverse_text', False)
+        self.original_opacity = parent_player.config.get('panel_opacity', 100)
 
         self.setWindowTitle(tr('skins'))
         self.setMinimumSize(680, 480)
@@ -129,7 +142,7 @@ class SkinsDialog(QDialog):
         self.leftLayout.addLayout(opacityRow)
 
         self.opacitySlider = NoWheelSlider(Qt.Orientation.Horizontal)
-        self.opacitySlider.setRange(20, 100)
+        self.opacitySlider.setRange(50, 100)
         self.opacitySlider.setSingleStep(5)
         self.opacitySlider.setPageStep(5)
         self.opacitySlider.valueChanged.connect(self.parent_player.on_panel_opacity_changed)
@@ -145,13 +158,19 @@ class SkinsDialog(QDialog):
         self.importBtn = PushButton(tr('import_skin'))
         self.importBtn.clicked.connect(self.parent_player.prompt_import_skin)
 
-        self.closeBtn = PushButton(tr('cancel'))
-        self.closeBtn.clicked.connect(self.accept)
-
         self.actionsLayout.addWidget(self.saveBtn)
         self.actionsLayout.addWidget(self.importBtn)
         self.leftLayout.addLayout(self.actionsLayout)
-        self.leftLayout.addWidget(self.closeBtn)
+
+        # Bottom Buttons (Apply & Cancel)
+        self.bottomBtnLayout = QHBoxLayout()
+        self.applyBtnAction = PushButton(tr('apply'))
+        self.applyBtnAction.clicked.connect(self.accept)
+        self.cancelBtn = PushButton(tr('cancel'))
+        self.cancelBtn.clicked.connect(self.reject)
+        self.bottomBtnLayout.addWidget(self.applyBtnAction)
+        self.bottomBtnLayout.addWidget(self.cancelBtn)
+        self.leftLayout.addLayout(self.bottomBtnLayout)
 
         # Right pane: Skins & Presets
         self.rightPane = QFrame()
@@ -188,6 +207,9 @@ class SkinsDialog(QDialog):
 
         self.setStyleSheet(f"background: {t['bg']}; color: {t['fg']};")
         self._apply_dwm(t['bg'], t['fg'])
+        
+        opacity = getattr(self.parent_player, 'pending_panel_opacity', self.parent_player.config.get('panel_opacity', 100))
+        self.setWindowOpacity(opacity / 100.0)
 
         # Style labels
         for lbl in [self.inverseTextLabel, self.opacityTitleLabel, self.opacityValueLabel]:
@@ -202,14 +224,15 @@ class SkinsDialog(QDialog):
         self.bgBtn.setStyleSheet(styles_dict.get('TRIGGER_STYLE', ''))
         self.saveBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
         self.importBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
-        self.closeBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
+        self.applyBtnAction.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
+        self.cancelBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
 
         self.inverseTextToggle.blockSignals(True)
         self.inverseTextToggle.setChecked(self.parent_player.config.get('inverse_text', False))
         self.inverseTextToggle.blockSignals(False)
         self.inverseTextToggle.setStyleSheet(styles_dict.get('SWITCH_STYLE', ''))
 
-        opacity = self.parent_player.config.get('panel_opacity', 100)
+        opacity = getattr(self.parent_player, 'pending_panel_opacity', self.parent_player.config.get('panel_opacity', 100))
         self.opacityValueLabel.setText(f"{opacity}%")
         self.opacitySlider.blockSignals(True)
         self.opacitySlider.setValue(opacity)
@@ -330,6 +353,49 @@ class SkinsDialog(QDialog):
             parent=self
         )
 
+
+    def restore_original_settings(self):
+        # Restore configuration values
+        self.parent_player.config['accent_color'] = self.original_accent
+        self.parent_player.config['bg_color'] = self.original_bg
+        self.parent_player.config['inverse_text'] = self.original_inverse
+        self.parent_player.config['panel_opacity'] = self.original_opacity
+        
+        # Update pending state values in player
+        self.parent_player.pending_accent_color = self.original_accent
+        self.parent_player.pending_bg_color = self.original_bg
+        self.parent_player.accent_color = self.original_accent
+        self.parent_player.pending_panel_opacity = self.original_opacity
+        
+        # Set theme and accent colors
+        from qfluentwidgets import setTheme, Theme, setThemeColor
+        from PyQt6.QtGui import QColor
+        setThemeColor(QColor(self.original_accent))
+        setTheme(Theme.LIGHT if self.original_inverse else Theme.DARK)
+        
+        if hasattr(self.parent_player, 'refresh_custom_styles'):
+            self.parent_player.refresh_custom_styles()
+            
+        self.parent_player.update_ui_texts()
+        self.parent_player.config.save()
+
+    def accept(self):
+        # Save the current values to config
+        accent = getattr(self.parent_player, 'pending_accent_color', self.parent_player.config.get('accent_color', '#00f2ff'))
+        bg = getattr(self.parent_player, 'pending_bg_color', self.parent_player.config.get('bg_color', '#202020'))
+        inverse = self.parent_player.config.get('inverse_text', False)
+        opacity = getattr(self.parent_player, 'pending_panel_opacity', self.parent_player.config.get('panel_opacity', 100))
+        
+        self.parent_player.config['accent_color'] = accent
+        self.parent_player.config['bg_color'] = bg
+        self.parent_player.config['inverse_text'] = inverse
+        self.parent_player.config['panel_opacity'] = opacity
+        self.parent_player.config.save()
+        super().accept()
+
+    def reject(self):
+        self.restore_original_settings()
+        super().reject()
 
     def closeEvent(self, event):
         self.parent_player.active_skins_dialog = None

@@ -230,7 +230,8 @@ class FullscreenUIMixin:
                 self.view.setCursor(Qt.CursorShape.ArrowCursor)
                 
             # Restore opacity smoothly after a short delay to completely hide OS window frame recreation flashes
-            QTimer.singleShot(150, lambda: self.setWindowOpacity(1.0))
+            target_opacity = self.config.get('panel_opacity', 100) / 100.0
+            QTimer.singleShot(150, lambda: self.setWindowOpacity(target_opacity))
                 
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
