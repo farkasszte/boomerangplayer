@@ -1,7 +1,7 @@
 import os
 import json
 from PyQt6.QtCore import Qt
-from utils import get_config_path, DEFAULT_CONFIG
+from utils import get_config_path, DEFAULT_CONFIG, validate_config, logger
 
 class Configuration(dict):
     """
@@ -24,40 +24,26 @@ class Configuration(dict):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
-                        
-                        # Prevent custom dictionary pollution and merge carefully
-                        for k, v in data.items():
-                            if k == 'shortcuts' and isinstance(v, dict):
-                                # Merge shortcuts specifically
-                                merged_shortcuts = DEFAULT_CONFIG['shortcuts'].copy()
-                                merged_shortcuts.update(v)
-                                self['shortcuts'] = merged_shortcuts
-                            elif k == 'palette' and isinstance(v, list):
-                                # Ensure palette is a valid list of hex colors
-                                valid_palette = []
-                                for color in v:
-                                    if isinstance(color, str) and color.startswith('#'):
-                                        valid_palette.append(color.upper())
-                                if valid_palette:
-                                    self['palette'] = valid_palette
-                            else:
-                                self[k] = v
+                        validated = validate_config(data)
+                        self.update(validated)
                 except Exception as e:
-                    print(f"Error loading configuration in Configuration class: {e}")
+                    logger.error(f"Error loading configuration in Configuration class: {e}")
         finally:
             self._loading = False
 
     def save(self):
         path = get_config_path()
         try:
-            config_to_save = dict(self).copy()
+            config_to_save = validate_config(self)
             if 'markers_data' in config_to_save:
                 del config_to_save['markers_data']
                 
-            with open(path, 'w', encoding='utf-8') as f:
+            temp_path = path + ".tmp"
+            with open(temp_path, 'w', encoding='utf-8') as f:
                 json.dump(config_to_save, f, indent=4)
+            os.replace(temp_path, path)
         except Exception as e:
-            print(f"Error saving configuration in Configuration class: {e}")
+            logger.error(f"Error saving configuration in Configuration class: {e}")
 
     def __setitem__(self, key, value):
         # Validation Hooks

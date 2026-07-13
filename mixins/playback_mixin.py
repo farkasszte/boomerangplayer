@@ -3,9 +3,12 @@ PlaybackMixin — play/pause, frame advance, seeking, media events with Multi-In
 """
 
 import os
+import logging
 from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
 from PyQt6.QtMultimedia import QMediaPlayer
 from utils import format_time
+
+logger = logging.getLogger("BoomerangPlayer")
 
 
 from typing import TYPE_CHECKING
@@ -468,7 +471,7 @@ class PlaybackMixin(PlaybackMixinBase):
             if os.path.exists(path):
                 os.remove(path)
         except Exception as e:
-            print(f"Error removing markers.json on exit: {e}")
+            logger.warning(f"Error removing markers.json on exit: {e}")
             
         super().closeEvent(event)
 

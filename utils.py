@@ -2,8 +2,11 @@ import os
 import sys
 import json
 import subprocess
+import logging
 from PyQt6.QtCore import Qt
+
 VERSION = "4.0"
+logger = logging.getLogger("BoomerangPlayer")
 
 def get_base_path():
     """ Get the directory where the application is located (next to .exe if bundled) """
@@ -40,6 +43,74 @@ def get_ffprobe_path():
         return os.path.normpath(path)
     return "ffprobe"
 
+def get_system_volume_control():
+    """
+    Attempts to initialize COM and connect to Pycaw system endpoint volume control.
+    Returns the volume control interface, or None if pycaw is not available or connection fails.
+    """
+    if sys.platform != 'win32':
+        return None
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            import comtypes
+            from comtypes import CLSCTX_ALL, GUID
+            try:
+                comtypes.CoInitialize()
+            except OSError:
+                pass
+
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+            IID_IAudioEndpointVolume = "{5CDF2C82-841E-4546-9722-0CF74078229A}"
+
+            def try_link_flexible(device_obj):
+                if not device_obj:
+                    return None
+                potential_targets = [device_obj]
+                try:
+                    for attr in dir(device_obj):
+                        try:
+                            val = getattr(device_obj, attr)
+                            if hasattr(val, 'Activate'):
+                                potential_targets.append(val)
+                        except (AttributeError, comtypes.COMError):
+                            continue
+                except (AttributeError, comtypes.COMError):
+                    pass
+
+                for target in potential_targets:
+                    try:
+                        iid = getattr(IAudioEndpointVolume, '_iid_', IID_IAudioEndpointVolume)
+                        try:
+                            interface = target.Activate(GUID(iid), CLSCTX_ALL, None)
+                            if interface:
+                                return interface.QueryInterface(IAudioEndpointVolume)
+                        except (AttributeError, comtypes.COMError):
+                            continue
+                    except (AttributeError, comtypes.COMError, OSError):
+                        continue
+                return None
+
+            try:
+                test_dev = AudioUtilities.GetSpeakers()
+                ctrl = try_link_flexible(test_dev)
+                if ctrl:
+                    return ctrl
+            except (comtypes.COMError, OSError, NameError, AttributeError):
+                pass
+
+            try:
+                for d in AudioUtilities.GetAllDevices():
+                    ctrl = try_link_flexible(d)
+                    if ctrl:
+                        return ctrl
+            except (comtypes.COMError, OSError, NameError, AttributeError):
+                pass
+    except Exception as e:
+        logger.debug(f"Failed to initialize Pycaw system volume control: {e}")
+    return None
+
 def detect_best_hwaccel_async(config):
     """
     Detects the best hardware decoding method supported by the system ffmpeg
@@ -57,8 +128,8 @@ def detect_best_hwaccel_async(config):
             if os.path.exists(dummy_file):
                 try:
                     os.remove(dummy_file)
-                except OSError:
-                    pass
+                except OSError as err:
+                    logger.warning(f"[GPU Detect] Failed to delete existing dummy file {dummy_file}: {err}")
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             gen_cmd = [
@@ -68,7 +139,7 @@ def detect_best_hwaccel_async(config):
             
             res = subprocess.run(gen_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creationflags, timeout=5)
             if res.returncode != 0 or not os.path.exists(dummy_file):
-                print("[GPU Detect] Failed to generate dummy video for testing.")
+                logger.warning("[GPU Detect] Failed to generate dummy video for testing.")
                 return
             
             hwaccels_to_test = ['cuda', 'd3d11va', 'dxva2']
@@ -82,15 +153,16 @@ def detect_best_hwaccel_async(config):
                     res_test = subprocess.run(test_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creationflags, timeout=3)
                     if res_test.returncode == 0:
                         best_accel = accel
-                        print(f"[GPU Detect] Hardware acceleration '{accel}' is verified and working.")
+                        logger.info(f"[GPU Detect] Hardware acceleration '{accel}' is verified and working.")
                         break
                 except Exception:
                     continue
             
-            try:
-                os.remove(dummy_file)
-            except OSError:
-                pass
+            if os.path.exists(dummy_file):
+                try:
+                    os.remove(dummy_file)
+                except OSError as err:
+                    logger.warning(f"[GPU Detect] Failed to delete dummy file {dummy_file}: {err}")
             
             config['detected_hwaccel'] = best_accel
             try:
@@ -100,7 +172,7 @@ def detect_best_hwaccel_async(config):
                 pass
                 
         except Exception as e:
-            print(f"[GPU Detect] Error during detection: {e}")
+            logger.error(f"[GPU Detect] Error during detection: {e}")
             
     threading.Thread(target=worker, daemon=True).start()
 
@@ -151,6 +223,8 @@ def qt_message_handler(mode, context, message):
 
 DEFAULT_CONFIG = {
     'language': 'en',
+    'accent_color': '#00F2FF',
+    'bg_color': '#202020',
     'audio_device': '',
     'panel_opacity': 100,
     'speed_locked': False,
@@ -200,40 +274,108 @@ def get_config_path():
 def get_markers_path():
     return os.path.join(get_base_path(), "markers.json")
 
+def validate_config(data):
+    if not isinstance(data, dict):
+        return DEFAULT_CONFIG.copy()
+    
+    validated = DEFAULT_CONFIG.copy()
+    for k, default_val in DEFAULT_CONFIG.items():
+        if k in data:
+            val = data[k]
+            if k == 'language':
+                if isinstance(val, str):
+                    validated[k] = val
+            elif k in ('accent_color', 'bg_color', 'subtitle_text_color', 'subtitle_bg_color', 'subtitle_outline_color'):
+                if isinstance(val, str) and val.startswith('#'):
+                    validated[k] = val.upper()
+            elif k in ('panel_opacity', 'subtitle_bg_opacity'):
+                try:
+                    ival = int(val)
+                    if k == 'panel_opacity':
+                        validated[k] = max(20, min(100, ival))
+                    else:
+                        validated[k] = max(0, min(100, ival))
+                except (ValueError, TypeError):
+                    pass
+            elif k in ('speed_locked', 'inverse_text', 'audio_eq_enabled', 'enable_subtitles', 'subtitle_outline_enabled', 'advance_playlist_after_loop'):
+                if isinstance(val, bool):
+                    validated[k] = val
+            elif k == 'shortcuts':
+                if isinstance(val, dict):
+                    for sk, sv in val.items():
+                        if sk in DEFAULT_CONFIG['shortcuts']:
+                            try:
+                                validated['shortcuts'][sk] = int(sv)
+                            except (ValueError, TypeError):
+                                pass
+            elif k == 'palette':
+                if isinstance(val, list):
+                    valid_colors = []
+                    for c in val:
+                        if isinstance(c, str) and c.startswith('#'):
+                            valid_colors.append(c.upper())
+                    if valid_colors:
+                        validated[k] = valid_colors
+            elif k == 'active_color_index':
+                try:
+                    validated[k] = int(val)
+                except (ValueError, TypeError):
+                    pass
+            elif k == 'audio_eq_gains':
+                if isinstance(val, list) and len(val) == 10:
+                    try:
+                        validated[k] = [int(g) for g in val]
+                    except (ValueError, TypeError):
+                        pass
+            elif k in ('subtitle_font_family', 'audio_eq_preset', 'audio_device', 'default_folder', 'detected_hwaccel'):
+                if isinstance(val, str):
+                    validated[k] = val
+            elif k == 'subtitle_font_size':
+                try:
+                    validated[k] = max(8, min(72, int(val)))
+                except (ValueError, TypeError):
+                    pass
+            elif k == 'subtitle_outline_width':
+                try:
+                    validated[k] = max(0, min(10, int(val)))
+                except (ValueError, TypeError):
+                    pass
+            elif k == 'advance_playlist_loop_count':
+                try:
+                    validated[k] = max(1, int(val))
+                except (ValueError, TypeError):
+                    pass
+            else:
+                if type(val) is type(default_val):
+                    validated[k] = val
+    return validated
+
 def load_config():
     path = get_config_path()
     if os.path.exists(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                # Merge with default to ensure all keys exist
-                merged = DEFAULT_CONFIG.copy()
-                merged.update(config)
-                # Ensure shortcuts are properly merged too
-                if 'shortcuts' in config:
-                    merged['shortcuts'] = DEFAULT_CONFIG['shortcuts'].copy()
-                    merged['shortcuts'].update(config['shortcuts'])
-                
-                # Force gpu_acceleration to True as we rely on the internal fallback now
-                merged['gpu_acceleration'] = True
-                
-                return merged
+                validated = validate_config(config)
+                validated['gpu_acceleration'] = True
+                return validated
         except Exception as e:
-            print(f"Error loading config: {e}")
+            logger.error(f"Error loading config: {e}")
     return DEFAULT_CONFIG.copy()
 
 def save_config(config):
     path = get_config_path()
     try:
-        # Don't save markers_data to config anymore
-        config_to_save = config.copy()
+        config_to_save = validate_config(config)
         if 'markers_data' in config_to_save:
             del config_to_save['markers_data']
             
-        with open(path, 'w', encoding='utf-8') as f:
+        temp_path = path + ".tmp"
+        with open(temp_path, 'w', encoding='utf-8') as f:
             json.dump(config_to_save, f, indent=4)
+        os.replace(temp_path, path)
     except Exception as e:
-        print(f"Error saving config: {e}")
+        logger.error(f"Error saving config: {e}")
 
 def load_markers():
     path = get_markers_path()
@@ -242,16 +384,18 @@ def load_markers():
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading markers: {e}")
+            logger.error(f"Error loading markers: {e}")
     return {}
 
 def save_markers(markers_data):
     path = get_markers_path()
     try:
-        with open(path, 'w', encoding='utf-8') as f:
+        temp_path = path + ".tmp"
+        with open(temp_path, 'w', encoding='utf-8') as f:
             json.dump(markers_data, f, indent=4)
+        os.replace(temp_path, path)
     except Exception as e:
-        print(f"Error saving markers: {e}")
+        logger.error(f"Error saving markers: {e}")
 
 def cleanup_nvidia_dxcache():
     """ Garbage collect ONLY the Nvidia DXCache (.nvph) files created by our application.
@@ -301,7 +445,7 @@ def cleanup_nvidia_dxcache():
                         remaining_old_files.append(filepath)
             
             if deleted_count > 0:
-                print(f"[DXCache GC] Cleaned up {deleted_count} stale cache files from previous session.")
+                logger.info(f"[DXCache GC] Cleaned up {deleted_count} stale cache files from previous session.")
             
             # Step 2: Record current files to detect new ones
             try:
@@ -334,7 +478,7 @@ def cleanup_nvidia_dxcache():
                 pass
                 
         except Exception as e:
-            print(f"[DXCache GC] Error during cache tracking: {e}")
+            logger.error(f"[DXCache GC] Error during cache tracking: {e}")
             
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
@@ -370,11 +514,11 @@ def cleanup_old_mem_cache():
                         except Exception:
                             pass
             if cleaned_count > 0:
-                print(f"[MemCache GC] Cleaned up {cleaned_count} stale cache directories from previous sessions.")
+                logger.info(f"[MemCache GC] Cleaned up {cleaned_count} stale cache directories from previous sessions.")
             if skipped_count > 0:
-                print(f"[MemCache GC] Skipped {skipped_count} directories still owned by running instances.")
+                logger.info(f"[MemCache GC] Skipped {skipped_count} directories still owned by running instances.")
         except Exception as e:
-            print(f"[MemCache GC] Error cleaning up stale cache directories: {e}")
+            logger.error(f"[MemCache GC] Error cleaning up stale cache directories: {e}")
             
     threading.Thread(target=worker, daemon=True).start()
 

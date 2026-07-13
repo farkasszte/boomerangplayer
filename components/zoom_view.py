@@ -49,39 +49,8 @@ class ZoomView(ZoomViewDrawingMixin, DrawingEraserMixin, QGraphicsView):
         self.watermark_drag_offset: Optional[QPointF] = None
         self.last_eraser_pos: Optional[QPointF] = None
         
-        # Cursor preview group
-        self.cursor_item = QGraphicsItemGroup()
-        
-        # 1. Circle representing pen width
-        self.cursor_circle = QGraphicsEllipseItem(self.cursor_item)
-        self.cursor_circle.setPen(QPen(QColor(255, 255, 255, 180), 1))
-        self.cursor_circle.setBrush(QColor(255, 255, 255, 40))
-        
-        # 2. Crosshair for precision (High contrast: Black outline + White inner)
-        cross_path = QPainterPath()
-        cross_path.moveTo(-15, 0)
-        cross_path.lineTo(15, 0)
-        cross_path.moveTo(0, -15)
-        cross_path.lineTo(0, 15)
-        cross_path.addRect(-0.5, -0.5, 1, 1) # Center point
-        
-        self.cursor_cross_bg = QGraphicsPathItem(self.cursor_item)
-        bg_pen = QPen(Qt.GlobalColor.black, 3)
-        bg_pen.setCosmetic(True)
-        self.cursor_cross_bg.setPen(bg_pen)
-        self.cursor_cross_bg.setPath(cross_path)
-        
-        self.cursor_cross_fg = QGraphicsPathItem(self.cursor_item)
-        fg_pen = QPen(Qt.GlobalColor.white, 1)
-        fg_pen.setCosmetic(True)
-        self.cursor_cross_fg.setPen(fg_pen)
-        self.cursor_cross_fg.setPath(cross_path)
-        
-        self.cursor_item.setZValue(20000)
-        self.cursor_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-        self.cursor_item.setEnabled(False)
-        self.cursor_item.hide()
-        self.scene().addItem(self.cursor_item)
+        # Initialize cursor preview group
+        self._create_cursor_items()
 
         # Text preview ghost
         self.text_preview_item = QGraphicsTextItem()
@@ -120,6 +89,41 @@ class ZoomView(ZoomViewDrawingMixin, DrawingEraserMixin, QGraphicsView):
     def update_cursor_size(self) -> None:
         r = self.pen_width / 2.0
         self.cursor_circle.setRect(-r, -r, self.pen_width, self.pen_width)
+
+    def _create_cursor_items(self) -> None:
+        # Cursor preview group
+        self.cursor_item = QGraphicsItemGroup()
+        
+        # 1. Circle representing pen width
+        self.cursor_circle = QGraphicsEllipseItem(self.cursor_item)
+        self.cursor_circle.setPen(QPen(QColor(255, 255, 255, 180), 1))
+        self.cursor_circle.setBrush(QColor(255, 255, 255, 40))
+        
+        # 2. Crosshair for precision (High contrast: Black outline + White inner)
+        cross_path = QPainterPath()
+        cross_path.moveTo(-15, 0)
+        cross_path.lineTo(15, 0)
+        cross_path.moveTo(0, -15)
+        cross_path.lineTo(0, 15)
+        cross_path.addRect(-0.5, -0.5, 1, 1) # Center point
+        
+        self.cursor_cross_bg = QGraphicsPathItem(self.cursor_item)
+        bg_pen = QPen(Qt.GlobalColor.black, 3)
+        bg_pen.setCosmetic(True)
+        self.cursor_cross_bg.setPen(bg_pen)
+        self.cursor_cross_bg.setPath(cross_path)
+        
+        self.cursor_cross_fg = QGraphicsPathItem(self.cursor_item)
+        fg_pen = QPen(Qt.GlobalColor.white, 1)
+        fg_pen.setCosmetic(True)
+        self.cursor_cross_fg.setPen(fg_pen)
+        self.cursor_cross_fg.setPath(cross_path)
+        
+        self.cursor_item.setZValue(20000)
+        self.cursor_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self.cursor_item.setEnabled(False)
+        self.cursor_item.hide()
+        self.scene().addItem(self.cursor_item)
 
     def undo_stroke(self) -> None:
         if self.undo_stack:

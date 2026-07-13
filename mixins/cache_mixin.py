@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 else:
     CacheMixinBase = object
 
+BUFFER_FRACTION = 0.15
 
 class CacheMixin(CacheMixinBase):
     if TYPE_CHECKING:
@@ -80,6 +81,35 @@ class CacheMixin(CacheMixinBase):
         if hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
             self.controlsCard.raise_()
 
+    def _calculate_prefetch_bounds(self, center_frame):
+        """
+        Calculates prefetch window bounds (start_frame, end_frame, chunk_size)
+        based on cache configuration.
+        """
+        divisor = [1, 2, 4, 6][self.config.get('prefetch_chunk_idx', 0)]
+        if divisor == 1:
+            chunk_size = self.cache_window_half * 2
+            backward_buffer = self.cache_window_half
+            forward_buffer = self.cache_window_half
+        else:
+            total_window = self.cache_window_half * 2
+            chunk_size = max(10, total_window // divisor)
+            is_forward = getattr(self, 'isForward', True)
+            
+            primary_buffer = max(5, int(chunk_size * BUFFER_FRACTION))
+            secondary_buffer = chunk_size - primary_buffer
+            
+            if is_forward:
+                backward_buffer = primary_buffer
+                forward_buffer = secondary_buffer
+            else:
+                forward_buffer = primary_buffer
+                backward_buffer = secondary_buffer
+
+        start_frame = max(0, center_frame - backward_buffer)
+        end_frame = min(max(0, self.total_frames - 1), center_frame + forward_buffer)
+        return start_frame, end_frame, chunk_size
+
     def cleanup_cache(self, keep_extracted_video=False):
         if hasattr(self, 'extraction_thread') and self.extraction_thread and self.extraction_thread.isRunning():
             
@@ -126,12 +156,12 @@ class CacheMixin(CacheMixinBase):
             t_start = getattr(self.extraction_thread, 'player_start', -1)
             t_end = getattr(self.extraction_thread, 'player_end', -1)
             if t_start <= center_frame <= t_end:
-                print(f"[request_frame_extraction] Running thread already covers center={center_frame} (range {t_start}-{t_end}). Letting it run.")
+                logger.debug(f"[request_frame_extraction] Running thread already covers center={center_frame} (range {t_start}-{t_end}). Letting it run.")
                 self.last_extracted_center = center_frame
                 return
 
             if force:
-                print(f"[request_frame_extraction] Cancelling running extraction thread for force request (center={center_frame}, running range={t_start}-{t_end}).")
+                logger.debug(f"[request_frame_extraction] Cancelling running extraction thread for force request (center={center_frame}, running range={t_start}-{t_end}).")
                 try:
                     self.extraction_thread.finished_extraction.disconnect()
                 except TypeError:
@@ -141,28 +171,10 @@ class CacheMixin(CacheMixinBase):
                 self.extraction_thread.wait()
                 self.extraction_thread = None
             else:
-                print(f"[request_frame_extraction] Aborted: extraction thread is already running.")
+                logger.debug(f"[request_frame_extraction] Aborted: extraction thread is already running.")
                 return  # Already extracting
 
-        divisor = [1, 2, 4, 6][self.config.get('prefetch_chunk_idx', 0)]
-        if divisor == 1:
-            start_frame = max(0, center_frame - self.cache_window_half)
-            end_frame = min(max(0, self.total_frames - 1), center_frame + self.cache_window_half)
-            chunk_size = self.cache_window_half * 2
-        else:
-            total_window = self.cache_window_half * 2
-            chunk_size = max(10, total_window // divisor)
-            is_forward = getattr(self, 'isForward', True)
-            if is_forward:
-                backward_buffer = max(5, int(chunk_size * 0.15))
-                forward_buffer = chunk_size - backward_buffer
-                start_frame = max(0, center_frame - backward_buffer)
-                end_frame = min(max(0, self.total_frames - 1), center_frame + forward_buffer)
-            else:
-                forward_buffer = max(5, int(chunk_size * 0.15))
-                backward_buffer = chunk_size - forward_buffer
-                start_frame = max(0, center_frame - backward_buffer)
-                end_frame = min(max(0, self.total_frames - 1), center_frame + forward_buffer)
+        start_frame, end_frame, chunk_size = self._calculate_prefetch_bounds(center_frame)
 
         num_frames = end_frame - start_frame + 1
         if num_frames <= 0:
@@ -172,14 +184,14 @@ class CacheMixin(CacheMixinBase):
         threshold = max(5, chunk_size // 4)
         if (not force and self.last_extracted_center != -1
                 and abs(self.last_extracted_center - center_frame) < threshold):
-            print(f"[request_frame_extraction] Aborted: optimization threshold met (last={self.last_extracted_center}, current={center_frame}, threshold={threshold}).")
+            logger.debug(f"[request_frame_extraction] Aborted: optimization threshold met (last={self.last_extracted_center}, current={center_frame}, threshold={threshold}).")
             return
 
         # Skip extraction for frames already in cache
         missing = [i for i in range(start_frame, start_frame + num_frames)
                    if i not in self.cached_frame_dict]
         if not missing:
-            print(f"[request_frame_extraction] All {num_frames} frames already cached. Skipping.")
+            logger.debug(f"[request_frame_extraction] All {num_frames} frames already cached. Skipping.")
             self.last_extracted_center = center_frame
             return
 
@@ -217,7 +229,7 @@ class CacheMixin(CacheMixinBase):
         from workers.threads import FrameExtractionThread
         gpu_enabled = self.config.get('gpu_acceleration', False)
         qv_value = self.config.get('qv_value', 2)
-        print(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, temp_dir={self.current_temp_dir}, qv_value={qv_value}")
+        logger.debug(f"[request_frame_extraction] Starting FrameExtractionThread: file={video_path}, start={actual_start_frame}, num={actual_num_frames}, temp_dir={self.current_temp_dir}, qv_value={qv_value}")
         self.extraction_thread = FrameExtractionThread(
             video_path,
             actual_start_frame,
@@ -311,9 +323,9 @@ class CacheMixin(CacheMixinBase):
 
     def on_first_frame_extracted(self, frame_dict, temp_dir, start_frame, num_frames):
         path_safe = self.currentFilePath.encode('ascii', errors='replace').decode('ascii') if self.currentFilePath else ""
-        print(f"[on_first_frame_extracted] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={path_safe}")
+        logger.debug(f"[on_first_frame_extracted] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={path_safe}")
         if not self.currentFilePath or not self.extraction_thread or temp_dir != self.current_temp_dir:
-            print("[on_first_frame_extracted] Early abort: invalid file path, missing thread, or temp_dir mismatch.")
+            logger.debug("[on_first_frame_extracted] Early abort: invalid file path, missing thread, or temp_dir mismatch.")
             self.loadingOverlay.hide()
             return
 
@@ -344,7 +356,7 @@ class CacheMixin(CacheMixinBase):
             
         # Silently trigger the background sliding window cache extraction
         self.last_extracted_center = -1
-        print(f"[on_first_frame_extracted] Triggering request_frame_extraction for current_cache_index={self.current_cache_index}")
+        logger.debug(f"[on_first_frame_extracted] Triggering request_frame_extraction for current_cache_index={self.current_cache_index}")
         self.request_frame_extraction(self.current_cache_index, force=True)
 
         if getattr(self, 'autoplay_next', False):
@@ -381,13 +393,13 @@ class CacheMixin(CacheMixinBase):
     # ------------------------------------------------------------------ #
 
     def on_extraction_finished(self, frame_dict, temp_dir, start_frame, num_frames):
-        print(f"[on_extraction_finished] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={self.currentFilePath}")
+        logger.debug(f"[on_extraction_finished] Called with {len(frame_dict) if frame_dict else 0} frames, temp_dir={temp_dir}, currentFilePath={self.currentFilePath}")
         if temp_dir != self.current_temp_dir:
-            print(f"[on_extraction_finished] Stale callback ignored. temp_dir={temp_dir}, current_temp_dir={self.current_temp_dir}")
+            logger.debug(f"[on_extraction_finished] Stale callback ignored. temp_dir={temp_dir}, current_temp_dir={self.current_temp_dir}")
             return
 
         if not frame_dict:
-            print("[on_extraction_finished] Frame dict is empty.")
+            logger.warning("[on_extraction_finished] Frame dict is empty.")
             self.loadingOverlay.hide()
             if self.extraction_thread:
                 self.extraction_thread.wait()

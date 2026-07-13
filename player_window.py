@@ -2,29 +2,19 @@ import os
 import sys
 import warnings
 
-# System volume control
-try:
-    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-    from comtypes import CLSCTX_ALL
-    HAS_PYCAW = True
-except Exception:
-    HAS_PYCAW = False
-
 from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
 from PyQt6.QtGui import QIcon, QColor, QPalette
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 # Silence qfluentwidgets during import
-_temp_stdout = sys.stdout
-sys.stdout = open(os.devnull, 'w')
-try:
+import contextlib
+import io
+
+with contextlib.redirect_stdout(io.StringIO()):
     import qfluentwidgets
     from qfluentwidgets import FluentWindow
     
     qfluentwidgets.HELP_MESSAGE = False
-finally:
-    sys.stdout.close()
-    sys.stdout = _temp_stdout
 
 from PyQt6.QtCore import qInstallMessageHandler
 from utils import get_resource_path, qt_message_handler, load_markers, VERSION
@@ -134,65 +124,8 @@ class PlayerWindow(
         self.mediaPlayer.setAudioOutput(self.audioOutput)
 
         # ---- System volume --------------------------------------------
-        self.volume_ctrl = None
-        if HAS_PYCAW:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                try:
-                    import comtypes
-                    from comtypes import CLSCTX_ALL, GUID
-                    try:
-                        comtypes.CoInitialize()
-                    except OSError:
-                        pass
-
-                    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-                    IID_IAudioEndpointVolume = "{5CDF2C82-841E-4546-9722-0CF74078229A}"
-
-                    def try_link_flexible(device_obj):
-                        if not device_obj:
-                            return None
-                        potential_targets = [device_obj]
-                        try:
-                            for attr in dir(device_obj):
-                                try:
-                                    val = getattr(device_obj, attr)
-                                    if hasattr(val, 'Activate'):
-                                        potential_targets.append(val)
-                                except (AttributeError, comtypes.COMError):
-                                    continue
-                        except (AttributeError, comtypes.COMError):
-                            pass
-
-                        for target in potential_targets:
-                            try:
-                                iid = getattr(IAudioEndpointVolume, '_iid_', IID_IAudioEndpointVolume)
-                                try:
-                                    interface = target.Activate(GUID(iid), CLSCTX_ALL, None)
-                                    if interface:
-                                        return interface.QueryInterface(IAudioEndpointVolume)
-                                except (AttributeError, comtypes.COMError):
-                                    continue
-                            except (AttributeError, comtypes.COMError, OSError):
-                                continue
-                        return None
-
-                    try:
-                        test_dev = AudioUtilities.GetSpeakers()
-                        self.volume_ctrl = try_link_flexible(test_dev)
-                    except (comtypes.COMError, OSError):
-                        pass
-
-                    if self.volume_ctrl is None:
-                        try:
-                            for d in AudioUtilities.GetAllDevices():
-                                self.volume_ctrl = try_link_flexible(d)
-                                if self.volume_ctrl:
-                                    break
-                        except (comtypes.COMError, OSError):
-                            pass
-                except ImportError:
-                    pass
+        from utils import get_system_volume_control
+        self.volume_ctrl = get_system_volume_control()
 
         # ---- Cache / playback variables --------------------------------
         self.cached_frame_dict = {}

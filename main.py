@@ -80,10 +80,17 @@ sys.excepthook = exception_hook
 
 def main():
     logger.info("Boomerang Player main execution started.")
-    # Garbage collect Nvidia DXCache (.nvph) files and stale mem_cache directories asynchronously in the background
-    from utils import cleanup_nvidia_dxcache, cleanup_old_mem_cache
-    cleanup_nvidia_dxcache()
-    cleanup_old_mem_cache()
+    # Garbage collect Nvidia DXCache (.nvph) files and stale mem_cache directories asynchronously in a background thread
+    def run_cleanup_async():
+        try:
+            from utils import cleanup_nvidia_dxcache, cleanup_old_mem_cache
+            cleanup_nvidia_dxcache()
+            cleanup_old_mem_cache()
+        except Exception as e:
+            logger.error(f"Error during async cleanup startup: {e}")
+            
+    import threading
+    threading.Thread(target=run_cleanup_async, name="StartupCleanupThread", daemon=True).start()
 
     # Enable High DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
@@ -100,7 +107,7 @@ def main():
     
     if "--test-crash" in sys.argv:
         logger.info("Testing Python unhandled exception crash...")
-        raise ValueError("Ez egy teszt Python kivétel.")
+        raise ValueError("This is a test Python exception.")
         
     if "--test-native-crash" in sys.argv:
         logger.info("Testing native C/C++ crash via ctypes...")
@@ -111,7 +118,13 @@ def main():
     from PyQt6.QtGui import QFont
     app.setFont(QFont("Segoe UI", 10))
     
-    # Monkeypatch qfluentwidgets MaskDialogBase to fix PyQt6 animation garbage collection bug
+    # Monkeypatch qfluentwidgets MaskDialogBase to fix PyQt6 animation garbage collection bug.
+    # JUSTIFICATION: In qfluentwidgets, animations are stored as local variables inside MaskDialogBase's
+    # methods (e.g. `opacityAni = QPropertyAnimation(...)`). In PyQt6, local animations are garbage-collected
+    # immediately when the method returns, which truncates the fade animations. By monkeypatching the class
+    # and binding the animation to `self.opacityAni` / `self.showOpacityAni`, we prevent early garbage collection.
+    # Subclassing is not viable here because internal library functions directly instantiate MaskDialogBase's
+    # subclasses (such as MessageDialog/ColorDialog), so the patched methods must be applied on the base class level.
     try:
         from qfluentwidgets.components.dialog_box.mask_dialog_base import MaskDialogBase
         from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
@@ -143,7 +156,7 @@ def main():
         MaskDialogBase.done = patched_done
         MaskDialogBase.showEvent = patched_showEvent
     except Exception as e:
-        print(f"Failed to patch MaskDialogBase: {e}")
+        logger.debug(f"Failed to patch MaskDialogBase: {e}")
 
     from player_window import PlayerWindow
     window = PlayerWindow()
