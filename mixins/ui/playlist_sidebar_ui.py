@@ -60,7 +60,11 @@ class PlaylistSidebarUIMixin:
         self.playlistList.setStyleSheet(
             f"QListWidget {{ border: none; background: transparent; outline: none; color: {fg_color}; }} "
             "QListWidget::item { border: none; outline: none; } "
-            "QScrollBar:vertical { width: 0px; } "
+            "QScrollBar:vertical { border: none; background: transparent; width: 6px; margin: 0px; } "
+            "QScrollBar::handle:vertical { background: rgba(128, 128, 128, 0.4); min-height: 20px; border-radius: 3px; } "
+            f"QScrollBar::handle:vertical:hover {{ background: {accent}; }} "
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { border: none; background: none; height: 0px; } "
+            "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; } "
             f"QListWidget::item:selected {{ background: rgba({_hex_to_rgb(accent)}, 0.3); border: none; outline: none; }} "
             f"QListWidget::item:selected:focus {{ background: rgba({_hex_to_rgb(accent)}, 0.4); border: none; outline: none; }}"
         )
@@ -88,10 +92,13 @@ class PlaylistSidebarUIMixin:
         self.playlistLayout.addWidget(self.playlistLabel)
 
         self.playlistList = DropListWidget()
+        from PyQt6.QtWidgets import QSizePolicy
+        self.playlistList.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding)
+        self.playlistList.setMinimumSize(0, 0)
         self.playlistList.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.playlistList.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.playlistList.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.playlistList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._update_playlist_list_stylesheet()
         self.playlistList.setItemDelegate(PlaylistDelegate(self))
         # Force a full viewport repaint on selection change to instantly clean up any sub-pixel border trails

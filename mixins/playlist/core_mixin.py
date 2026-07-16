@@ -1,5 +1,5 @@
 import os
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, QTimer
 from PyQt6.QtGui import QColor, QPixmap, QIcon
 from PyQt6.QtWidgets import QListWidgetItem
 from translations import tr
@@ -142,7 +142,7 @@ class PlaylistCoreMixin:
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
-            # Under new layout: index 5 is playlistContainer
-            if len(sizes) > 5 and sizes[5] < 250:
-                sizes[5] = 250
+            idx = self.mainSplitter.indexOf(self.playlistContainer)
+            if idx != -1 and len(sizes) > idx and sizes[idx] < 250:
+                sizes[idx] = 250
                 self.mainSplitter.setSizes(sizes)

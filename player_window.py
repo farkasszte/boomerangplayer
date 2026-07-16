@@ -79,6 +79,7 @@ class PlayerWindow(
         setThemeColor(QColor(self.accent_color))
 
         super().__init__()
+        self.BORDER_WIDTH = 8  # Wider resize grip (default 5 is too narrow, especially on HiDPI)
         self.setWindowIcon(QIcon(get_resource_path("resources/app_icon.ico")))
         self.setWindowTitle(f"Boomerang Player v{VERSION}")
         self.titleBar.setFixedHeight(32)
@@ -86,7 +87,7 @@ class PlayerWindow(
         # Target the top-level window directly to avoid cascading
         self.setStyleSheet(f"PlayerWindow {{ background-color: {self.config.get('bg_color', '#202020')}; }}")
         
-        self.widgetLayout.setContentsMargins(0, 32, 0, 0)
+        self.widgetLayout.setContentsMargins(2, 32, 2, 2)
 
         # Add a left margin to the logo by inserting spacing at the beginning of the layout (prevents squeezing)
         self.titleBar.hBoxLayout.insertSpacing(0, 12)
@@ -182,6 +183,31 @@ class PlayerWindow(
         # ---- UDP Multi-Instance Sync ----------------------------------
         self.init_ipc_sync()
 
+
+
+    def refresh_window_frame(self):
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+        import sys
+        if sys.platform == 'win32':
+            try:
+                from qfluentwidgets import isDarkTheme
+                if hasattr(self, 'windowEffect'):
+                    if getattr(self, 'isMicaEffectEnabled', lambda: False)():
+                        self.windowEffect.setMicaEffect(hwnd, isDarkTheme())
+                    else:
+                        self.windowEffect.addShadowEffect(hwnd)
+                import win32gui
+                import win32con
+                win32gui.SetWindowPos(
+                    hwnd, None, 0, 0, 0, 0,
+                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE |
+                    win32con.SWP_NOACTIVATE | win32con.SWP_FRAMECHANGED
+                )
+            except Exception:
+                pass
+
     def setWindowTitle(self, title):
         super().setWindowTitle(title)
         self._original_window_title = title
@@ -200,6 +226,12 @@ class PlayerWindow(
             x = (self.titleBar.width() - title_lbl.width()) // 2
             y = (self.titleBar.height() - title_lbl.height()) // 2
             title_lbl.move(x, y)
+
+    def event(self, event):
+        from PyQt6.QtCore import QEvent
+        if event.type() in (QEvent.Type.WindowActivate, QEvent.Type.ActivationChange, QEvent.Type.FocusIn):
+            self.refresh_window_frame()
+        return super().event(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

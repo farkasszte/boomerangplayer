@@ -11,6 +11,14 @@ class DropListWidget(QListWidget):
         self.setAcceptDrops(True)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
+    def minimumSizeHint(self):
+        from PyQt6.QtCore import QSize
+        return QSize(50, 50)
+
+    def sizeHint(self):
+        from PyQt6.QtCore import QSize
+        return QSize(100, 100)
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Delete:
             self.deleteRequested.emit()

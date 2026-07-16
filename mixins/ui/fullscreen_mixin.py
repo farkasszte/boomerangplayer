@@ -173,7 +173,7 @@ class FullscreenUIMixin:
                 # Re-parent titleBar back to the fluent window layout if needed
             # Restore header margin
             if hasattr(self, 'widgetLayout'):
-                self.widgetLayout.setContentsMargins(0, 32, 0, 0)
+                self.widgetLayout.setContentsMargins(2, 32, 2, 2)
                 
             # Restore saved window state or default to Maximized
             if hasattr(self, 'window_state_before_fs') and self.window_state_before_fs is not None:

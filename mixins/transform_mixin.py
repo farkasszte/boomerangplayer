@@ -194,9 +194,20 @@ class TransformMixin(TransformMixinBase):
                 and not self.pixmapItem.pixmap().isNull()
                 and self.view
                 and getattr(self, 'zoomLevel', 1.0) == 1.0):
-            vw = self.view.viewport().width()
-            vh = self.view.viewport().height()
-            logger.debug(f"[DEBUG resizeEvent] is_fs={getattr(self, 'is_full_screen', False)}, viewport={vw}x{vh}, pixmap={self.pixmapItem.pixmap().width()}x{self.pixmapItem.pixmap().height()}")
-            self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)
+            if not hasattr(self, '_fit_in_view_timer'):
+                self._fit_in_view_timer = QTimer(self)
+                self._fit_in_view_timer.setSingleShot(True)
+                self._fit_in_view_timer.timeout.connect(self._do_fit_in_view)
+            self._fit_in_view_timer.start(0)  # Defer execution to next event loop cycle
 
         self.update_loading_overlay_geometry()
+
+    def _do_fit_in_view(self):
+        if (hasattr(self, 'pixmapItem') and self.pixmapItem
+                and not self.pixmapItem.pixmap().isNull()
+                and self.view
+                and getattr(self, 'zoomLevel', 1.0) == 1.0):
+            vw = self.view.viewport().width()
+            vh = self.view.viewport().height()
+            logger.debug(f"[DEBUG _do_fit_in_view] viewport={vw}x{vh}, pixmap={self.pixmapItem.pixmap().width()}x{self.pixmapItem.pixmap().height()}")
+            self.view.fitInView(self.pixmapItem, Qt.AspectRatioMode.KeepAspectRatio)

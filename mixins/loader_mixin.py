@@ -277,6 +277,9 @@ class LoaderMixin(LoaderMixinBase):
                         self.current_cache_index = 0
                     self._start_playback()
             logger.info(f"load_video completed successfully for: {filePath}")
+            
+            if hasattr(self, 'refresh_window_frame'):
+                QTimer.singleShot(250, self.refresh_window_frame)
 
         except Exception as e:
             logger.exception(f"Error opening file: {filePath}")

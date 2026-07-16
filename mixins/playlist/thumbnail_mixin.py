@@ -203,6 +203,10 @@ class PlaylistThumbnailMixin:
             
             self.playlistList.setIconSize(QSize(0, 0))
 
+        from PyQt6.QtWidgets import QSizePolicy
+        self.playlistList.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding)
+        self.playlistList.setMinimumSize(0, 0)
+
         if not show_thumbs:
             
             self.thumb_queue.clear()
