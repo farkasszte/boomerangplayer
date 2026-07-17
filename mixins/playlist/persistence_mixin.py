@@ -55,7 +55,7 @@ class PlaylistPersistenceMixin:
                 with open(fileName, 'r', encoding='utf-8') as f:
                     data = json.load(f, strict=False)
 
-                if data.get('header') != 'boomerangplaylist':
+                if not isinstance(data, dict) or (data.get('header') != 'boomerangplaylist' and 'files' not in data):
                     raise ValueError(tr('not_a_valid_playlist'))
 
                 self.playlistList.clear()

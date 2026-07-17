@@ -226,6 +226,7 @@ class PlayerWindow(
             x = (self.titleBar.width() - title_lbl.width()) // 2
             y = (self.titleBar.height() - title_lbl.height()) // 2
             title_lbl.move(x, y)
+            self.titleBar.update()
 
     def event(self, event):
         from PyQt6.QtCore import QEvent
@@ -257,6 +258,7 @@ class PlayerWindow(
                 x = (self.titleBar.width() - title_lbl.width()) // 2
                 y = (self.titleBar.height() - title_lbl.height()) // 2
                 title_lbl.move(x, y)
+                self.titleBar.update()
 
         if getattr(self, 'is_full_screen', False):
             # Reposition title bar overlay in fullscreen
