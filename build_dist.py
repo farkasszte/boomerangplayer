@@ -1,50 +1,66 @@
-import PyInstaller.__main__  # type: ignore
 import os
 import shutil
+import sys
+import traceback
 
 # Final EXE name
 APP_NAME = "BoomerangPlayer"
 
-print(f"Building {APP_NAME}...")
+try:
+    print(f"Building {APP_NAME}...")
 
-# Check for ffmpeg and ffprobe
-ffmpeg_found = os.path.exists("ffmpeg.exe")
-ffprobe_found = os.path.exists("ffprobe.exe")
+    # Move non-standard imports inside try block to catch ImportError/ModuleNotFoundError
+    import PyInstaller.__main__  # type: ignore
 
-if not ffmpeg_found or not ffprobe_found:
-    print("Warning: ffmpeg.exe or ffprobe.exe not found in current directory!")
-    print("They will not be bundled. The app will rely on system PATH.")
+    # Check for ffmpeg and ffprobe
+    ffmpeg_found = os.path.exists("ffmpeg.exe")
+    ffprobe_found = os.path.exists("ffprobe.exe")
 
-args = [
-    'main.py',
-    '--onefile',           # Single EXE
-    '--windowed',          # No console window
-    f'--name={APP_NAME}',
-    '--icon=resources/app_icon.ico',
-    '--add-data=resources;resources', # Bundle resources folder including SVGs and window icon
-    '--runtime-tmpdir=%TEMP%\\BoomerangPlayer',
-    '--clean',
-]
+    if not ffmpeg_found or not ffprobe_found:
+        print("Warning: ffmpeg.exe or ffprobe.exe not found in current directory!")
+        print("They will not be bundled. The app will rely on system PATH.")
 
-# Exclude heavy machine learning and scientific modules to keep the build size minimal (~147MB)
-excludes = [
-    'torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sklearn', 'cv2',
-    'matplotlib', 'pyarrow', 'lxml', 'openpyxl', 'jinja2', 'numba',
-    'llvmlite', 'lz4', 'fsspec', 'astropy', 'PIL', 'h5py', 'sympy', 'IPython',
-    'yt_dlp', 'requests', 'urllib3', 'curl_cffi', 'brotli', 'mutagen', 'secretstorage',
-    'Cryptodome'
-]
-for ex in excludes:
-    args.append(f'--exclude-module={ex}')
+    args = [
+        'main.py',
+        '--onefile',           # Single EXE
+        '--windowed',          # No console window
+        f'--name={APP_NAME}',
+        '--icon=resources/app_icon.ico',
+        '--add-data=resources;resources', # Bundle resources folder including SVGs and window icon
+        '--runtime-tmpdir=%TEMP%\\BoomerangPlayer',
+        '--clean',
+    ]
 
-# Add binaries if they exist
-if ffmpeg_found:
-    args.append('--add-binary=ffmpeg.exe;.')
-if ffprobe_found:
-    args.append('--add-binary=ffprobe.exe;.')
+    # Exclude heavy machine learning and scientific modules to keep the build size minimal (~147MB)
+    excludes = [
+        'torch', 'torchvision', 'torchaudio', 'scipy', 'pandas', 'sklearn', 'cv2',
+        'matplotlib', 'pyarrow', 'lxml', 'openpyxl', 'jinja2', 'numba',
+        'llvmlite', 'lz4', 'fsspec', 'astropy', 'PIL', 'h5py', 'sympy', 'IPython',
+        'yt_dlp', 'requests', 'urllib3', 'curl_cffi', 'brotli', 'mutagen', 'secretstorage',
+        'Cryptodome'
+    ]
+    for ex in excludes:
+        args.append(f'--exclude-module={ex}')
 
-# Run PyInstaller
-PyInstaller.__main__.run(args)
+    # Add binaries if they exist
+    if ffmpeg_found:
+        args.append('--add-binary=ffmpeg.exe;.')
+    if ffprobe_found:
+        args.append('--add-binary=ffprobe.exe;.')
 
-print("\nBuild finished!")
-print(f"Your single EXE file is in the 'dist' folder: dist/{APP_NAME}.exe")
+    # Run PyInstaller
+    PyInstaller.__main__.run(args)
+
+    print("\nBuild finished!")
+    print(f"Your single EXE file is in the 'dist' folder: dist/{APP_NAME}.exe")
+
+except SystemExit as se:
+    if se.code != 0:
+        print(f"\nPyInstaller exited with error code: {se.code}")
+    else:
+        print("\nBuild finished successfully!")
+except BaseException as e:
+    print("\nError occurred during build:")
+    traceback.print_exc()
+finally:
+    input("\nPress Enter to exit...")
