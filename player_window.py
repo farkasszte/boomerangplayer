@@ -190,7 +190,7 @@ class PlayerWindow(
         if not hwnd:
             return
         import sys
-        if sys.platform == 'win32':
+        if sys.platform == 'win32' and not self.isMaximized():
             try:
                 from qfluentwidgets import isDarkTheme
                 if hasattr(self, 'windowEffect'):
