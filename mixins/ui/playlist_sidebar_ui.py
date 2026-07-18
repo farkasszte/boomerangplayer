@@ -57,8 +57,9 @@ class PlaylistSidebarUIMixin:
         
         inverse_text = self.config.get('inverse_text', False)
         fg_color = "#1c1c1c" if inverse_text else "#ffffff"
+        bg_color = self.config.get('bg_color', '#202020')
         self.playlistList.setStyleSheet(
-            f"QListWidget {{ border: none; background: transparent; outline: none; color: {fg_color}; }} "
+            f"QListWidget {{ border: none; background: {bg_color}; outline: none; color: {fg_color}; }} "
             "QListWidget::item { border: none; outline: none; } "
             "QScrollBar:vertical { border: none; background: transparent; width: 6px; margin: 0px; } "
             "QScrollBar::handle:vertical { background: rgba(128, 128, 128, 0.4); min-height: 20px; border-radius: 3px; } "

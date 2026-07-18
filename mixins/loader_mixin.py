@@ -84,6 +84,10 @@ class LoaderMixin(LoaderMixinBase):
 
     def open_media(self):
         """Custom file picker — avoids QFileDialog which corrupts DWM rendering in fullscreen."""
+        if getattr(self, '_open_media_dialog', None) is not None:
+            self._open_media_dialog.raise_()
+            self._open_media_dialog.activateWindow()
+            return
         from mixins.file_dialog import MediaFileDialog
         dialog = MediaFileDialog(self, self.config)
         self._open_media_dialog = dialog
@@ -94,6 +98,7 @@ class LoaderMixin(LoaderMixinBase):
         dialog = self._open_media_dialog
         if result and hasattr(dialog, 'selected_files') and dialog.selected_files:
             self._process_selected_files(dialog.selected_files)
+        self._open_media_dialog = None
 
     def _process_selected_files(self, selected):
         video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')

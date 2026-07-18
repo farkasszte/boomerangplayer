@@ -207,11 +207,15 @@ class PlayerWindow(
                 )
             except Exception:
                 pass
+        title = getattr(self, '_original_window_title', self.windowTitle())
+        self.customSetTitle(title)
 
     def setWindowTitle(self, title):
         super().setWindowTitle(title)
+        self.customSetTitle(title)
+
+    def customSetTitle(self, title):
         self._original_window_title = title
-        # Trigger an update of the elided title bar label immediately
         if hasattr(self, 'titleBar') and hasattr(self.titleBar, 'titleLabel') and self.titleBar.titleLabel:
             from PyQt6.QtGui import QFontMetrics
             from PyQt6.QtCore import Qt
@@ -223,10 +227,14 @@ class PlayerWindow(
             title_lbl.setText(elided)
             title_lbl.adjustSize()
             
+            margins = self.titleBar.hBoxLayout.contentsMargins()
+            content_h = self.titleBar.height() - margins.top() - margins.bottom()
             x = (self.titleBar.width() - title_lbl.width()) // 2
-            y = (self.titleBar.height() - title_lbl.height()) // 2
+            y = margins.top() + (content_h - title_lbl.height()) // 2
             title_lbl.move(x, y)
             self.titleBar.update()
+
+
 
     def event(self, event):
         from PyQt6.QtCore import QEvent
@@ -238,27 +246,14 @@ class PlayerWindow(
         super().resizeEvent(event)
         # Fix the title bar position and size when navigationInterface is hidden
         if hasattr(self, 'titleBar') and not getattr(self, 'is_full_screen', False):
-            self.titleBar.move(0, 0)
-            self.titleBar.resize(self.width(), self.titleBar.height())
+            if not self.isMaximized():
+                self.titleBar.move(0, 0)
+                self.titleBar.resize(self.width(), self.titleBar.height())
             
             # Manually center titleLabel strictly relative to the window width, applying elide to prevent overlaps
             if hasattr(self.titleBar, 'titleLabel') and self.titleBar.titleLabel:
-                from PyQt6.QtGui import QFontMetrics
-                from PyQt6.QtCore import Qt
-                
-                title_lbl = self.titleBar.titleLabel
-                max_w = max(100, self.width() - 320)
-                
                 full_text = getattr(self, '_original_window_title', self.windowTitle())
-                metrics = QFontMetrics(title_lbl.font())
-                elided = metrics.elidedText(full_text, Qt.TextElideMode.ElideRight, max_w)
-                title_lbl.setText(elided)
-                title_lbl.adjustSize()
-                
-                x = (self.titleBar.width() - title_lbl.width()) // 2
-                y = (self.titleBar.height() - title_lbl.height()) // 2
-                title_lbl.move(x, y)
-                self.titleBar.update()
+                self.customSetTitle(full_text)
 
         if getattr(self, 'is_full_screen', False):
             # Reposition title bar overlay in fullscreen
