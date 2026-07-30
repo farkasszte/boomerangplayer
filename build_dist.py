@@ -6,6 +6,12 @@ import traceback
 # Final EXE name
 APP_NAME = "BoomerangPlayer"
 
+# Ensure running within the virtual environment (.venv)
+venv_py = os.path.abspath(os.path.join(os.path.dirname(__file__), ".venv", "Scripts", "python.exe"))
+if os.path.exists(venv_py) and os.path.normpath(sys.executable).lower() != os.path.normpath(venv_py).lower():
+    print(f"Re-executing with virtual environment python: {venv_py}")
+    os.execv(venv_py, [venv_py] + sys.argv)
+
 try:
     print(f"Building {APP_NAME}...")
 

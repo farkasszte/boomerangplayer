@@ -714,7 +714,7 @@ class MediaFileDialog(QDialog):
 
     def _on_item_clicked(self, item, col=None):
         p = _item_path(item)
-        if not os.path.isdir(p):
+        if not os.path.isdir(p) and self._save_mode:
             self._name_filter.setText(os.path.basename(p))
 
     def _on_save_clicked(self):

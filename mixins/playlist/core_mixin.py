@@ -115,6 +115,9 @@ class PlaylistCoreMixin:
             
             self._process_thumb_queue()
 
+        if hasattr(self, 'update_playlist_counter'):
+            self.update_playlist_counter()
+
     # ------------------------------------------------------------------ #
     # Item interaction                                                     #
     # ------------------------------------------------------------------ #

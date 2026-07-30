@@ -76,6 +76,12 @@ class PlaylistSidebarUIMixin:
         palette.setColor(QPalette.ColorRole.Highlight, QColor(accent))
         self.playlistList.setPalette(palette)
 
+    def update_playlist_counter(self):
+        """Update the count display on the playlist sidebar header."""
+        if hasattr(self, 'playlistLabel') and hasattr(self, 'playlistList'):
+            count = self.playlistList.count()
+            self.playlistLabel.setText(f"{tr('playlist')} ({count})")
+
     def _init_playlist_sidebar(self):
         t = get_color_tokens(
             self.config.get('accent_color', '#00f2ff'),
@@ -165,3 +171,4 @@ class PlaylistSidebarUIMixin:
         self.playlistLayout.setContentsMargins(10, 10, 4, 10)
         
         self.update_playlist_layout(force_reload_thumbs=self.thumbToggle.isChecked())
+        self.update_playlist_counter()

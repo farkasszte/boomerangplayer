@@ -316,6 +316,9 @@ class PlaylistCrudMixin:
                 if row >= 0:
                     self.playlistList.takeItem(row)
                 
+                if hasattr(self, 'update_playlist_counter'):
+                    self.update_playlist_counter()
+                
                 # Remove from playlistData (markers)
                 if path in self.playlistData:
                     del self.playlistData[path]
@@ -508,6 +511,9 @@ class PlaylistCrudMixin:
         for row in sorted(rows_to_remove, reverse=True):
             self.playlistList.takeItem(row)
 
+        if hasattr(self, 'update_playlist_counter'):
+            self.update_playlist_counter()
+
         # Show result
         if success_count > 0:
             InfoBar.success(
@@ -550,6 +556,9 @@ class PlaylistCrudMixin:
                 
                 self.playlistList.takeItem(row)
 
+        if hasattr(self, 'update_playlist_counter'):
+            self.update_playlist_counter()
+
     def clear_playlist(self):
         
         self.thumb_queue.clear()
@@ -567,6 +576,9 @@ class PlaylistCrudMixin:
         
         self.cleanup_cache()
         self.currentFilePath = None
+        
+        if hasattr(self, 'update_playlist_counter'):
+            self.update_playlist_counter()
         
         self.setWindowTitle(f"Boomerang Player v{VERSION}")
         if hasattr(self, 'pixmapItem'):

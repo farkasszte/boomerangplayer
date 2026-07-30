@@ -52,7 +52,10 @@ class GlobalSettingsLocaleManagerMixin:
 
     def update_ui_texts(self):
         
-        self.playlistLabel.setText(tr('playlist'))
+        if hasattr(self, 'update_playlist_counter'):
+            self.update_playlist_counter()
+        else:
+            self.playlistLabel.setText(tr('playlist'))
         
         self.thumbLabel.setText(tr('show_thumbnails'))
         
