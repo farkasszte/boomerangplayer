@@ -58,18 +58,49 @@ class StyleUIMixin:
                 menu = getattr(self, menu_name)
                 menu.setStyleSheet(s['MENU_STYLE'])
 
-        # Playback buttons
+        # Playback buttons styling (seamless button group without border overlap)
         pb_btns = ['stepBackButton', 'playBackwardButton', 'fullScreenButton', 'playButton', 'stepForwardButton']
-        for btn_name in pb_btns:
+        for i, btn_name in enumerate(pb_btns):
             if hasattr(self, btn_name):
                 btn = getattr(self, btn_name)
-                # COMPACT_BTN_STYLE needs specific rounding for ends
-                style = s['COMPACT_BTN_STYLE']
-                if btn_name == 'stepBackButton':
-                    style += "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }"
-                elif btn_name == 'stepForwardButton':
-                    style += f"ToolButton {{ border-right: 1px solid {border_color}; border-top-right-radius: 4px; border-bottom-right-radius: 4px; }}"
-                btn.setStyleSheet(style)
+                if i == 0:
+                    btn_style = f"""
+                        ToolButton {{
+                            border: 1px solid {border_color};
+                            border-top-left-radius: 4px;
+                            border-bottom-left-radius: 4px;
+                            background: {bg_translucent};
+                            padding: 0px; min-width: 32px; min-height: 32px; max-height: 32px; margin: 0px;
+                        }}
+                        ToolButton:hover {{ background: {bg_hover}; }}
+                        ToolButton:pressed {{ background: {bg_pressed}; }}
+                    """
+                elif i == len(pb_btns) - 1:
+                    btn_style = f"""
+                        ToolButton {{
+                            border: 1px solid {border_color};
+                            border-left: none;
+                            border-top-right-radius: 4px;
+                            border-bottom-right-radius: 4px;
+                            background: {bg_translucent};
+                            padding: 0px; min-width: 32px; min-height: 32px; max-height: 32px; margin: 0px;
+                        }}
+                        ToolButton:hover {{ background: {bg_hover}; }}
+                        ToolButton:pressed {{ background: {bg_pressed}; }}
+                    """
+                else:
+                    btn_style = f"""
+                        ToolButton {{
+                            border: 1px solid {border_color};
+                            border-left: none;
+                            border-radius: 0px;
+                            background: {bg_translucent};
+                            padding: 0px; min-width: 32px; min-height: 32px; max-height: 32px; margin: 0px;
+                        }}
+                        ToolButton:hover {{ background: {bg_hover}; }}
+                        ToolButton:pressed {{ background: {bg_pressed}; }}
+                    """
+                btn.setStyleSheet(btn_style)
 
         # Controls card bottom row tool buttons styling
         cc_btns = [

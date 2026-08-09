@@ -175,6 +175,7 @@ class MediaFileDialog(QDialog):
         wbg = "#ffffff" if inverse_text else "#1a1a1a"
         bdr = "rgba(0,0,0,0.15)" if inverse_text else "rgba(255,255,255,0.1)"
         hov = "rgba(0,0,0,0.08)" if inverse_text else "rgba(255,255,255,0.1)"
+        bg_pressed = "rgba(0,0,0,0.02)" if inverse_text else "rgba(255,255,255,0.03)"
         hdr = "#eaeaea" if inverse_text else "#252525"
 
         if self._save_mode:
@@ -226,10 +227,11 @@ class MediaFileDialog(QDialog):
             QComboBox QAbstractItemView::item:hover {{ background: {hov}; }}
             QPushButton {{
                 background: {wbg}; border: 1px solid {bdr};
-                border-radius: 4px; padding: 6px 12px; min-width: 75px;
-                font-weight: 500; color: {fg};
+                border-radius: 4px; padding: 6px 14px; min-width: 80px;
+                font-weight: 500; color: {fg}; outline: none;
             }}
             QPushButton:hover {{ background-color: {hov}; }}
+            QPushButton:pressed {{ background-color: {bg_pressed}; }}
             QSplitter::handle {{ background: {bdr}; width: 1px; }}
         """)
 
@@ -499,7 +501,7 @@ class MediaFileDialog(QDialog):
 
         for text, handler, w, tip in buttons:
             btn = QPushButton(text)
-            btn.setFixedWidth(w)
+            btn.setMinimumWidth(100)
             btn.setToolTip(tip)
             btn.clicked.connect(handler)
             lay.addWidget(btn)

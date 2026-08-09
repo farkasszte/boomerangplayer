@@ -130,18 +130,21 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
 
     styles['ACTION_BTN_STYLE'] = f"""
         PushButton {{
-            border: none;
+            border: 1px solid {border_color};
             border-radius: 4px;
             background: {bg_translucent};
-            border: 1px solid {border_color};
             color: {fg_color};
             font-size: 13px;
             font-weight: 500;
-            padding: 8px;
-            min-width: 60px;
+            padding: 6px 12px;
+            min-width: 65px;
+            outline: none;
         }}
         PushButton:hover {{
             background: {bg_hover};
+        }}
+        PushButton:pressed {{
+            background: {bg_pressed};
         }}
     """
 

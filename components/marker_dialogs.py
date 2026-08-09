@@ -174,12 +174,18 @@ class MarkersDialog(QDialog):
         self.layout.addWidget(self.listWidget)
 
         # Bottom Buttons
+        from styles import get_styles
+        styles_dict = get_styles(parent_player.config.get('accent_color', '#00f2ff'), t['bg'], parent_player.config.get('inverse_text', False))
+        
         self.closeBtn = PushButton(tr('close'))
         self.closeBtn.clicked.connect(self.close)
-        self.closeBtn.setFixedWidth(100)
+        self.closeBtn.setMinimumWidth(90)
+        self.closeBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
         
         self.addMarkerBtn = PushButton("+ " + tr('add_marker'))
         self.addMarkerBtn.clicked.connect(self.on_add_marker_clicked)
+        self.addMarkerBtn.setMinimumWidth(100)
+        self.addMarkerBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
         
         btnLayout = QHBoxLayout()
         btnLayout.addWidget(self.addMarkerBtn)
@@ -402,8 +408,8 @@ class SaveFrameOptionsDialog(QDialog):
         btnLayout.addWidget(self.cancelBtn)
         self.layout.addLayout(btnLayout)
 
-        self.saveBtn.setStyleSheet(ACTION_BTN_STYLE)
-        self.cancelBtn.setStyleSheet(ACTION_BTN_STYLE)
+        self.saveBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
+        self.cancelBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
 
         self.formatCombo.currentIndexChanged.connect(self.update_quality_visibility)
         self.update_quality_visibility()
@@ -605,8 +611,8 @@ class SaveLoopOptionsDialog(QDialog):
         btnLayout.addWidget(self.cancelBtn)
         self.layout.addLayout(btnLayout)
 
-        self.saveBtn.setStyleSheet(ACTION_BTN_STYLE)
-        self.cancelBtn.setStyleSheet(ACTION_BTN_STYLE)
+        self.saveBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
+        self.cancelBtn.setStyleSheet(styles_dict.get('ACTION_BTN_STYLE', ''))
 
         self.modeCombo.currentIndexChanged.connect(self.update_options_visibility)
         self.formatCombo.currentIndexChanged.connect(self.update_options_visibility)

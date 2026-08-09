@@ -204,12 +204,6 @@ class UIMixin(
         self.playerLayout.setContentsMargins(0, 0, 0, 0)
         self.playerLayout.setSpacing(0)
 
-        # Enforce opaque backingstore behavior on key containers
-        for widget in [self.playerInterface, getattr(self, 'stackedWidget', None), self.controlsCard, getattr(self, 'playlistContainer', None)]:
-            if widget is not None:
-                widget.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
-                widget.setAutoFillBackground(True)
-
 
         # Startup audio device
         device_id = self.config.get('audio_device', '')
