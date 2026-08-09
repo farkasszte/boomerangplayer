@@ -243,7 +243,10 @@ class StyleUIMixin:
         opacity = getattr(self, 'pending_panel_opacity', self.config.get('panel_opacity', 100))
         opacity_float = opacity / 100.0
         rgb_bg = hex_to_rgb(bg_color)
-        transparent_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"
+        
+        panel_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"
+        win_bg_style = f"PlayerWindow {{ background-color: {bg_color}; }}"
+        title_bg_style = f"background-color: {bg_color}; border: none;"
 
         # Apply window opacity to the main window
         self.setWindowOpacity(opacity_float)
@@ -257,16 +260,17 @@ class StyleUIMixin:
 
         # Update Background Colors
         # Main window (PlayerWindow)
-        
-        self.setStyleSheet(f"PlayerWindow {{ background-color: rgba({rgb_bg}, {opacity_float}); }}")
+        self.setStyleSheet(win_bg_style)
         
         # Title bar
         if hasattr(self, 'titleBar'):
-            self.titleBar.setStyleSheet(f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;")
+            self.titleBar.setStyleSheet(title_bg_style)
             
-        # Set playerInterface background to black so transparent sidebars and controlsCard show high-contrast glass effect
+        # Set stackedWidget & playerInterface background to black for video contrast
+        if hasattr(self, 'stackedWidget'):
+            self.stackedWidget.setStyleSheet("QStackedWidget { background-color: black; border: none; }")
         if hasattr(self, 'playerInterface'):
-            self.playerInterface.setStyleSheet(f"QWidget#playerInterface {{ background-color: black; }}")
+            self.playerInterface.setStyleSheet("QWidget#playerInterface { background-color: black; border: none; }")
             
         # Set mainSplitter background to transparent
         if hasattr(self, 'mainSplitter'):
@@ -276,7 +280,7 @@ class StyleUIMixin:
             
         # Controls card (Footer)
         if hasattr(self, 'controlsCard'):
-            self.controlsCard.setStyleSheet(transparent_bg_style)
+            self.controlsCard.setStyleSheet(panel_bg_style)
             
         # Sidebars
         sidebar_containers = ['settingsContainer', 'imageAdjContainer', 'globalSettingsContainer', 
@@ -285,10 +289,12 @@ class StyleUIMixin:
             if hasattr(self, container_name):
                 if container_name == 'drawingContainer':
                     getattr(self, container_name).setStyleSheet(
-                        f"background-color: rgba({rgb_bg}, {opacity_float}); border: none; QScrollBar {{ width: 0px; height: 0px; }}"
+                        f"{panel_bg_style} QScrollBar {{ width: 0px; height: 0px; }}"
                     )
                 else:
-                    getattr(self, container_name).setStyleSheet(transparent_bg_style)
+                    getattr(self, container_name).setStyleSheet(panel_bg_style)
+
+
                 
         # Drawing scroll area and widget
         if hasattr(self, 'drawingScrollWidget'):

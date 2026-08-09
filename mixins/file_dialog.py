@@ -380,7 +380,9 @@ class MediaFileDialog(QDialog):
 
         # Drive sidebar
         self._drive_list = QListWidget()
-        self._drive_list.setFixedWidth(160)
+        self._drive_list.setMinimumWidth(150)
+        self._drive_list.setMaximumWidth(300)
+        self._drive_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         for label, p in _get_special_folders():
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, p)
@@ -450,8 +452,11 @@ class MediaFileDialog(QDialog):
         self._stack.addWidget(self._file_tree)
         self._stack.addWidget(self._thumb_list)
         splitter.addWidget(self._stack)
-        splitter.setSizes([160, 690])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([180, 670])
         return splitter
+
 
     # ── Bottom bar ────────────────────────────────────────────────────────────
 
