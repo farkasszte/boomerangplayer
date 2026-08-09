@@ -336,3 +336,8 @@ class StyleUIMixin:
             except Exception:
                 pass
 
+        self.update()
+        if hasattr(self, 'playerInterface'):
+            self.playerInterface.update()
+
+

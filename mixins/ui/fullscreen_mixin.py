@@ -237,3 +237,8 @@ class FullscreenUIMixin:
             self.update_sidebar_fullscreen_state()
         if hasattr(self, 'update_sidebar_margins'):
             self.update_sidebar_margins()
+
+        self.update()
+        if hasattr(self, 'playerInterface'):
+            self.playerInterface.update()
+

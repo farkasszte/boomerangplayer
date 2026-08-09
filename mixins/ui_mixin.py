@@ -228,6 +228,8 @@ class UIMixin(
             if enabled:
                 if not isinstance(self.view.viewport(), QOpenGLWidget):
                     gl_v = QOpenGLWidget()
+                    gl_v.setUpdateBehavior(QOpenGLWidget.UpdateBehavior.NoPartialUpdate)
+                    gl_v.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
                     gl_v.setAutoFillBackground(True)
                     # Force full viewport update to prevent "ghosting" / leaving previous frames
                     self.view.setViewport(gl_v)
@@ -351,3 +353,8 @@ class UIMixin(
                 250 if self.drawingContainer.isVisible() else 0
             ]
             self.mainSplitter.setSizes(sizes)
+
+        # Trigger full window update to clear any reparenting ghost artifacts in backing store
+        self.update()
+        if hasattr(self, 'playerInterface'):
+            self.playerInterface.update()

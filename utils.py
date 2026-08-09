@@ -5,7 +5,7 @@ import subprocess
 import logging
 from PyQt6.QtCore import Qt
 
-VERSION = "4.1"
+VERSION = "4.2"
 logger = logging.getLogger("BoomerangPlayer")
 
 def get_base_path():

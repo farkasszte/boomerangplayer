@@ -69,4 +69,9 @@ except BaseException as e:
     print("\nError occurred during build:")
     traceback.print_exc()
 finally:
-    input("\nPress Enter to exit...")
+    if sys.stdin and sys.stdin.isatty():
+        try:
+            input("\nPress Enter to exit...")
+        except Exception:
+            pass
+
