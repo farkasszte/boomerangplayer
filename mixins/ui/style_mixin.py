@@ -71,6 +71,7 @@ class StyleUIMixin:
                             border-bottom-left-radius: 4px;
                             background: {bg_translucent};
                             padding: 0px; min-width: 32px; min-height: 32px; max-height: 32px; margin: 0px;
+                            outline: none;
                         }}
                         ToolButton:hover {{ background: {bg_hover}; }}
                         ToolButton:pressed {{ background: {bg_pressed}; }}
@@ -84,6 +85,7 @@ class StyleUIMixin:
                             border-bottom-right-radius: 4px;
                             background: {bg_translucent};
                             padding: 0px; min-width: 32px; min-height: 32px; max-height: 32px; margin: 0px;
+                            outline: none;
                         }}
                         ToolButton:hover {{ background: {bg_hover}; }}
                         ToolButton:pressed {{ background: {bg_pressed}; }}
@@ -96,6 +98,7 @@ class StyleUIMixin:
                             border-radius: 0px;
                             background: {bg_translucent};
                             padding: 0px; min-width: 32px; min-height: 32px; max-height: 32px; margin: 0px;
+                            outline: none;
                         }}
                         ToolButton:hover {{ background: {bg_hover}; }}
                         ToolButton:pressed {{ background: {bg_pressed}; }}
@@ -119,6 +122,7 @@ class StyleUIMixin:
                         color: {fg_color};
                         min-width: 32px;
                         min-height: 32px;
+                        outline: none;
                     }}
                     ToolButton:hover {{
                         background: {bg_hover};

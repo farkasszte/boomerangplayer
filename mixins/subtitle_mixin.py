@@ -82,11 +82,12 @@ class OutlineLabel(QLabel):
             super().paintEvent(event)
             return
 
-        # 1. Let QLabel paint the background and text first
-        super().paintEvent(event)
-
-        # 2. Update cache and blit the cached pixmap
+        # 1. Update cache with outline and text
         self._update_cache()
+
+        # 2. Paint frame/background if any, then blit cached pixmap containing outline + text
+        from PyQt6.QtWidgets import QFrame
+        QFrame.paintEvent(self, event)
 
         if self._cached_pixmap is not None:
             painter = QPainter(self)

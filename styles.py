@@ -49,6 +49,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
         min-height: 32px;
         max-height: 32px;
         margin: 0px;
+        outline: none;
     }}
     ToolButton:hover {{
         background: {bg_hover};
@@ -84,6 +85,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
             border-bottom: 1px solid {border_bottom_color};
             border-radius: 5px; padding: 4px 10px;
             min-height: 22px; color: {fg_color}; font-size: 13px;
+            outline: none;
         }}
         QComboBox:hover {{ background: {bg_hover}; }}
         QComboBox::drop-down {{ border: none; width: 0px; }}
@@ -118,6 +120,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
             padding: 4px 6px;
             color: {fg_color};
             font-size: 13px;
+            outline: none;
         }}
         QSpinBox:hover {{
             background: {bg_hover};
@@ -125,6 +128,12 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
         QSpinBox:focus {{
             border: 1px solid {accent_color};
             background: {bg_translucent};
+        }}
+        QSpinBox QLineEdit {{
+            border: none;
+            background: transparent;
+            outline: none;
+            color: {fg_color};
         }}
     """
 
@@ -157,6 +166,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
             border: 1px solid {border_color};
             border-radius: 4px;
             color: {fg_color};
+            outline: none;
         }}
         PushButton:hover, ToolButton:hover {{
             background: {bg_hover};
@@ -180,6 +190,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
             border-bottom: 1px solid {border_bottom_color};
             border-radius: 4px; color: {fg_color};
             padding: 8px 12px; text-align: left; font-size: 13px;
+            outline: none;
         }}
         PushButton:hover {{ background: {bg_hover}; }}
     """

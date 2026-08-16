@@ -178,12 +178,12 @@ class DrawingMixin(DrawingMixinBase):
     def update_palette_ui(self):
         palette = self.config.get('palette', [])
         active_idx = self.config.get('active_color_index', 2)
-        accent = "#0099FF" # Accent color for border
+        accent = self.config.get('accent_color', '#00f2ff')
         
         for i, btn in enumerate(self.paletteButtons):
             color = palette[i]
-            border = f"2px solid {accent}" if i == active_idx else "1px solid rgba(255,255,255,40)"
-            btn.setStyleSheet(f"background-color: {color}; border: {border}; border-radius: 4px;")
+            border = f"2px solid {accent}" if i == active_idx else "1px solid rgba(255, 255, 255, 0.2)"
+            btn.setStyleSheet(f"ToolButton {{ background-color: {color}; border: {border}; border-radius: 4px; padding: 0px; outline: none; }}")
 
     def update_pen_width(self, val):
         self.view.pen_width = val

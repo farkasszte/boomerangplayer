@@ -52,11 +52,7 @@ class MarkerSlider(NoWheelSlider):
             painter.setOpacity(0.15)
             painter.setBrush(color)
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRect(0, 0, w, h)
-            # Draw a slightly more visible border
-            painter.setOpacity(0.4)
-            painter.setPen(QPen(color, 1))
-            painter.drawRect(0, 0, w-1, h-1)
+            painter.drawRoundedRect(0, 0, w, h, 4, 4)
             painter.end()
 
         # 2. Draw the standard QSlider (groove, sub-page/accent, handle)

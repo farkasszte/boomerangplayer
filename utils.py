@@ -5,7 +5,7 @@ import subprocess
 import logging
 from PyQt6.QtCore import Qt
 
-VERSION = "4.2"
+VERSION = "4.3"
 logger = logging.getLogger("BoomerangPlayer")
 
 def get_base_path():
@@ -265,7 +265,15 @@ DEFAULT_CONFIG = {
     'detected_hwaccel': 'auto',
     'advance_playlist_after_loop': False,
     'advance_playlist_loop_count': 1,
-    'default_folder': ''
+    'default_folder': '',
+    'cache_window': 900,
+    'gpu_acceleration': True,
+    'show_filenames': True,
+    'show_thumbnails': True,
+    'thumbnail_size_index': 1,
+    'qv_value': 1,
+    'dxcache_files': {},
+    'prefetch_chunk_idx': 0
 }
 
 def get_config_path():
@@ -297,7 +305,7 @@ def validate_config(data):
                         validated[k] = max(0, min(100, ival))
                 except (ValueError, TypeError):
                     pass
-            elif k in ('speed_locked', 'inverse_text', 'audio_eq_enabled', 'enable_subtitles', 'subtitle_outline_enabled', 'advance_playlist_after_loop'):
+            elif k in ('speed_locked', 'inverse_text', 'audio_eq_enabled', 'enable_subtitles', 'subtitle_outline_enabled', 'advance_playlist_after_loop', 'gpu_acceleration', 'show_filenames', 'show_thumbnails'):
                 if isinstance(val, bool):
                     validated[k] = val
             elif k == 'shortcuts':
@@ -340,11 +348,14 @@ def validate_config(data):
                     validated[k] = max(0, min(10, int(val)))
                 except (ValueError, TypeError):
                     pass
-            elif k == 'advance_playlist_loop_count':
+            elif k in ('advance_playlist_loop_count', 'cache_window', 'thumbnail_size_index', 'qv_value', 'prefetch_chunk_idx'):
                 try:
-                    validated[k] = max(1, int(val))
+                    validated[k] = int(val)
                 except (ValueError, TypeError):
                     pass
+            elif k == 'dxcache_files':
+                if isinstance(val, dict):
+                    validated[k] = val
             else:
                 if type(val) is type(default_val):
                     validated[k] = val
@@ -356,9 +367,7 @@ def load_config():
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                validated = validate_config(config)
-                validated['gpu_acceleration'] = True
-                return validated
+                return validate_config(config)
         except Exception as e:
             logger.error(f"Error loading config: {e}")
     return DEFAULT_CONFIG.copy()

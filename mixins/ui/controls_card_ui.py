@@ -37,11 +37,9 @@ class ControlsCardUIMixin:
         
         if self.volume_ctrl:
             try:
-                
                 initial_vol = int(self.volume_ctrl.GetMasterVolumeLevelScalar() * 100)
-                
                 self.userMutedIntent = self.volume_ctrl.GetMute()
-            except:
+            except Exception:
                 pass
         
         self.audioOutput.setVolume(initial_vol / 100.0)
@@ -88,12 +86,8 @@ class ControlsCardUIMixin:
 
         self.stepBackButton = ToolButton(FluentIcon.LEFT_ARROW)
         self.stepBackButton.setToolTip(tr('tip_prev_frame'))
-        
         self.stepBackButton.clicked.connect(lambda: self.step_frame(-1))
         self.stepBackButton.setFixedSize(32, 32)
-        self.stepBackButton.setStyleSheet(
-            COMPACT_BTN_STYLE + "ToolButton { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }"
-        )
 
         # Create flipped Play icon for backward button
         play_pixmap = FluentIcon.PLAY.icon().pixmap(QSize(24, 24))
@@ -106,41 +100,24 @@ class ControlsCardUIMixin:
         self.playBackwardButton.setToolTip(tr('tip_play_backward'))
         self.playBackwardButton.setIconSize(QSize(24, 24))
         self.playBackwardButton.setFixedSize(32, 32)
-        self.playBackwardButton.setStyleSheet(
-            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
-        )
-        
         self.playBackwardButton.clicked.connect(self.play_pause_backward)
-
-        self.playButton = ToolButton(FluentIcon.PLAY)
-        self.playButton.setToolTip(tr('tip_play_pause'))
-        self.playButton.setIconSize(QSize(24, 24))
-        self.playButton.setFixedSize(32, 32)
-        self.playButton.setStyleSheet(
-            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
-        )
-        
-        self.playButton.clicked.connect(self.play_pause)
-
-        self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
-        self.stepForwardButton.setToolTip(tr('tip_next_frame'))
-        
-        self.stepForwardButton.clicked.connect(lambda: self.step_frame(1))
-        self.stepForwardButton.setFixedSize(32, 32)
-        self.stepForwardButton.setStyleSheet(
-            COMPACT_BTN_STYLE
-            + "ToolButton { border-right: 1px solid rgba(255,255,255,0.08); "
-              "border-top-right-radius: 4px; border-bottom-right-radius: 4px; }"
-        )
 
         self.fullScreenButton = ToolButton(FluentIcon.FULL_SCREEN)
         self.fullScreenButton.setToolTip(tr('tip_full_screen'))
         self.fullScreenButton.setIconSize(QSize(24, 24))
         self.fullScreenButton.setFixedSize(32, 32)
-        self.fullScreenButton.setStyleSheet(
-            COMPACT_BTN_STYLE + "ToolButton { border-radius: 0px; border-right: none; }"
-        )
         self.fullScreenButton.clicked.connect(self.toggle_full_screen)
+
+        self.playButton = ToolButton(FluentIcon.PLAY)
+        self.playButton.setToolTip(tr('tip_play_pause'))
+        self.playButton.setIconSize(QSize(24, 24))
+        self.playButton.setFixedSize(32, 32)
+        self.playButton.clicked.connect(self.play_pause)
+
+        self.stepForwardButton = ToolButton(FluentIcon.RIGHT_ARROW)
+        self.stepForwardButton.setToolTip(tr('tip_next_frame'))
+        self.stepForwardButton.clicked.connect(lambda: self.step_frame(1))
+        self.stepForwardButton.setFixedSize(32, 32)
 
         playbackButtonsLayout.addWidget(self.stepBackButton)
         playbackButtonsLayout.addWidget(self.playBackwardButton)

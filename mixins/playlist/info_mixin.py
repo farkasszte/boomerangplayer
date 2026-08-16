@@ -80,7 +80,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                     if asample != '?':
                         try:
                             asample = f"{float(asample)/1000:.1f} kHz"
-                        except:
+                        except (ValueError, TypeError):
                             pass
 
                     # Try to get language tag
