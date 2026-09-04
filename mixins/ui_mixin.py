@@ -102,7 +102,7 @@ class UIMixin(
         self.mainSplitter.addWidget(self.playlistContainer)
         self.mainSplitter.addWidget(self.drawingContainer)
         self.mainSplitter.setStretchFactor(4, 1)
-        self.mainSplitter.setSizes([0, 0, 0, 0, 10000, 0, 250, 0])
+        self.mainSplitter.setSizes([0, 0, 0, 0, 10000, 0, 260, 0])
 
         self.playerLayout.addWidget(self.mainSplitter, stretch=1)
 
@@ -299,7 +299,7 @@ class UIMixin(
                 
                 if was_visible:
                     container.raise_()
-                    width = 250
+                    width = 260
                     x = 0 if side == 'left' else (self.width() - width)
                     container.setGeometry(x, title_bar_h, width, sidebar_height - title_bar_h)
             
@@ -344,14 +344,14 @@ class UIMixin(
             
             # Restore windowed sizes dynamically based on actual visibility of the sidebars
             sizes = [
-                250 if self.globalSettingsContainer.isVisible() else 0,
-                250 if self.settingsContainer.isVisible() else 0,
-                250 if self.imageAdjContainer.isVisible() else 0,
-                250 if self.subtitleContainer.isVisible() else 0,
+                260 if self.globalSettingsContainer.isVisible() else 0,
+                260 if self.settingsContainer.isVisible() else 0,
+                260 if self.imageAdjContainer.isVisible() else 0,
+                260 if self.subtitleContainer.isVisible() else 0,
                 10000,
-                250 if hasattr(self, 'audioContainer') and self.audioContainer.isVisible() else 0,
-                250 if self.playlistContainer.isVisible() else 0,
-                250 if self.drawingContainer.isVisible() else 0
+                260 if hasattr(self, 'audioContainer') and self.audioContainer.isVisible() else 0,
+                260 if self.playlistContainer.isVisible() else 0,
+                260 if self.drawingContainer.isVisible() else 0
             ]
             self.mainSplitter.setSizes(sizes)
 

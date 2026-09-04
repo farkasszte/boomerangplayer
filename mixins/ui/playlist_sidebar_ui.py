@@ -89,7 +89,7 @@ class PlaylistSidebarUIMixin:
             self.config.get('inverse_text', False)
         )
         self.playlistContainer = QFrame()
-        self.playlistContainer.setMinimumWidth(250)
+        self.playlistContainer.setMinimumWidth(260)
         self.playlistContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
         self.playlistLayout.setContentsMargins(5, 5, 5, 5)

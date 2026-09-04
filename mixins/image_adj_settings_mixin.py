@@ -74,7 +74,7 @@ class ImageAdjSettingsMixin(ImageAdjSettingsMixinBase):
             self.config.get('inverse_text', False)
         )
         self.imageAdjContainer = QFrame()
-        self.imageAdjContainer.setMinimumWidth(250)
+        self.imageAdjContainer.setMinimumWidth(260)
         self.imageAdjContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.imageAdjLayout = QVBoxLayout(self.imageAdjContainer)
         self.imageAdjLayout.setContentsMargins(10, 10, 4, 10)
@@ -120,8 +120,8 @@ class ImageAdjSettingsMixin(ImageAdjSettingsMixinBase):
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
-            if len(sizes) > 2 and sizes[2] < 250:
-                sizes[2] = 250
+            if len(sizes) > 2 and sizes[2] < 260:
+                sizes[2] = 260
                 self.mainSplitter.setSizes(sizes)
 
     def _build_image_adj_section(self):

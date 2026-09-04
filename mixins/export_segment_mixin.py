@@ -264,19 +264,6 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                 arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
 
                 apply_software_adjustments(arr, b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
-
-                # Mirroring & rotation
-                transform = QTransform()
-                if getattr(self, 'isMirrored', False):
-                    transform.scale(-1, 1)
-                if getattr(self, 'isMirroredVertical', False):
-                    transform.scale(1, -1)
-                angle = int(getattr(self, 'rotationAngle', 0)) % 360
-                if angle != 0:
-                    transform.rotate(angle)
-                if not transform.isIdentity():
-                    img = img.transformed(transform, Qt.TransformationMode.SmoothTransformation)
-                
                 return img
 
             # Save state
@@ -295,10 +282,25 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
 
             first_adjusted = apply_image_effects(first_img)
             self.pixmapItem.setPixmap(QPixmap.fromImage(first_adjusted))
-            rect = self.pixmapItem.pixmap().rect()
+
+            cx = first_img.width() / 2.0
+            cy = first_img.height() / 2.0
+            transform = QTransform()
+            transform.translate(cx, cy)
+            if getattr(self, 'isMirrored', False):
+                transform.scale(-1, 1)
+            if getattr(self, 'isMirroredVertical', False):
+                transform.scale(1, -1)
+            angle = int(getattr(self, 'rotationAngle', 0)) % 360
+            if angle != 0:
+                transform.rotate(angle)
+            transform.translate(-cx, -cy)
+            self.pixmapItem.setTransform(transform)
+
+            scene_rect = self.pixmapItem.sceneBoundingRect()
             
-            out_width = rect.width()
-            out_height = rect.height()
+            out_width = max(1, int(round(scene_rect.width())))
+            out_height = max(1, int(round(scene_rect.height())))
             if scale_factor != 1.0:
                 out_width = int(out_width * scale_factor)
                 out_height = int(out_height * scale_factor)
@@ -389,6 +391,16 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
             progress.setMinimumDuration(0)
             progress.setValue(start_f)
 
+            # Hide transient cursor and text preview in scene
+            cursor_visible = False
+            if hasattr(self.view, 'cursor_item') and self.view.cursor_item:
+                cursor_visible = self.view.cursor_item.isVisible()
+                self.view.cursor_item.setVisible(False)
+            text_preview_visible = False
+            if hasattr(self.view, 'text_preview_item') and self.view.text_preview_item:
+                text_preview_visible = self.view.text_preview_item.isVisible()
+                self.view.text_preview_item.setVisible(False)
+
             try:
                 for f in range(start_f, end_f + 1):
                     if progress.wasCanceled():
@@ -405,14 +417,16 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                     adjusted_img = apply_image_effects(img)
                     self.pixmapItem.setPixmap(QPixmap.fromImage(adjusted_img))
                     
-                    rect = self.pixmapItem.pixmap().rect()
-                    out_pixmap = QPixmap(rect.size())
+                    scene_rect = self.pixmapItem.sceneBoundingRect()
+                    render_w = max(1, int(round(scene_rect.width())))
+                    render_h = max(1, int(round(scene_rect.height())))
+                    out_pixmap = QPixmap(render_w, render_h)
                     out_pixmap.fill(Qt.GlobalColor.black)
 
                     painter = QPainter(out_pixmap)
                     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                     painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-                    self.view.scene().render(painter, QRectF(rect), QRectF(rect))
+                    self.view.scene().render(painter, QRectF(0, 0, render_w, render_h), scene_rect)
                     painter.end()
 
                     final_img = out_pixmap.toImage()
@@ -434,6 +448,12 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                 
                 # Restore original state
                 self.pixmapItem.setPixmap(original_pixmap)
+                if hasattr(self, 'apply_transformations'):
+                    self.apply_transformations()
+                if hasattr(self.view, 'cursor_item') and self.view.cursor_item:
+                    self.view.cursor_item.setVisible(cursor_visible)
+                if hasattr(self.view, 'text_preview_item') and self.view.text_preview_item:
+                    self.view.text_preview_item.setVisible(text_preview_visible)
                 self.current_cache_index = original_index
                 self.update_pixmap_from_cache()
                 progress.close()
@@ -459,7 +479,7 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
             # Case A & B: Lossless Stream Copy or Custom Re-encode WITHOUT drawings (Fast ffmpeg direct execution)
             vf_filters = []
             
-            if not is_lossless and apply_adjustments:
+            if not is_lossless:
                 # Mirror
                 if getattr(self, 'isMirrored', False):
                     vf_filters.append("hflip")
@@ -474,34 +494,35 @@ class ExportSegmentMixin(ExportSegmentMixinBase):
                 elif angle == 270:
                     vf_filters.append("transpose=2")
 
-                # Color Adjustments
-                b_val = self.brightnessSlider.value() / 100.0
-                c_val = self.contrastSlider.value() / 100.0
-                g_val = self.gammaSlider.value() / 100.0
-                exp_val = self.exposureSlider.value() if hasattr(self, 'exposureSlider') else 0
-                b_val += exp_val / 100.0
-                
-                vf_filters.append(f"eq=brightness={b_val:.3f}:contrast={c_val:.3f}:gamma={g_val:.3f}")
+                if apply_adjustments:
+                    # Color Adjustments
+                    b_val = self.brightnessSlider.value() / 100.0
+                    c_val = self.contrastSlider.value() / 100.0
+                    g_val = self.gammaSlider.value() / 100.0
+                    exp_val = self.exposureSlider.value() if hasattr(self, 'exposureSlider') else 0
+                    b_val += exp_val / 100.0
+                    
+                    vf_filters.append(f"eq=brightness={b_val:.3f}:contrast={c_val:.3f}:gamma={g_val:.3f}")
 
-                # Hue / Saturation
-                hue_val = self.hueSlider.value() if hasattr(self, 'hueSlider') else 0
-                sat_val = self.saturationSlider.value() / 100.0
-                if hue_val != 0 or sat_val != 1.0:
-                    vf_filters.append(f"hue=h={hue_val}:s={sat_val:.3f}")
+                    # Hue / Saturation
+                    hue_val = self.hueSlider.value() if hasattr(self, 'hueSlider') else 0
+                    sat_val = self.saturationSlider.value() / 100.0
+                    if hue_val != 0 or sat_val != 1.0:
+                        vf_filters.append(f"hue=h={hue_val}:s={sat_val:.3f}")
 
-                # Invert
-                if hasattr(self, 'invertButton') and self.invertButton.isChecked():
-                    vf_filters.append("negate")
+                    # Invert
+                    if hasattr(self, 'invertButton') and self.invertButton.isChecked():
+                        vf_filters.append("negate")
 
-                # Sharpen / Blur
-                sharpen_val = self.sharpenSlider.value() if hasattr(self, 'sharpenSlider') else 0
-                blur_val = self.blurSlider.value() if hasattr(self, 'blurSlider') else 0
-                if sharpen_val > 0:
-                    amount = (sharpen_val / 100.0) * 1.5
-                    vf_filters.append(f"unsharp=5:5:{amount:.3f}:5:5:0.0")
-                if blur_val > 0:
-                    rad = (blur_val / 100.0) * 5.0
-                    vf_filters.append(f"gblur=sigma={rad:.3f}")
+                    # Sharpen / Blur
+                    sharpen_val = self.sharpenSlider.value() if hasattr(self, 'sharpenSlider') else 0
+                    blur_val = self.blurSlider.value() if hasattr(self, 'blurSlider') else 0
+                    if sharpen_val > 0:
+                        amount = (sharpen_val / 100.0) * 1.5
+                        vf_filters.append(f"unsharp=5:5:{amount:.3f}:5:5:0.0")
+                    if blur_val > 0:
+                        rad = (blur_val / 100.0) * 5.0
+                        vf_filters.append(f"gblur=sigma={rad:.3f}")
 
             # Scale factor
             scale_factors = [1.0, 0.75, 0.5, 2.0, 1.5]

@@ -115,33 +115,70 @@ class ExportFrameMixin(ExportFrameMixinBase):
 
             apply_software_adjustments(arr, b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
 
-        if include_drawings:
+        has_drawings = bool(include_drawings and hasattr(self, 'view') and getattr(self.view, 'strokes', None))
+
+        if has_drawings:
             original_pixmap = self.pixmapItem.pixmap()
             self.pixmapItem.setPixmap(QPixmap.fromImage(img))
 
-            rect = self.pixmapItem.pixmap().rect()
-            out_pixmap = QPixmap(rect.size())
-            out_pixmap.fill(Qt.GlobalColor.black)
+            # Hide transient cursor and text preview items from scene before rendering
+            cursor_visible = False
+            if hasattr(self.view, 'cursor_item') and self.view.cursor_item:
+                cursor_visible = self.view.cursor_item.isVisible()
+                self.view.cursor_item.setVisible(False)
+            text_preview_visible = False
+            if hasattr(self.view, 'text_preview_item') and self.view.text_preview_item:
+                text_preview_visible = self.view.text_preview_item.isVisible()
+                self.view.text_preview_item.setVisible(False)
 
-            painter = QPainter(out_pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-            self.view.scene().render(painter, QRectF(rect), QRectF(rect))
-            painter.end()
-
-            self.pixmapItem.setPixmap(original_pixmap)
-            final_img = out_pixmap.toImage()
-        else:
-            if apply_adjustments:
+            try:
+                # Ensure the transform on pixmapItem matches current dimensions and orientation
+                cx = img.width() / 2.0
+                cy = img.height() / 2.0
                 transform = QTransform()
-                if self.isMirrored:
+                transform.translate(cx, cy)
+                if getattr(self, 'isMirrored', False):
                     transform.scale(-1, 1)
-                if self.isMirroredVertical:
+                if getattr(self, 'isMirroredVertical', False):
                     transform.scale(1, -1)
-                if self.rotationAngle != 0:
-                    transform.rotate(self.rotationAngle)
-                if not transform.isIdentity():
-                    img = img.transformed(transform, Qt.TransformationMode.SmoothTransformation)
+                angle = int(getattr(self, 'rotationAngle', 0)) % 360
+                if angle != 0:
+                    transform.rotate(angle)
+                transform.translate(-cx, -cy)
+                self.pixmapItem.setTransform(transform)
+
+                scene_rect = self.pixmapItem.sceneBoundingRect()
+                out_w = max(1, int(round(scene_rect.width())))
+                out_h = max(1, int(round(scene_rect.height())))
+                out_pixmap = QPixmap(out_w, out_h)
+                out_pixmap.fill(Qt.GlobalColor.black)
+
+                painter = QPainter(out_pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                self.view.scene().render(painter, QRectF(0, 0, out_w, out_h), scene_rect)
+                painter.end()
+
+                final_img = out_pixmap.toImage()
+            finally:
+                self.pixmapItem.setPixmap(original_pixmap)
+                if hasattr(self, 'apply_transformations'):
+                    self.apply_transformations()
+                if hasattr(self.view, 'cursor_item') and self.view.cursor_item:
+                    self.view.cursor_item.setVisible(cursor_visible)
+                if hasattr(self.view, 'text_preview_item') and self.view.text_preview_item:
+                    self.view.text_preview_item.setVisible(text_preview_visible)
+        else:
+            transform = QTransform()
+            if getattr(self, 'isMirrored', False):
+                transform.scale(-1, 1)
+            if getattr(self, 'isMirroredVertical', False):
+                transform.scale(1, -1)
+            angle = int(getattr(self, 'rotationAngle', 0)) % 360
+            if angle != 0:
+                transform.rotate(angle)
+            if not transform.isIdentity():
+                img = img.transformed(transform, Qt.TransformationMode.SmoothTransformation)
             final_img = img
 
         if scale_factor != 1.0:

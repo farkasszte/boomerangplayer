@@ -120,8 +120,8 @@ class DrawingMixin(DrawingMixinBase):
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
             # Under new layout: index 6 is drawingContainer
-            if len(sizes) > 6 and sizes[6] < 250:
-                sizes[6] = 250
+            if len(sizes) > 6 and sizes[6] < 260:
+                sizes[6] = 260
                 self.mainSplitter.setSizes(sizes)
 
     # ------------------------------------------------------------------ #

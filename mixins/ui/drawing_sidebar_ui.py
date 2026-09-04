@@ -13,7 +13,7 @@ class DrawingSidebarUIMixin:
             self.config.get('inverse_text', False)
         )
         self.drawingContainer = QFrame()
-        self.drawingContainer.setMinimumWidth(250)
+        self.drawingContainer.setMinimumWidth(260)
         self.drawingContainer.setStyleSheet(
             f"background: {t['bg']}; border: none; QScrollBar {{ width: 0px; height: 0px; }}"
         )

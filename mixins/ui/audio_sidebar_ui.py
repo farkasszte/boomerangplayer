@@ -16,7 +16,7 @@ class AudioSidebarUIMixin:
             self.config.get('inverse_text', False)
         )
         self.audioContainer = QFrame()
-        self.audioContainer.setMinimumWidth(250)
+        self.audioContainer.setMinimumWidth(260)
         self.audioContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.audioLayout = QVBoxLayout(self.audioContainer)
         self.audioLayout.setContentsMargins(10, 10, 4, 10)

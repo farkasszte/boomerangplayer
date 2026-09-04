@@ -146,6 +146,6 @@ class PlaylistCoreMixin:
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
             idx = self.mainSplitter.indexOf(self.playlistContainer)
-            if idx != -1 and len(sizes) > idx and sizes[idx] < 250:
-                sizes[idx] = 250
+            if idx != -1 and len(sizes) > idx and sizes[idx] < 260:
+                sizes[idx] = 260
                 self.mainSplitter.setSizes(sizes)

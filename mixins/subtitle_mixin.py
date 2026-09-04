@@ -531,8 +531,8 @@ class SubtitleMixin:
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
-            if len(sizes) > 2 and sizes[2] < 250:
-                sizes[2] = 250
+            if len(sizes) > 2 and sizes[2] < 260:
+                sizes[2] = 260
                 self.mainSplitter.setSizes(sizes)
 
     def adjust_subtitle_delay(self, ms):

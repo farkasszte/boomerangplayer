@@ -20,7 +20,7 @@ class GlobalSettingsUiBuilderMixin:
             self.config.get('inverse_text', False)
         )
         self.globalSettingsContainer = QFrame()
-        self.globalSettingsContainer.setMinimumWidth(250)
+        self.globalSettingsContainer.setMinimumWidth(260)
         self.globalSettingsContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.globalSettingsLayout = QVBoxLayout(self.globalSettingsContainer)
         self.globalSettingsLayout.setContentsMargins(10, 10, 4, 10)
@@ -177,8 +177,8 @@ class GlobalSettingsUiBuilderMixin:
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
-            if len(sizes) > 0 and sizes[0] < 250:
-                sizes[0] = 250
+            if len(sizes) > 0 and sizes[0] < 260:
+                sizes[0] = 260
                 self.mainSplitter.setSizes(sizes)
 
             device_id = self.config.get('audio_device', '')
@@ -482,8 +482,8 @@ class GlobalSettingsUiBuilderMixin:
 
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
-            if len(sizes) > 1 and sizes[1] < 250:
-                sizes[1] = 250
+            if len(sizes) > 1 and sizes[1] < 260:
+                sizes[1] = 260
                 self.mainSplitter.setSizes(sizes)
 
     def show_shortcuts_dialog(self) -> None:

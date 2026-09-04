@@ -66,7 +66,7 @@ class SettingsMixin(SettingsMixinBase):
         )
         t = self._color_tokens
         self.settingsContainer = QFrame()
-        self.settingsContainer.setMinimumWidth(250)
+        self.settingsContainer.setMinimumWidth(260)
         self.settingsContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.settingsLayout = QVBoxLayout(self.settingsContainer)
         self.settingsLayout.setContentsMargins(10, 10, 4, 10)

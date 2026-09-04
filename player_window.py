@@ -183,6 +183,58 @@ class PlayerWindow(
         # ---- UDP Multi-Instance Sync ----------------------------------
         self.init_ipc_sync()
 
+        # ---- Window geometry based on screen dimensions ----------------
+        self.init_window_geometry()
+
+    def init_window_geometry(self):
+        """Set initial window size and position based on screen dimensions (one tier smaller than screen)."""
+        from PyQt6.QtGui import QCursor
+        from PyQt6.QtWidgets import QApplication
+
+        screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+        if not screen:
+            self.resize(1440, 810)
+            return
+
+        avail = screen.availableGeometry()
+        sw = avail.width()
+        sh = avail.height()
+
+        # Resolution tiers (one category smaller than current screen resolution):
+        # 4K UHD (>= 3840) -> 2560 x 1440
+        # QHD 2K (>= 2560) -> 1920 x 1080
+        # Full HD (>= 1920) -> 1440 x 810 (e.g. 1920 -> 1440)
+        # HD+ (>= 1600) -> 1280 x 720
+        # HD (>= 1280) -> 1024 x 576
+        # Smaller (< 1280) -> 960 x 540
+        if sw >= 3840:
+            w, h = 2560, 1440
+        elif sw >= 2560:
+            w, h = 1920, 1080
+        elif sw >= 1920:
+            w, h = 1440, 810
+        elif sw >= 1600:
+            w, h = 1280, 720
+        elif sw >= 1280:
+            w, h = 1024, 576
+        else:
+            w, h = 960, 540
+
+        # Safety clamp to ensure window fits inside available screen work area with margin
+        max_w = int(sw * 0.9)
+        max_h = int(sh * 0.9)
+        if w > max_w or h > max_h:
+            scale = min(max_w / w, max_h / h)
+            w = int(w * scale)
+            h = int(h * scale)
+
+        self.resize(w, h)
+
+        # Center window in the available workspace of the active monitor
+        x = avail.x() + (avail.width() - w) // 2
+        y = avail.y() + (avail.height() - h) // 2
+        self.move(x, y)
+
 
 
     def refresh_window_frame(self):

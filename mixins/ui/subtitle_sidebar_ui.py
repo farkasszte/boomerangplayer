@@ -15,7 +15,7 @@ class SubtitleSidebarUIMixin:
             self.config.get('inverse_text', False)
         )
         self.subtitleContainer = QFrame()
-        self.subtitleContainer.setMinimumWidth(250)
+        self.subtitleContainer.setMinimumWidth(260)
         self.subtitleContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.subtitleLayout = QVBoxLayout(self.subtitleContainer)
         self.subtitleLayout.setContentsMargins(10, 10, 4, 10)

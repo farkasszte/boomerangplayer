@@ -540,6 +540,6 @@ class AudioMixin:
         if not is_visible and not getattr(self, 'is_full_screen', False):
             sizes = self.mainSplitter.sizes()
             # Under new layout: index 4 is audioContainer
-            if len(sizes) > 4 and sizes[4] < 250:
-                sizes[4] = 250
+            if len(sizes) > 4 and sizes[4] < 260:
+                sizes[4] = 260
                 self.mainSplitter.setSizes(sizes)
