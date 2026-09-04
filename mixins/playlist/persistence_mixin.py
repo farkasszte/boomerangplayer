@@ -65,12 +65,12 @@ class PlaylistPersistenceMixin:
                 
                 self.add_files_to_playlist(data.get('files', []), cached_thumbnails=cached_thumbnails)
 
-                
                 if self.playlistList.count() > 0:
-                    
                     self.load_video(self.playlistList.item(0).data(Qt.ItemDataRole.UserRole))
+                return True
             except Exception as e:
-                print(f"Error loading playlist: {e}")
+                import logging
+                logging.getLogger("BoomerangPlayer").warning(f"Error loading playlist {fileName}: {e}")
                 if not silent:
                     InfoBar.error(
                         title=tr('open_project_title'),
@@ -81,6 +81,8 @@ class PlaylistPersistenceMixin:
                         duration=5000,
                         parent=self
                     )
+                return False
+        return False
 
     def load_playlist_from_file(self):
         from mixins.file_dialog import MediaFileDialog

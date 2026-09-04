@@ -162,11 +162,13 @@ def main():
     window = PlayerWindow()
     window.show()
     
-    # Force a small window resize to fix Windows 11 styling and layout glitch on startup
+    # Refresh window frame and trigger clean interface update after startup settles
     def force_resize_fix():
-        window.resize(window.width() + 1, window.height())
-        window.resize(window.width() - 1, window.height())
+        if hasattr(window, 'refresh_window_frame'):
+            window.refresh_window_frame()
         window.update()
+        if hasattr(window, 'playerInterface'):
+            window.playerInterface.update()
         
     from PyQt6.QtCore import QTimer
     QTimer.singleShot(300, force_resize_fix)

@@ -464,7 +464,26 @@ class PlaybackMixin(PlaybackMixinBase):
 
     def closeEvent(self, event):
         self.cleanup_cache()
-        
+
+        # Gracefully cancel and wait for any running background threads
+        for t in getattr(self, 'thumb_threads', []):
+            try:
+                t.cancel()
+                t.wait(150)
+            except Exception:
+                pass
+        self.thumb_threads = []
+
+        for attr in ('prefetch_extract_thread', 'audio_extract_thread', 'extraction_thread'):
+            t = getattr(self, attr, None)
+            if t and hasattr(t, 'isRunning') and t.isRunning():
+                try:
+                    if hasattr(t, 'cancel'):
+                        t.cancel()
+                    t.wait(150)
+                except Exception:
+                    pass
+
         try:
             from utils import get_markers_path
             path = get_markers_path()

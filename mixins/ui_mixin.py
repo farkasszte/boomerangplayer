@@ -62,12 +62,59 @@ class UIMixin(
         pixmapItem: GPUPixmapItem | None
         update_ui_texts: callable
 
+class PlayerInterface(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        self.setAutoFillBackground(True)
+        from PyQt6.QtGui import QPalette
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+        self.setPalette(palette)
+
+    def paintEvent(self, event):
+        from PyQt6.QtGui import QPainter
+        painter = QPainter(self)
+        painter.fillRect(event.rect(), Qt.GlobalColor.black)
+        painter.end()
+        super().paintEvent(event)
+
+class UIMixin(
+    PlaylistSidebarUIMixin,
+    DrawingSidebarUIMixin,
+    ControlsCardUIMixin,
+    StyleUIMixin,
+    ShortcutUIMixin,
+    FullscreenUIMixin,
+    SubtitleSidebarUIMixin,
+    AudioSidebarUIMixin,
+    UIMixinBase
+):
+    if TYPE_CHECKING:
+        from config import Configuration
+        from PyQt6.QtMultimedia import QAudioOutput
+        from components import GPUPixmapItem
+        config: Configuration
+        audioOutput: QAudioOutput
+        pixmapItem: GPUPixmapItem | None
+        update_ui_texts: callable
+
     def init_ui(self):
         # Main interface widget
-        self.playerInterface = QWidget()
+        self.playerInterface = PlayerInterface()
         self.playerLayout = QVBoxLayout(self.playerInterface)
         self.playerLayout.setContentsMargins(0, 0, 0, 0)
         self.playerLayout.setSpacing(0)
+
+        # Ensure stackedWidget also fills background properly
+        if hasattr(self, 'stackedWidget'):
+            self.stackedWidget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            self.stackedWidget.setAutoFillBackground(True)
+            from PyQt6.QtGui import QPalette
+            stk_pal = self.stackedWidget.palette()
+            stk_pal.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+            self.stackedWidget.setPalette(stk_pal)
 
         self.mainSplitter = QSplitter(Qt.Orientation.Horizontal)
         self.mainSplitter.setHandleWidth(1)
@@ -91,12 +138,17 @@ class UIMixin(
         self._init_playlist_sidebar()
         self._init_drawing_sidebar()
 
+        for container in [
+            self.globalSettingsContainer, self.settingsContainer, self.imageAdjContainer,
+            self.subtitleContainer, self.audioContainer, self.playlistContainer, self.drawingContainer
+        ]:
+            if hasattr(container, 'setAttribute'):
+                container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
         self.mainSplitter.addWidget(self.globalSettingsContainer)
         self.mainSplitter.addWidget(self.settingsContainer)
         self.mainSplitter.addWidget(self.imageAdjContainer)
         self.mainSplitter.addWidget(self.subtitleContainer)
-        self.view.filesDropped.connect(self.handle_view_drop)
-        self.view.zoomChanged.connect(self.on_user_zoom_changed)
         self.mainSplitter.addWidget(self.view)
         self.mainSplitter.addWidget(self.audioContainer)
         self.mainSplitter.addWidget(self.playlistContainer)

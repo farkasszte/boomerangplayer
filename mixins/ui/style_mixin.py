@@ -279,7 +279,10 @@ class StyleUIMixin:
         opacity_float = opacity / 100.0
         rgb_bg = hex_to_rgb(bg_color)
         
-        panel_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"
+        if opacity_float >= 1.0:
+            panel_bg_style = f"background-color: rgb({rgb_bg}); border: none;"
+        else:
+            panel_bg_style = f"background-color: rgba({rgb_bg}, {opacity_float}); border: none;"
         win_bg_style = f"PlayerWindow {{ background-color: {bg_color}; }}"
         title_bg_style = f"background-color: {bg_color}; border: none;"
 
@@ -304,8 +307,10 @@ class StyleUIMixin:
         # Set stackedWidget & playerInterface background to black for video contrast
         if hasattr(self, 'stackedWidget'):
             self.stackedWidget.setStyleSheet("QStackedWidget { background-color: black; border: none; }")
+            self.stackedWidget.setAutoFillBackground(True)
         if hasattr(self, 'playerInterface'):
             self.playerInterface.setStyleSheet("QWidget#playerInterface { background-color: black; border: none; }")
+            self.playerInterface.setAutoFillBackground(True)
             
         # Set mainSplitter background to transparent
         if hasattr(self, 'mainSplitter'):
@@ -316,18 +321,28 @@ class StyleUIMixin:
         # Controls card (Footer)
         if hasattr(self, 'controlsCard'):
             self.controlsCard.setStyleSheet(panel_bg_style)
+            self.controlsCard.setAutoFillBackground(True)
+            from PyQt6.QtGui import QPalette, QColor
+            c_pal = self.controlsCard.palette()
+            c_pal.setColor(QPalette.ColorRole.Window, QColor(bg_color))
+            self.controlsCard.setPalette(c_pal)
             
         # Sidebars
         sidebar_containers = ['settingsContainer', 'imageAdjContainer', 'globalSettingsContainer', 
                               'drawingContainer', 'playlistContainer', 'audioContainer', 'subtitleContainer']
         for container_name in sidebar_containers:
             if hasattr(self, container_name):
+                c = getattr(self, container_name)
                 if container_name == 'drawingContainer':
-                    getattr(self, container_name).setStyleSheet(
+                    c.setStyleSheet(
                         f"{panel_bg_style} QScrollBar {{ width: 0px; height: 0px; }}"
                     )
                 else:
-                    getattr(self, container_name).setStyleSheet(panel_bg_style)
+                    c.setStyleSheet(panel_bg_style)
+                from PyQt6.QtGui import QPalette, QColor
+                c_pal = c.palette()
+                c_pal.setColor(QPalette.ColorRole.Window, QColor(bg_color))
+                c.setPalette(c_pal)
 
 
                 

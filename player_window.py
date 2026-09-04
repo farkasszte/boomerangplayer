@@ -85,7 +85,14 @@ class PlayerWindow(
         self.titleBar.setFixedHeight(32)
         
         # Target the top-level window directly to avoid cascading
-        self.setStyleSheet(f"PlayerWindow {{ background-color: {self.config.get('bg_color', '#202020')}; }}")
+        bg_col = self.config.get('bg_color', '#202020')
+        self.setStyleSheet(f"PlayerWindow {{ background-color: {bg_col}; }}")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAutoFillBackground(True)
+        from PyQt6.QtGui import QPalette
+        win_pal = self.palette()
+        win_pal.setColor(QPalette.ColorRole.Window, QColor(bg_col))
+        self.setPalette(win_pal)
         
         self.widgetLayout.setContentsMargins(0, 32, 0, 0)
 
@@ -316,10 +323,21 @@ class PlayerWindow(
             if hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
                 h = max(80, self.controlsCard.sizeHint().height())
                 self.controlsCard.setGeometry(0, self.height() - h, self.width(), h)
+        else:
+            # In windowed mode, ensure controlsCard is inside playerLayout if it was reparented to self
+            if hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
+                if hasattr(self, 'playerLayout') and hasattr(self, 'playerInterface'):
+                    self.controlsCard.setParent(self.playerInterface)
+                    self.playerLayout.addWidget(self.controlsCard, stretch=0)
+                    self.controlsCard.show()
+
         if hasattr(self, 'update_sidebar_fullscreen_state'):
             self.update_sidebar_fullscreen_state()
         if hasattr(self, 'update_sidebar_margins'):
             self.update_sidebar_margins()
         if hasattr(self, 'position_subtitle_label'):
             self.position_subtitle_label()
+        if hasattr(self, 'playerInterface'):
+            self.playerInterface.update()
+        self.update()
 

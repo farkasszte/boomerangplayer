@@ -14,6 +14,12 @@ class ControlsCardUIMixin:
             self.config.get('inverse_text', False)
         )
         self.controlsCard = QFrame()
+        self.controlsCard.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.controlsCard.setAutoFillBackground(True)
+        from PyQt6.QtGui import QPalette, QColor
+        card_pal = self.controlsCard.palette()
+        card_pal.setColor(QPalette.ColorRole.Window, QColor(t['bg']))
+        self.controlsCard.setPalette(card_pal)
         self.controlsCard.setStyleSheet(f"background-color: {t['bg']}; border: none;")
         self.controlsLayout = QVBoxLayout(self.controlsCard)
         self.controlsLayout.setContentsMargins(12, 12, 12, 12)
@@ -216,6 +222,12 @@ class ControlsCardUIMixin:
             self.controlsCard.show()
             if hasattr(self, 'position_subtitle_label'):
                 self.position_subtitle_label()
+        
+        if getattr(self, 'is_full_screen', False):
+            if hasattr(self, 'controlsCard') and self.controlsCard.parent() == self:
+                h = max(80, self.controlsCard.sizeHint().height())
+                self.controlsCard.setGeometry(0, self.height() - h, self.width(), h)
+                self.controlsCard.raise_()
         
         # Show title bar as overlay in fullscreen
         if hasattr(self, 'titleBar'):

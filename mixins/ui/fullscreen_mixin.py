@@ -171,6 +171,16 @@ class FullscreenUIMixin:
                 # Reset autoFillBackground so it doesn't interfere in windowed mode
                 self.titleBar.setAutoFillBackground(False)
                 # Re-parent titleBar back to the fluent window layout if needed
+            # Restore parent and add controlsCard back into self.playerLayout BEFORE resizing
+            if hasattr(self, 'playerLayout') and hasattr(self, 'controlsCard'):
+                self.controlsCard.setParent(self.playerInterface)
+                self.playerLayout.addWidget(self.controlsCard, stretch=0)
+                self.controlsCard.show()
+
+            # Restore sidebars back into mainSplitter BEFORE resizing
+            if hasattr(self, 'update_sidebar_fullscreen_state'):
+                self.update_sidebar_fullscreen_state()
+
             # Restore header margin
             if hasattr(self, 'widgetLayout'):
                 self.widgetLayout.setContentsMargins(0, 32, 0, 0)
@@ -217,12 +227,6 @@ class FullscreenUIMixin:
             # Ensure controls are shown and timer is stopped when exiting fullscreen
             if hasattr(self, 'controls_timer'):
                 self.controls_timer.stop()
-            
-            # Restore parent and add controlsCard back into self.playerLayout
-            if hasattr(self, 'playerLayout') and hasattr(self, 'controlsCard'):
-                self.controlsCard.setParent(self.playerInterface)
-                self.playerLayout.addWidget(self.controlsCard, stretch=0)
-                self.controlsCard.show()
 
             # Restore mouse cursor
             if hasattr(self, 'view') and not getattr(self.view, 'drawing_mode', False):

@@ -104,8 +104,22 @@ class LoaderMixin(LoaderMixinBase):
         video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')
         image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
         audio_exts = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
-        playlist_exts = ('.json', '.bpl')
+        playlist_exts = ('.bpl', '.json')
         all_exts = video_exts + image_exts + audio_exts + playlist_exts
+
+        def is_bpl_playlist(filepath):
+            if not os.path.isfile(filepath):
+                return False
+            if filepath.lower().endswith('.bpl'):
+                return True
+            if filepath.lower().endswith('.json'):
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as pf:
+                        prefix = pf.read(512)
+                        return 'boomerangplaylist' in prefix
+                except Exception:
+                    return False
+            return False
 
         files_to_add = []
         playlist_files = []
@@ -114,23 +128,26 @@ class LoaderMixin(LoaderMixinBase):
                 for f in sorted(os.listdir(path)):
                     if f.lower().endswith(all_exts):
                         fpath = os.path.join(path, f)
-                        if f.lower().endswith(playlist_exts):
+                        if is_bpl_playlist(fpath):
                             playlist_files.append(fpath)
-                        else:
+                        elif not f.lower().endswith('.json'):
                             files_to_add.append(fpath)
             elif os.path.isfile(path):
-                if path.lower().endswith(playlist_exts):
+                if is_bpl_playlist(path):
                     playlist_files.append(path)
-                else:
+                elif not path.lower().endswith('.json'):
                     files_to_add.append(path)
 
+        loaded_playlist = False
         if playlist_files:
-            self.load_playlist_by_path(playlist_files[0], silent=True)
+            loaded_playlist = self.load_playlist_by_path(playlist_files[0], silent=True)
             if files_to_add:
                 self.add_files_to_playlist(files_to_add)
         elif files_to_add:
             self.add_files_to_playlist(files_to_add)
-            if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
+
+        if not loaded_playlist and files_to_add:
+            if self.mediaPlayer.playbackState() == QMediaPlayer.PlaybackState.StoppedState or not self.currentFilePath:
                 self.load_video(files_to_add[0])
 
     def load_video(self, filePath):
