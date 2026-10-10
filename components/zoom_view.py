@@ -280,19 +280,20 @@ class ZoomView(ZoomViewDrawingMixin, DrawingEraserMixin, QGraphicsView):
         if not win.config.get('enable_subtitles', True) or not win.subtitles:
             return
             
-        # Get active subtitle text
-        fps = getattr(win, 'fps', 30.0)
-        if fps <= 0:
-            fps = 30.0
-        current_time = int((getattr(win, 'current_cache_index', 0) * 1000) / fps)
-        offset = win.config.get('subtitle_offset', 0)
-        adjusted_time = current_time + offset
-        
-        active_text = ""
-        for cue in win.subtitles:
-            if cue['start'] <= adjusted_time <= cue['end']:
-                active_text = cue['text']
-                break
+        # Get active subtitle text (use cached value if available to avoid O(N) scan)
+        active_text = getattr(win, '_last_subtitle_text', None)
+        if active_text is None:
+            fps = getattr(win, 'fps', 30.0)
+            if fps <= 0:
+                fps = 30.0
+            current_time = int((getattr(win, 'current_cache_index', 0) * 1000) / fps)
+            offset = win.config.get('subtitle_offset', 0)
+            adjusted_time = current_time + offset
+            
+            for cue in win.subtitles:
+                if cue['start'] <= adjusted_time <= cue['end']:
+                    active_text = cue['text']
+                    break
                 
         if not active_text:
             return

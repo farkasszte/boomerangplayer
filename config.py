@@ -1,6 +1,6 @@
 import os
 import json
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer, QCoreApplication
 from utils import get_config_path, DEFAULT_CONFIG, validate_config, logger
 
 class Configuration(dict):
@@ -10,8 +10,28 @@ class Configuration(dict):
     """
     def __init__(self):
         self._loading = True
+        self._save_timer = None
         super().__init__()
         self.load()
+
+    def _trigger_delayed_save(self):
+        if getattr(self, '_loading', False):
+            return
+        if QCoreApplication.instance() is not None:
+            if self._save_timer is None:
+                self._save_timer = QTimer()
+                self._save_timer.setSingleShot(True)
+                self._save_timer.setInterval(300)
+                self._save_timer.timeout.connect(self.save)
+            self._save_timer.start()
+        else:
+            self.save()
+
+    def flush(self):
+        """Immediately flush pending changes to disk."""
+        if self._save_timer and self._save_timer.isActive():
+            self._save_timer.stop()
+        self.save()
 
     def load(self):
         self._loading = True
@@ -69,8 +89,7 @@ class Configuration(dict):
                 value = 100
         
         super().__setitem__(key, value)
-        if not getattr(self, '_loading', False):
-            self.save()
+        self._trigger_delayed_save()
 
     def update(self, *args, **kwargs):
         was_loading = getattr(self, '_loading', False)
@@ -79,5 +98,4 @@ class Configuration(dict):
             super().update(*args, **kwargs)
         finally:
             self._loading = was_loading
-        if not self._loading:
-            self.save()
+        self._trigger_delayed_save()

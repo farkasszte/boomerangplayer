@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QPixmap
 from qfluentwidgets import InfoBar, InfoBarPosition
 from translations import tr
+from styles import get_bg_pressed
 from utils import VERSION, send_to_recycle_bin, log_debug
 
 def is_same_path(p1, p2):
@@ -44,7 +45,7 @@ class PlaylistCrudMixin:
 
         bg_button = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
         bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
-        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+        bg_pressed = get_bg_pressed(inverse_text)
         
         dialog.setStyleSheet(f"""
             QDialog, QMessageBox, QInputDialog {{

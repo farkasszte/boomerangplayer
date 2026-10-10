@@ -48,3 +48,16 @@ def test_validate_config_invalid_types():
     assert validated['subtitle_outline_width'] == DEFAULT_CONFIG['subtitle_outline_width']
     assert validated['gpu_acceleration'] == DEFAULT_CONFIG['gpu_acceleration']
     assert validated['cache_window'] == DEFAULT_CONFIG['cache_window']
+
+def test_validate_config_deepcopy_isolation():
+    initial_pause_key = DEFAULT_CONFIG['shortcuts']['play_pause']
+    initial_palette_len = len(DEFAULT_CONFIG['palette'])
+    
+    validated = validate_config({'shortcuts': {'play_pause': 9999}})
+    assert validated['shortcuts']['play_pause'] == 9999
+    # Ensure global DEFAULT_CONFIG was not mutated
+    assert DEFAULT_CONFIG['shortcuts']['play_pause'] == initial_pause_key
+
+    # Mutate nested lists on validated result
+    validated['palette'].append('#ABCDEF')
+    assert len(DEFAULT_CONFIG['palette']) == initial_palette_len

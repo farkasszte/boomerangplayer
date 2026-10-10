@@ -1,4 +1,4 @@
-from styles import get_styles
+from styles import get_styles, get_bg_pressed
 
 class StyleUIMixin:
     def refresh_custom_styles(self, accent_color=None, bg_color=None):
@@ -17,7 +17,7 @@ class StyleUIMixin:
         border_color = "rgba(0, 0, 0, 0.35)" if inverse_text else "rgba(255, 255, 255, 0.1)"
         bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
         bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
-        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+        bg_pressed = get_bg_pressed(inverse_text)
 
         # Update main UI elements
         sliders = ['progressBar', 'penSizeSlider', 'speedSlider', 'zoomSlider', 'cacheSlider', 'qvSlider',

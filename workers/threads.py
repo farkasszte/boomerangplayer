@@ -1,10 +1,9 @@
 import os
 import subprocess
-import tempfile
 import json
-from PyQt6.QtCore import QThread, pyqtSignal, Qt, QRunnable, QObject
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QImage
-from utils import get_resource_path, get_ffmpeg_path
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtGui import QPainter, QImage
+from utils import get_resource_path, get_ffmpeg_path, get_ffprobe_path
 
 class FrameExtractionThread(QThread):
     finished_extraction = pyqtSignal(dict, str, int, int)
@@ -58,21 +57,21 @@ class FrameExtractionThread(QThread):
             while True:
                 start_idx = buffer.find(b'\xff\xd8')
                 if start_idx == -1:
-                    if len(buffer) > 0:
-                        buffer = buffer[-1:]
+                    if len(buffer) > 1:
+                        del buffer[:-1]
                     break
                 
                 end_idx = buffer.find(b'\xff\xd9', start_idx)
                 if end_idx == -1:
                     if start_idx > 0:
-                        buffer = buffer[start_idx:]
+                        del buffer[:start_idx]
                     break
                 
                 img_data = bytes(buffer[start_idx : end_idx + 2])
                 frame_bytes[frame_idx] = img_data
                 frame_idx += 1
                 
-                buffer = buffer[end_idx + 2:]
+                del buffer[:end_idx + 2]
                 
         if self._is_cancelled:
             try:
@@ -172,7 +171,8 @@ class FrameExtractionThread(QThread):
 
 
 class ThumbnailThread(QThread):
-    finished = pyqtSignal(str, QPixmap)
+    thumbnail_ready = pyqtSignal(str, QImage)
+    finished = thumbnail_ready
 
     def __init__(self, filePath, parent=None):
         super().__init__(parent)
@@ -184,53 +184,58 @@ class ThumbnailThread(QThread):
         try:
             image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
             if self.filePath.lower().endswith(image_exts):
-                pixmap = QPixmap(self.filePath)
-                if not pixmap.isNull():
-                    thumb = pixmap.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-                    final_thumb = QPixmap(160, 160)
+                image = QImage(self.filePath)
+                if not image.isNull():
+                    thumb = image.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+                    final_thumb = QImage(160, 160, QImage.Format.Format_ARGB32_Premultiplied)
                     final_thumb.fill(Qt.GlobalColor.transparent)
                     painter = QPainter(final_thumb)
                     x = (160 - thumb.width()) // 2
                     y = (160 - thumb.height()) // 2
-                    painter.drawPixmap(x, y, thumb)
+                    painter.drawImage(x, y, thumb)
                     painter.end()
                     
                     if not self._is_cancelled:
-                        self.finished.emit(self.filePath, final_thumb)
+                        self.thumbnail_ready.emit(self.filePath, final_thumb)
                     return
 
-            temp_dir = tempfile.gettempdir()
-            import uuid
-            thumb_name = f"thumb_{uuid.uuid4().hex}.jpg"
-            thumb_path = os.path.join(temp_dir, thumb_name)
-            
             ffmpeg_path = get_ffmpeg_path()
 
             is_hdr = False
             color_transfer = ""
+            seek_time = "1.0"
             try:
-                ffprobe_path = os.path.join(os.path.dirname(ffmpeg_path), "ffprobe.exe" if os.name == 'nt' else "ffprobe")
-                if not os.path.exists(ffprobe_path):
-                    ffprobe_path = "ffprobe"
-                
+                ffprobe_path = get_ffprobe_path()
                 probe_cmd = [
                     ffprobe_path, "-v", "error",
-                    "-show_entries", "stream=codec_type,color_transfer,color_primaries",
+                    "-show_entries", "stream=codec_type,color_transfer,color_primaries:format=duration",
                     "-of", "json", self.filePath
                 ]
                 creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                probe_res = subprocess.check_output(probe_cmd, creationflags=creationflags).decode('utf-8')
-                probe_data = json.loads(probe_res)
-                for s in probe_data.get('streams', []):
-                    if s.get('codec_type') == 'video':
-                        transfer = s.get('color_transfer', '')
-                        primaries = s.get('color_primaries', '')
-                        if transfer in ('smpte2084', 'arib-std-b67') or primaries == 'bt2020':
-                            is_hdr = True
-                            color_transfer = transfer
-                        break
+                probe_proc = subprocess.run(probe_cmd, creationflags=creationflags, capture_output=True, text=True, timeout=4)
+                if probe_proc.returncode == 0 and probe_proc.stdout:
+                    probe_data = json.loads(probe_proc.stdout)
+                    duration_str = probe_data.get('format', {}).get('duration')
+                    if duration_str:
+                        try:
+                            dur = float(duration_str)
+                            if dur < 1.0:
+                                seek_time = "0.0"
+                        except ValueError:
+                            pass
+                    for s in probe_data.get('streams', []):
+                        if s.get('codec_type') == 'video':
+                            transfer = s.get('color_transfer', '')
+                            primaries = s.get('color_primaries', '')
+                            if transfer in ('smpte2084', 'arib-std-b67') or primaries == 'bt2020':
+                                is_hdr = True
+                                color_transfer = transfer
+                            break
             except Exception as e:
                 print(f"ffprobe color check failed in ThumbnailThread: {e}")
+
+            if self._is_cancelled:
+                return
 
             vf_filter = "setsar=1,scale=160:160:force_original_aspect_ratio=increase,crop=160:160"
             if is_hdr:
@@ -239,49 +244,50 @@ class ThumbnailThread(QThread):
 
             cmd = [
                 ffmpeg_path, "-y",
-                "-ss", "1.0",
+                "-ss", seek_time,
                 "-i", self.filePath,
                 "-vframes", "1",
                 "-vf", vf_filter,
-                thumb_path
+                "-f", "image2pipe",
+                "-vcodec", "mjpeg",
+                "-"
             ]
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-            self.process = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.process = subprocess.Popen(
+                cmd,
+                creationflags=creationflags,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL
+            )
             
             try:
-                self.process.wait(timeout=5)
+                stdout_data, _ = self.process.communicate(timeout=5)
             except subprocess.TimeoutExpired:
                 if self.process:
                     try: self.process.kill()
                     except OSError: pass
-                try: os.remove(thumb_path)
-                except OSError: pass
                 if not self._is_cancelled:
-                    self.finished.emit(self.filePath, QPixmap())
+                    self.thumbnail_ready.emit(self.filePath, QImage())
                 return
 
             if self._is_cancelled:
-                try: os.remove(thumb_path)
-                except OSError: pass
                 return
 
             thumbnail_emitted = False
-            if os.path.exists(thumb_path):
-                pixmap = QPixmap(thumb_path)
-                if not pixmap.isNull():
+            if stdout_data:
+                img = QImage.fromData(stdout_data)
+                if not img.isNull():
                     if not self._is_cancelled:
-                        self.finished.emit(self.filePath, pixmap)
+                        self.thumbnail_ready.emit(self.filePath, img)
                         thumbnail_emitted = True
-                try: os.remove(thumb_path)
-                except OSError: pass
 
             if not thumbnail_emitted and not self._is_cancelled:
-                self.finished.emit(self.filePath, QPixmap())
+                self.thumbnail_ready.emit(self.filePath, QImage())
         except Exception as e:
             print(f"Thumbnail error for {self.filePath}: {e}")
             if not self._is_cancelled:
-                self.finished.emit(self.filePath, QPixmap())
+                self.thumbnail_ready.emit(self.filePath, QImage())
 
     def cancel(self):
         self._is_cancelled = True
@@ -303,6 +309,8 @@ class AudioExtractionThread(QThread):
         self.track_index = track_index
         self.start_time = start_time
         self.duration = duration
+        self._is_cancelled = False
+        self.process = None
 
     def run(self):
         try:
@@ -321,40 +329,40 @@ class AudioExtractionThread(QThread):
                 "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
                 self.output_path
             ]
-            creationflags = 0
-            if os.name == 'nt':
-                creationflags = subprocess.CREATE_NO_WINDOW
-            subprocess.run(cmd, creationflags=creationflags, check=True)
-            self.finished_extraction.emit(self.output_path, self.start_time, self.duration)
+            creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            self.process = subprocess.Popen(
+                cmd,
+                creationflags=creationflags,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            self.process.wait()
+
+            if self._is_cancelled:
+                if os.path.exists(self.output_path):
+                    try:
+                        os.remove(self.output_path)
+                    except OSError:
+                        pass
+                return
+
+            if self.process.returncode == 0:
+                self.finished_extraction.emit(self.output_path, self.start_time, self.duration)
+            else:
+                self.finished_extraction.emit("", self.start_time, self.duration)
         except Exception as e:
             print(f"[AudioExtractionThread] Error extracting audio track {self.track_index} at {self.start_time}s: {e}")
-            self.finished_extraction.emit("", self.start_time, self.duration)
+            if not self._is_cancelled:
+                self.finished_extraction.emit("", self.start_time, self.duration)
 
+    def cancel(self):
+        self._is_cancelled = True
+        if self.process:
+            try:
+                self.process.kill()
+            except OSError:
+                pass
 
-class PreDecodeSignals(QObject):
-    decoded = pyqtSignal(int, QImage)
-
-
-class PreDecodeRunnable(QRunnable):
-    def __init__(self, frame_idx, jpeg_data, signals):
-        super().__init__()
-        self.frame_idx = frame_idx
-        self.jpeg_data = jpeg_data
-        self.signals = signals
-
-    def run(self):
-        try:
-            from PyQt6.QtGui import QImage
-            image = QImage()
-            if isinstance(self.jpeg_data, bytes):
-                image.loadFromData(self.jpeg_data)
-            elif isinstance(self.jpeg_data, str):
-                image.load(self.jpeg_data)
-            
-            if not image.isNull():
-                self.signals.decoded.emit(self.frame_idx, image)
-        except Exception:
-            pass
 
 
 class ProcessMonitorThread(QThread):
@@ -364,13 +372,25 @@ class ProcessMonitorThread(QThread):
         super().__init__(parent)
         self.process = process
         self.filename = filename
+        self._is_cancelled = False
 
     def run(self):
         try:
             self.process.wait()
+            if self._is_cancelled:
+                return
             if self.process.returncode == 0:
                 self.finished_export.emit(self.filename, True, "")
             else:
                 self.finished_export.emit(self.filename, False, f"FFmpeg exited with code {self.process.returncode}")
         except Exception as e:
-            self.finished_export.emit(self.filename, False, str(e))
+            if not self._is_cancelled:
+                self.finished_export.emit(self.filename, False, str(e))
+
+    def cancel(self):
+        self._is_cancelled = True
+        if self.process:
+            try:
+                self.process.kill()
+            except OSError:
+                pass

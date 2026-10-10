@@ -1,8 +1,10 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QImage, QMatrix4x4, QPixmap
+import math
+import numpy as np
+from PyQt6.QtCore import Qt, QRectF
+from PyQt6.QtGui import QImage, QMatrix4x4, QPixmap, QVector2D
 from PyQt6.QtWidgets import QGraphicsPixmapItem
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture
+from PyQt6.QtOpenGL import QOpenGLShaderProgram, QOpenGLShader, QOpenGLTexture, QOpenGLFunctions_2_1
 
 class GPUPixmapItem(QGraphicsPixmapItem):
     """
@@ -31,13 +33,23 @@ class GPUPixmapItem(QGraphicsPixmapItem):
         self._last_pixmap_id = None
         self._new_image_loaded = False
 
+        # Cached OpenGL & Geometry state
+        self._gl = None
+        self._v_loc = -1
+        self._t_loc = -1
+        self._last_vertex_wh = (-1.0, -1.0)
+        self._cached_vertices = None
+        self._cached_tex_coords = np.array([0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0], dtype=np.float32).reshape(-1, 2)
+
     def __del__(self):
-        if self.texture:
-            self.texture.destroy()
+        try:
+            if self.texture:
+                self.texture.destroy()
+        except Exception:
+            pass
 
     def boundingRect(self):
         if not self.current_image.isNull():
-            from PyQt6.QtCore import QRectF
             return QRectF(0.0, 0.0, float(self.current_image.width()), float(self.current_image.height()))
         return super().boundingRect()
 
@@ -185,6 +197,9 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             
         if not self.shader.link():
             print("Shader link error:", self.shader.log())
+        else:
+            self._v_loc = self.shader.attributeLocation("vertex")
+            self._t_loc = self.shader.attributeLocation("texCoord")
  
     def paint(self, painter, option, widget):
         try:
@@ -196,13 +211,13 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             if not isinstance(widget, QOpenGLWidget):
                 super().paint(painter, option, widget)
                 return
- 
+
             self._init_shader()
             
             if not self.shader or not self.shader.isLinked():
                 super().paint(painter, option, widget)
                 return
- 
+
             pix = self.pixmap()
             img = self.current_image
             
@@ -229,9 +244,9 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             
             self.shader.bind()
             
-            # Get attribute locations
-            v_loc = self.shader.attributeLocation("vertex")
-            t_loc = self.shader.attributeLocation("texCoord")
+            # Attribute locations
+            v_loc = self._v_loc if self._v_loc != -1 else self.shader.attributeLocation("vertex")
+            t_loc = self._t_loc if self._t_loc != -1 else self.shader.attributeLocation("texCoord")
             
             # Setup Projection Matrix
             matrix = QMatrix4x4(painter.combinedTransform())
@@ -239,8 +254,6 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             proj = QMatrix4x4()
             proj.ortho(0, widget.width(), widget.height(), 0, -1, 1)
             
-            import math
-            from PyQt6.QtGui import QVector2D
             self.shader.setUniformValue("matrix", proj * matrix)
             self.shader.setUniformValue("u_brightness", self.brightness)
             self.shader.setUniformValue("u_contrast", self.contrast)
@@ -262,25 +275,25 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             w = float(pix.width())
             h = float(pix.height())
             
-            import numpy as np
-            vertices = np.array([0.0, 0.0, w, 0.0, w, h, 0.0, h], dtype=np.float32).reshape(-1, 2)
-            texCoords = np.array([0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0], dtype=np.float32).reshape(-1, 2)
-            
-            from PyQt6.QtOpenGL import QOpenGLFunctions_2_1
-            gl = QOpenGLFunctions_2_1()
-            gl.initializeOpenGLFunctions()
+            if self._last_vertex_wh != (w, h) or self._cached_vertices is None:
+                self._cached_vertices = np.array([0.0, 0.0, w, 0.0, w, h, 0.0, h], dtype=np.float32).reshape(-1, 2)
+                self._last_vertex_wh = (w, h)
+
+            if self._gl is None:
+                self._gl = QOpenGLFunctions_2_1()
+                self._gl.initializeOpenGLFunctions()
             
             # Ensure viewport is correct
-            gl.glViewport(0, 0, widget.width(), widget.height())
+            self._gl.glViewport(0, 0, widget.width(), widget.height())
             
             self.shader.enableAttributeArray(v_loc)
             self.shader.enableAttributeArray(t_loc)
             
             # Use 2-argument call, shape will define the tuple size
-            self.shader.setAttributeArray(v_loc, vertices)
-            self.shader.setAttributeArray(t_loc, texCoords)
+            self.shader.setAttributeArray(v_loc, self._cached_vertices)
+            self.shader.setAttributeArray(t_loc, self._cached_tex_coords)
             
-            gl.glDrawArrays(0x0006, 0, 4) # GL_TRIANGLE_FAN is 0x0006
+            self._gl.glDrawArrays(0x0006, 0, 4) # GL_TRIANGLE_FAN is 0x0006
             
             self.shader.disableAttributeArray(v_loc)
             self.shader.disableAttributeArray(t_loc)

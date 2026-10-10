@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, QUrl, QTimer, QPointF
 from PyQt6.QtMultimedia import QMediaPlayer
 from utils import mark_temp_dir_owner
 from qfluentwidgets import FluentIcon
-from utils import get_resource_path, format_time, VERSION, get_embedded_video_offset
+from utils import get_resource_path, format_time, VERSION, get_embedded_video_offset, get_ffprobe_path
 from translations import tr
 
 logger = logging.getLogger("Loader")
@@ -325,9 +325,7 @@ class LoaderMixin(LoaderMixinBase):
         """Get FPS and duration using ffprobe, supporting both video and audio-only files."""
         logger.info(f"get_video_info started for: {file_path}")
         try:
-            ffprobe_path = get_resource_path("ffprobe.exe" if os.name == 'nt' else "ffprobe")
-            if not os.path.exists(ffprobe_path):
-                ffprobe_path = "ffprobe"
+            ffprobe_path = get_ffprobe_path()
 
             cmd = [
                 ffprobe_path, "-v", "error",
@@ -339,8 +337,11 @@ class LoaderMixin(LoaderMixinBase):
             if os.name == 'nt':
                 creationflags = subprocess.CREATE_NO_WINDOW
 
-            result = subprocess.check_output(cmd, creationflags=creationflags).decode('utf-8')
-            data = json.loads(result)
+            proc = subprocess.run(cmd, creationflags=creationflags, capture_output=True, text=True, timeout=10)
+            if proc.returncode != 0:
+                logger.warning(f"ffprobe returned code {proc.returncode}: {proc.stderr}")
+                return 30.0, 0, 0
+            data = json.loads(proc.stdout)
             streams = data.get('streams', [])
             
             self.audio_tracks_info = []

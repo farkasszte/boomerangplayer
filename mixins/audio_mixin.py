@@ -36,6 +36,15 @@ class AudioMixin:
 
         self.setup_media_player_intercept()
 
+    def _cancel_and_wait_thread(self, thread_attr):
+        thread = getattr(self, thread_attr, None)
+        if thread and thread.isRunning():
+            if hasattr(thread, 'cancel'):
+                thread.cancel()
+            if not thread.wait(200):
+                thread.terminate()
+                thread.wait(50)
+
     def setup_media_player_intercept(self):
         if not hasattr(self, 'mediaPlayer') or self.mediaPlayer is None:
             return
@@ -128,9 +137,7 @@ class AudioMixin:
         else:
             target_original = self.original_audio_path_1
 
-        if hasattr(self, 'prefetch_extract_thread') and self.prefetch_extract_thread and self.prefetch_extract_thread.isRunning():
-            self.prefetch_extract_thread.terminate()
-            self.prefetch_extract_thread.wait()
+        self._cancel_and_wait_thread('prefetch_extract_thread')
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
         ffmpeg_path = os.path.join(base_dir, "..", "ffmpeg.exe" if os.name == 'nt' else "ffmpeg")
@@ -186,12 +193,8 @@ class AudioMixin:
         self.setup_media_player_intercept()
 
     def cleanup_temp_audio(self):
-        if hasattr(self, 'audio_extract_thread') and self.audio_extract_thread and self.audio_extract_thread.isRunning():
-            self.audio_extract_thread.terminate()
-            self.audio_extract_thread.wait()
-        if hasattr(self, 'prefetch_extract_thread') and self.prefetch_extract_thread and self.prefetch_extract_thread.isRunning():
-            self.prefetch_extract_thread.terminate()
-            self.prefetch_extract_thread.wait()
+        self._cancel_and_wait_thread('audio_extract_thread')
+        self._cancel_and_wait_thread('prefetch_extract_thread')
 
         if hasattr(self, 'mediaPlayer'):
             self.mediaPlayer.setSource(QUrl())
@@ -250,12 +253,8 @@ class AudioMixin:
         self.pending_audio_start_ms = start_sec * 1000
         self.pending_audio_end_ms = (start_sec + duration_sec) * 1000
 
-        if hasattr(self, 'audio_extract_thread') and self.audio_extract_thread and self.audio_extract_thread.isRunning():
-            self.audio_extract_thread.terminate()
-            self.audio_extract_thread.wait()
-        if hasattr(self, 'prefetch_extract_thread') and self.prefetch_extract_thread and self.prefetch_extract_thread.isRunning():
-            self.prefetch_extract_thread.terminate()
-            self.prefetch_extract_thread.wait()
+        self._cancel_and_wait_thread('audio_extract_thread')
+        self._cancel_and_wait_thread('prefetch_extract_thread')
         self.has_prefetched_chunk = False
 
         # Find FFmpeg binary path

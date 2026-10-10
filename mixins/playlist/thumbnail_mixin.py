@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtCore import Qt, QSize, QPoint
-from PyQt6.QtGui import QColor, QPixmap, QIcon
+from PyQt6.QtGui import QColor, QPixmap, QIcon, QImage
 from PyQt6.QtWidgets import QListView, QMenu
 from workers.threads import ThumbnailThread
 from translations import tr
@@ -41,17 +41,16 @@ class PlaylistThumbnailMixin:
         sender = self.sender()
         
         if sender in self.thumb_threads:
-            
             self.thumb_threads.remove(sender)
 
-        
         if not self.thumbToggle.isChecked():
             self._process_thumb_queue()
             return
             
+        if isinstance(pixmap, QImage):
+            pixmap = QPixmap.fromImage(pixmap)
         
         for i in range(self.playlistList.count()):
-            
             item = self.playlistList.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == filePath:
                 item.setIcon(QIcon(pixmap))

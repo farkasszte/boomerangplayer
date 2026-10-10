@@ -143,11 +143,16 @@ class AdjustmentMixin(AdjustmentMixinBase):
     def update_pixmap_from_cache(self):
         is_audio = getattr(self, 'is_audio_only', False)
         target_index = 0 if is_audio else self.current_cache_index
-        cache_keys = list(getattr(self, 'cached_frame_dict', {}).keys())
-        logger.debug(f"[DEBUG update_pixmap] target_index={target_index}, cache_keys={cache_keys[:10]}..., is_fullscreen={getattr(self, 'is_full_screen', False)}")
+        cached_dict = getattr(self, 'cached_frame_dict', None)
+        if cached_dict is None:
+            return
 
-        if target_index in getattr(self, 'cached_frame_dict', {}):
-            data = self.cached_frame_dict[target_index]
+        if logger.isEnabledFor(logging.DEBUG):
+            cache_keys = list(cached_dict.keys())
+            logger.debug(f"[DEBUG update_pixmap] target_index={target_index}, cache_keys={cache_keys[:10]}..., is_fullscreen={getattr(self, 'is_full_screen', False)}")
+
+        if target_index in cached_dict:
+            data = cached_dict[target_index]
 
             b = self.brightnessSlider.value()
             c = self.contrastSlider.value() / 100.0
@@ -161,46 +166,57 @@ class AdjustmentMixin(AdjustmentMixinBase):
             sharpen_val = self.sharpenSlider.value() if hasattr(self, 'sharpenSlider') else 0
             blur_val = self.blurSlider.value() if hasattr(self, 'blurSlider') else 0
 
+            # Resolve decoded image (using ring buffer cache to accelerate playback and looping)
+            image = None
+            if target_index != getattr(self, '_last_rendered_index', -1) or not gpu_enabled:
+                decoded_cache = getattr(self, '_decoded_image_cache', None)
+                if decoded_cache is None:
+                    self._decoded_image_cache = {}
+                    decoded_cache = self._decoded_image_cache
+
+                if target_index in decoded_cache:
+                    image = decoded_cache[target_index]
+                else:
+                    image = QImage()
+                    if isinstance(data, bytes):
+                        image.loadFromData(data)
+                    elif isinstance(data, str):
+                        image.load(data)
+                    if not image.isNull():
+                        decoded_cache[target_index] = image
+                        if len(decoded_cache) > 24:
+                            del decoded_cache[next(iter(decoded_cache))]
+
             gpu_enabled = self.config.get('gpu_acceleration', False)
             if gpu_enabled:
                 if self.pixmapItem is not None:
                     if target_index == getattr(self, '_last_rendered_index', -1):
                         self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
-                    else:
-                        image = QImage()
-                        if isinstance(data, bytes):
-                            image.loadFromData(data)
-                        elif isinstance(data, str):
-                            image.load(data)
+                    elif image is not None and not image.isNull():
+                        self.pixmapItem.setImage(image)
+                        self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
                         
-                        if not image.isNull():
-                            self.pixmapItem.setImage(image)
-                            self.pixmapItem.update_params(b, c, g, s, hue_val, temp_val, exposure_mult, invert_val, sharpen_val, blur_val)
+                        fit_val = False
+                        if getattr(self, 'is_motion_photo', False):
+                            last_idx = getattr(self, '_last_rendered_index', -1)
+                            if target_index == 0 or last_idx == 0:
+                                fit_val = True
                         
-                            fit_val = False
-                            if getattr(self, 'is_motion_photo', False):
-                                last_idx = getattr(self, '_last_rendered_index', -1)
-                                if target_index == 0 or last_idx == 0:
-                                    fit_val = True
-                        
-                            self.apply_transformations(fit=fit_val)
-                            self._last_rendered_index = target_index
+                        self.apply_transformations(fit=fit_val)
+                        self._last_rendered_index = target_index
             else:
                 # Software rendering path
                 if (hasattr(self, '_last_base_index') and self._last_base_index == target_index 
                         and hasattr(self, '_current_base_image') and not self._current_base_image.isNull()):
                     img = self._current_base_image.copy()
-                else:
-                    pixmap = QPixmap()
-                    if isinstance(data, bytes):
-                        pixmap.loadFromData(data)
-                    elif isinstance(data, str):
-                        pixmap.load(data)
-                    img = pixmap.toImage()
+                elif image is not None and not image.isNull():
+                    img = image.copy()
                     self._current_base_image = img
                     self._last_base_index = target_index
+                else:
+                    img = QImage()
 
-                if b != 0 or c != 1.0 or g != 1.0 or s != 1.0 or hue_val != 0 or temp_val != 0 or exposure_mult != 1.0 or invert_val != 0 or sharpen_val > 0 or blur_val > 0:
+                if not img.isNull() and (b != 0 or c != 1.0 or g != 1.0 or s != 1.0 or hue_val != 0 or temp_val != 0 or exposure_mult != 1.0 or invert_val != 0 or sharpen_val > 0 or blur_val > 0):
                     img = img.convertToFormat(QImage.Format.Format_ARGB32)
                     width, height = img.width(), img.height()
                     ptr = img.bits()

@@ -140,6 +140,8 @@ class CacheMixin(CacheMixinBase):
         self._last_base_index = -1
         if hasattr(self, '_current_base_image'):
             self._current_base_image = QImage()
+        if hasattr(self, '_decoded_image_cache'):
+            self._decoded_image_cache.clear()
         pixmap_item = getattr(self, 'pixmapItem', None)
         if pixmap_item is not None:
             pixmap_item.setPixmap(QPixmap())

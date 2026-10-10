@@ -225,6 +225,7 @@ class PlaybackMixin(PlaybackMixinBase):
                         self.advance_playlist()
                     else:
                         self.stop_playback()
+                    return
         else:
             self.current_cache_index -= int_delta
             if self.current_cache_index < start_frame:
@@ -257,6 +258,7 @@ class PlaybackMixin(PlaybackMixinBase):
                         self.advance_playlist()
                     else:
                         self.stop_playback()
+                    return
 
         self.current_cache_index = max(0, min(max(0, self.total_frames - 1), self.current_cache_index))
 
@@ -463,24 +465,41 @@ class PlaybackMixin(PlaybackMixinBase):
     # ------------------------------------------------------------------ #
 
     def closeEvent(self, event):
+        if hasattr(self, 'config') and hasattr(self.config, 'flush'):
+            self.config.flush()
+
         self.cleanup_cache()
 
-        # Gracefully cancel and wait for any running background threads
-        for t in getattr(self, 'thumb_threads', []):
+        # Gracefully cancel all running background threads concurrently first
+        thumb_list = list(getattr(self, 'thumb_threads', []))
+        for t in thumb_list:
             try:
                 t.cancel()
-                t.wait(150)
             except Exception:
                 pass
-        self.thumb_threads = []
 
-        for attr in ('prefetch_extract_thread', 'audio_extract_thread', 'extraction_thread'):
+        for attr in ('prefetch_extract_thread', 'audio_extract_thread', 'extraction_thread', 'export_monitor'):
             t = getattr(self, attr, None)
             if t and hasattr(t, 'isRunning') and t.isRunning():
                 try:
                     if hasattr(t, 'cancel'):
                         t.cancel()
-                    t.wait(150)
+                except Exception:
+                    pass
+
+        # Then wait for them to finish cleanly
+        for t in thumb_list:
+            try:
+                t.wait(100)
+            except Exception:
+                pass
+        self.thumb_threads = []
+
+        for attr in ('prefetch_extract_thread', 'audio_extract_thread', 'extraction_thread', 'export_monitor'):
+            t = getattr(self, attr, None)
+            if t and hasattr(t, 'isRunning') and t.isRunning():
+                try:
+                    t.wait(100)
                 except Exception:
                     pass
 

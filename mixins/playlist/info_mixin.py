@@ -178,7 +178,7 @@ class PlaylistInfoMixin(PlaylistInfoMixinBase):
                 path_layout = QVBoxLayout(path_action_content)
                 path_layout.setContentsMargins(12, 2, 12, 6)
                 path_label = QLabel(f"<font color='#888'>{self.currentFilePath}</font>")
-                path_label.setStyleSheet("font-size: 11px; border: none;")
+                path_label.setStyleSheet("font-size: 12px; border: none;")
                 path_label.setWordWrap(True)
                 path_label.setFixedWidth(310)
                 path_layout.addWidget(path_label)

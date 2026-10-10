@@ -13,9 +13,9 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QListWidget,
                               QAbstractItemView, QTreeWidget, QTreeWidgetItem,
                               QSplitter, QHeaderView, QStackedWidget,
                               QApplication, QStyle)
-from PyQt6.QtGui import QIcon, QColor
+from PyQt6.QtGui import QIcon, QColor, QPixmap, QImage
 from qfluentwidgets import FluentIcon, ToolButton
-from styles import COMPACT_BTN_STYLE
+from styles import COMPACT_BTN_STYLE, get_bg_pressed
 from translations import tr
 
 # ── Extension constants ──────────────────────────────────────────────────────
@@ -306,7 +306,7 @@ class MediaFileDialog(QDialog):
         # Style definition for round edge buttons
         inverse_text = self._config.get('inverse_text', False)
         bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
-        bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+        bg_pressed = get_bg_pressed(inverse_text)
         
         def hex_to_rgb(hex_str):
             hex_str = hex_str.lstrip('#')
@@ -687,6 +687,8 @@ class MediaFileDialog(QDialog):
         self._thumb_pending.discard(path)
         self._thumb_done.add(path)
         if pixmap is not None and not pixmap.isNull():
+            if isinstance(pixmap, QImage):
+                pixmap = QPixmap.fromImage(pixmap)
             item.setIcon(QIcon(pixmap))
         self._ensure_visible_thumbs()
 

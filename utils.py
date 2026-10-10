@@ -3,9 +3,10 @@ import sys
 import json
 import subprocess
 import logging
+import copy
 from PyQt6.QtCore import Qt
 
-VERSION = "4.4"
+VERSION = "4.5"
 logger = logging.getLogger("BoomerangPlayer")
 
 def get_base_path():
@@ -116,6 +117,11 @@ def detect_best_hwaccel_async(config):
     Detects the best hardware decoding method supported by the system ffmpeg
     by generating a tiny video in the temp folder and trying to decode it.
     """
+    current_accel = config.get('detected_hwaccel', 'auto')
+    if current_accel and current_accel != 'auto' and current_accel in ('cuda', 'd3d11va', 'dxva2'):
+        logger.debug(f"[GPU Detect] Already configured with verified hwaccel: {current_accel}. Skipping probe.")
+        return
+
     import threading
     import tempfile
     import subprocess
@@ -165,11 +171,6 @@ def detect_best_hwaccel_async(config):
                     logger.warning(f"[GPU Detect] Failed to delete dummy file {dummy_file}: {err}")
             
             config['detected_hwaccel'] = best_accel
-            try:
-                from utils import save_config
-                save_config(config)
-            except Exception:
-                pass
                 
         except Exception as e:
             logger.error(f"[GPU Detect] Error during detection: {e}")
@@ -284,9 +285,9 @@ def get_markers_path():
 
 def validate_config(data):
     if not isinstance(data, dict):
-        return DEFAULT_CONFIG.copy()
+        return copy.deepcopy(DEFAULT_CONFIG)
     
-    validated = DEFAULT_CONFIG.copy()
+    validated = copy.deepcopy(DEFAULT_CONFIG)
     for k, default_val in DEFAULT_CONFIG.items():
         if k in data:
             val = data[k]
@@ -370,7 +371,7 @@ def load_config():
                 return validate_config(config)
         except Exception as e:
             logger.error(f"Error loading config: {e}")
-    return DEFAULT_CONFIG.copy()
+    return copy.deepcopy(DEFAULT_CONFIG)
 
 def save_config(config):
     path = get_config_path()
@@ -620,10 +621,12 @@ def send_to_recycle_bin(path):
     if not os.path.exists(path):
         return False
 
+    abs_path = os.path.abspath(path)
     import time
-    for attempt in range(30):
+
+    # Try SHFileOperationW with a few short retries in case of transient locks
+    for attempt in range(5):
         try:
-            abs_path = os.path.abspath(path)
             p_from = abs_path + "\0\0"
 
             fileop = SHFILEOPSTRUCTW()
@@ -637,35 +640,33 @@ def send_to_recycle_bin(path):
             fileop.lpszProgressTitle = None
             shell32 = ctypes.windll.shell32
             result = shell32.SHFileOperationW(ctypes.byref(fileop))
-            if result == 0 and not fileop.fAnyOperationsAborted:
+            if result == 0 and not fileop.fAnyOperationsAborted and not os.path.exists(abs_path):
                 log_debug(f"ctypes SHFileOperationW succeeded on attempt {attempt}")
                 return True
             else:
                 log_debug(f"ctypes SHFileOperationW failed on attempt {attempt} with code {result} (aborted: {fileop.fAnyOperationsAborted})")
-                print(f"[send_to_recycle_bin] (attempt {attempt}) SHFileOperationW returned code {result} (aborted: {fileop.fAnyOperationsAborted})")
-                
-                # Robust fallback: use PowerShell COM Shell.Application object to move the file to the Recycle Bin
-                try:
-                    ps_cmd = [
-                        "powershell", "-NoProfile", "-Command",
-                        f'(New-Object -ComObject Shell.Application).NameSpace(10).MoveHere("{abs_path}")'
-                    ]
-                    creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                    res = subprocess.run(ps_cmd, creationflags=creationflags, capture_output=True, text=True, timeout=5)
-                    if not os.path.exists(abs_path):
-                        log_debug(f"PowerShell fallback succeeded on attempt {attempt}")
-                        print(f"[send_to_recycle_bin] PowerShell fallback succeeded on attempt {attempt}")
-                        return True
-                    else:
-                        log_debug(f"PowerShell fallback run but file still exists. stdout: {res.stdout.strip()}, stderr: {res.stderr.strip()}")
-                except Exception as ex:
-                    log_debug(f"PowerShell fallback failed: {ex}")
-                    print(f"[send_to_recycle_bin] PowerShell fallback failed: {ex}")
         except Exception as e:
-            log_debug(f"Error in send_to_recycle_bin try-except: {e}")
-            print(f"Error in send_to_recycle_bin (attempt {attempt}): {e}")
+            log_debug(f"Error in send_to_recycle_bin SHFileOperationW: {e}")
         time.sleep(0.1)
-    log_debug("All 30 attempts to delete failed")
+
+    # Fallback: single attempt with PowerShell COM Shell.Application with safely escaped path
+    try:
+        abs_path_escaped = abs_path.replace("'", "''")
+        ps_cmd = [
+            "powershell", "-NoProfile", "-Command",
+            f"(New-Object -ComObject Shell.Application).NameSpace(10).MoveHere('{abs_path_escaped}')"
+        ]
+        creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        res = subprocess.run(ps_cmd, creationflags=creationflags, capture_output=True, text=True, timeout=5)
+        if not os.path.exists(abs_path):
+            log_debug("PowerShell fallback succeeded")
+            return True
+        else:
+            log_debug(f"PowerShell fallback failed: file still exists. stdout: {res.stdout.strip()}, stderr: {res.stderr.strip()}")
+    except Exception as ex:
+        log_debug(f"PowerShell fallback exception: {ex}")
+
+    log_debug("All attempts to recycle file failed")
     return False
 
 
@@ -673,24 +674,45 @@ def get_embedded_video_offset(file_path):
     """
     Checks if a JPG/JPEG file has an appended/embedded MP4 video.
     Returns the offset of the video file start if found, otherwise None.
+    Uses chunked streaming to avoid loading large files entirely into RAM.
     """
     if not file_path.lower().endswith(('.jpg', '.jpeg')):
         return None
     try:
         if not os.path.exists(file_path):
             return None
-        with open(file_path, 'rb') as f:
-            data = f.read()
         
-        idx = data.find(b'ftyp')
-        if idx != -1:
-            box_start = idx - 4
-            if box_start >= 0:
-                box_size = int.from_bytes(data[box_start:idx], 'big')
-                if 8 <= box_size <= 1024:
-                    return box_start
+        file_size = os.path.getsize(file_path)
+        if file_size < 16:
+            return None
+
+        # Search in 1MB chunks with overlap for boundary matches
+        chunk_size = 1024 * 1024
+        overlap = 16
+        with open(file_path, 'rb') as f:
+            offset = 0
+            prev_tail = b''
+            while offset < file_size:
+                f.seek(offset)
+                chunk = prev_tail + f.read(chunk_size)
+                if not chunk:
+                    break
+
+                idx = chunk.find(b'ftyp')
+                while idx != -1:
+                    box_start_in_chunk = idx - 4
+                    if box_start_in_chunk >= 0:
+                        box_size = int.from_bytes(chunk[box_start_in_chunk:idx], 'big')
+                        if 8 <= box_size <= 1024:
+                            actual_file_offset = (offset - len(prev_tail)) + box_start_in_chunk
+                            if 0 <= actual_file_offset < file_size:
+                                return actual_file_offset
+                    idx = chunk.find(b'ftyp', idx + 4)
+
+                prev_tail = chunk[-overlap:] if len(chunk) >= overlap else chunk
+                offset += chunk_size
     except Exception as e:
-        print(f"Error checking embedded video: {e}")
+        logger.debug(f"Error checking embedded video: {e}")
     return None
 
 

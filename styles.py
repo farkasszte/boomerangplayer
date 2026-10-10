@@ -11,7 +11,7 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
     border_bottom_color = "rgba(0, 0, 0, 0.45)" if inverse_text else "rgba(255, 255, 255, 0.2)"
     bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
     bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
-    bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+    bg_pressed = get_bg_pressed(inverse_text)
     menu_selected_bg = "rgba(0, 0, 0, 0.12)" if inverse_text else "rgba(255, 255, 255, 0.15)"
     
     slider_groove = "#555555" if inverse_text else "#444444"
@@ -246,6 +246,9 @@ def get_styles(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
     
     return styles
 
+def get_bg_pressed(inverse_text=False):
+    return "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+
 def get_color_tokens(accent_color="#00f2ff", bg_color="#202020", inverse_text=False):
     fg_color = "#1c1c1c" if inverse_text else "#ffffff"
     sec_fg_color = "#555555" if inverse_text else "#aaaaaa"
@@ -253,7 +256,7 @@ def get_color_tokens(accent_color="#00f2ff", bg_color="#202020", inverse_text=Fa
     border_bottom_color = "rgba(0, 0, 0, 0.45)" if inverse_text else "rgba(255, 255, 255, 0.2)"
     bg_translucent = "rgba(0, 0, 0, 0.04)" if inverse_text else "rgba(255, 255, 255, 0.05)"
     bg_hover = "rgba(0, 0, 0, 0.08)" if inverse_text else "rgba(255, 255, 255, 0.1)"
-    bg_pressed = "rgba(0, 0, 0, 0.02)" if inverse_text else "rgba(255, 255, 255, 0.03)"
+    bg_pressed = get_bg_pressed(inverse_text)
     menu_selected_bg = "rgba(0, 0, 0, 0.12)" if inverse_text else "rgba(255, 255, 255, 0.15)"
     return {
         'accent': accent_color,
