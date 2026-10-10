@@ -43,6 +43,25 @@ class TestUIRendering(unittest.TestCase):
         self.assertTrue(sw.testAttribute(Qt.WidgetAttribute.WA_StyledBackground))
         self.assertTrue(sw.autoFillBackground())
 
+    def test_update_pixmap_from_cache(self):
+        from PyQt6.QtGui import QImage
+        from PyQt6.QtCore import QByteArray, QBuffer, QIODevice
+        
+        test_img = QImage(64, 64, QImage.Format.Format_RGB32)
+        test_img.fill(0xFF00FF)
+        ba = QByteArray()
+        buf = QBuffer(ba)
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        test_img.save(buf, "JPEG")
+        buf.close()
+        
+        self.win.frame_cache = {0: bytes(ba)}
+        self.win.current_frame_index = 0
+        
+        for gpu_flag in (True, False):
+            self.win.config['gpu_acceleration'] = gpu_flag
+            self.win.update_pixmap_from_cache()
+
 
 if __name__ == '__main__':
     unittest.main()

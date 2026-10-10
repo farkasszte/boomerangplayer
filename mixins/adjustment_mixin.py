@@ -166,6 +166,8 @@ class AdjustmentMixin(AdjustmentMixinBase):
             sharpen_val = self.sharpenSlider.value() if hasattr(self, 'sharpenSlider') else 0
             blur_val = self.blurSlider.value() if hasattr(self, 'blurSlider') else 0
 
+            gpu_enabled = self.config.get('gpu_acceleration', False)
+
             # Resolve decoded image (using ring buffer cache to accelerate playback and looping)
             image = None
             if target_index != getattr(self, '_last_rendered_index', -1) or not gpu_enabled:
@@ -187,7 +189,6 @@ class AdjustmentMixin(AdjustmentMixinBase):
                         if len(decoded_cache) > 24:
                             del decoded_cache[next(iter(decoded_cache))]
 
-            gpu_enabled = self.config.get('gpu_acceleration', False)
             if gpu_enabled:
                 if self.pixmapItem is not None:
                     if target_index == getattr(self, '_last_rendered_index', -1):
