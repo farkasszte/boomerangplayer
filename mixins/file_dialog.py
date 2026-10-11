@@ -679,17 +679,23 @@ class MediaFileDialog(QDialog):
             self._thumb_pending.add(path)
             t = ThumbnailThread(path, self)
             t.finished.connect(
-                lambda px, _it=item, _p=path: self._on_thumb(_it, _p, px))
+                lambda p, img, _it=item: self._on_thumb(_it, p, img))
             self._thumb_threads.append(t)
             t.start()
 
     def _on_thumb(self, item, path, pixmap):
         self._thumb_pending.discard(path)
         self._thumb_done.add(path)
-        if pixmap is not None and not pixmap.isNull():
+        self._thumb_threads = [t for t in self._thumb_threads if t.isRunning()]
+        if pixmap is not None and hasattr(pixmap, 'isNull') and not pixmap.isNull():
             if isinstance(pixmap, QImage):
                 pixmap = QPixmap.fromImage(pixmap)
-            item.setIcon(QIcon(pixmap))
+            target_item = self._thumb_items_by_path.get(path, item)
+            if target_item is not None:
+                try:
+                    target_item.setIcon(QIcon(pixmap))
+                except (RuntimeError, AttributeError):
+                    pass
         self._ensure_visible_thumbs()
 
     # ── Event handlers ────────────────────────────────────────────────────────
