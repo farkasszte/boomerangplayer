@@ -58,9 +58,30 @@ class TestUIRendering(unittest.TestCase):
         self.win.frame_cache = {0: bytes(ba)}
         self.win.current_frame_index = 0
         
-        for gpu_flag in (True, False):
-            self.win.config['gpu_acceleration'] = gpu_flag
-            self.win.update_pixmap_from_cache()
+        orig_gpu = self.win.config.get('gpu_acceleration', True)
+        try:
+            for gpu_flag in (True, False):
+                self.win.config['gpu_acceleration'] = gpu_flag
+                self.win.update_pixmap_from_cache()
+        finally:
+            self.win.config['gpu_acceleration'] = orig_gpu
+            self.win.config.flush()
+
+    def test_frameless_margins_and_opaque_background(self):
+        self.assertFalse(self.win.isMicaEffectEnabled())
+        self.assertEqual(self.win._normalBackgroundColor().alpha(), 255)
+        self.assertFalse(self.win.playlistContainer.isHidden())
+        if sys.platform == 'win32':
+            self.assertTrue(bool(self.win.windowFlags() & Qt.WindowType.FramelessWindowHint))
+            self.win.show()
+            app.processEvents()
+            margins = self.win.windowHandle().frameMargins()
+            self.assertEqual((margins.left(), margins.top(), margins.right(), margins.bottom()), (0, 0, 0, 0))
+            self.assertEqual(self.win.geometry(), self.win.frameGeometry())
+            self.win.refresh_window_frame()
+            app.processEvents()
+            self.assertEqual(self.win.geometry(), self.win.frameGeometry())
+            self.win.hide()
 
 
 if __name__ == '__main__':

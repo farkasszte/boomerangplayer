@@ -338,12 +338,12 @@ class UIMixin(
         ]
         
         if is_fs:
-            h = self.controlsCard.height() if (hasattr(self, 'controlsCard') and self.controlsCard.isVisible()) else 0
+            h = self.controlsCard.height() if (hasattr(self, 'controlsCard') and not self.controlsCard.isHidden()) else 0
             sidebar_height = self.height() - h if h > 0 else self.height()
             
-            title_bar_h = self.titleBar.height() if hasattr(self, 'titleBar') and self.titleBar.isVisible() else 0
+            title_bar_h = self.titleBar.height() if hasattr(self, 'titleBar') and not self.titleBar.isHidden() else 0
             for name, container, side, original_idx in sidebars:
-                was_visible = container.isVisible()
+                was_visible = not container.isHidden()
                 if container.parent() != self:
                     container.setParent(self)
                 # Keep original visibility state
@@ -358,52 +358,52 @@ class UIMixin(
             # Always raise the title bar and controls card above the sidebars in fullscreen
             if hasattr(self, 'titleBar'):
                 self.titleBar.raise_()
-            if hasattr(self, 'controlsCard') and self.controlsCard.isVisible():
+            if hasattr(self, 'controlsCard') and not self.controlsCard.isHidden():
                 self.controlsCard.raise_()
         else:
             # Restore to mainSplitter in original index order
             for name, container, side, original_idx in sidebars:
-                was_visible = container.isVisible()
+                was_visible = not container.isHidden()
                 if container.parent() != self.mainSplitter:
                     self.mainSplitter.insertWidget(original_idx, container)
                 container.setVisible(was_visible)
             
             # Enforce mutual exclusivity on the same side in windowed mode
-            if self.globalSettingsContainer.isVisible():
-                if self.settingsContainer.isVisible(): self.settingsContainer.hide()
-                if self.imageAdjContainer.isVisible(): self.imageAdjContainer.hide()
-                if self.subtitleContainer.isVisible(): self.subtitleContainer.hide()
-            if self.settingsContainer.isVisible():
-                if self.globalSettingsContainer.isVisible(): self.globalSettingsContainer.hide()
-                if self.imageAdjContainer.isVisible(): self.imageAdjContainer.hide()
-                if self.subtitleContainer.isVisible(): self.subtitleContainer.hide()
-            if self.imageAdjContainer.isVisible():
-                if self.globalSettingsContainer.isVisible(): self.globalSettingsContainer.hide()
-                if self.settingsContainer.isVisible(): self.settingsContainer.hide()
-                if self.subtitleContainer.isVisible(): self.subtitleContainer.hide()
-            if self.subtitleContainer.isVisible():
-                if self.globalSettingsContainer.isVisible(): self.globalSettingsContainer.hide()
-                if self.settingsContainer.isVisible(): self.settingsContainer.hide()
-                if self.imageAdjContainer.isVisible(): self.imageAdjContainer.hide()
+            if not self.globalSettingsContainer.isHidden():
+                if not self.settingsContainer.isHidden(): self.settingsContainer.hide()
+                if not self.imageAdjContainer.isHidden(): self.imageAdjContainer.hide()
+                if not self.subtitleContainer.isHidden(): self.subtitleContainer.hide()
+            if not self.settingsContainer.isHidden():
+                if not self.globalSettingsContainer.isHidden(): self.globalSettingsContainer.hide()
+                if not self.imageAdjContainer.isHidden(): self.imageAdjContainer.hide()
+                if not self.subtitleContainer.isHidden(): self.subtitleContainer.hide()
+            if not self.imageAdjContainer.isHidden():
+                if not self.globalSettingsContainer.isHidden(): self.globalSettingsContainer.hide()
+                if not self.settingsContainer.isHidden(): self.settingsContainer.hide()
+                if not self.subtitleContainer.isHidden(): self.subtitleContainer.hide()
+            if not self.subtitleContainer.isHidden():
+                if not self.globalSettingsContainer.isHidden(): self.globalSettingsContainer.hide()
+                if not self.settingsContainer.isHidden(): self.settingsContainer.hide()
+                if not self.imageAdjContainer.isHidden(): self.imageAdjContainer.hide()
 
-            if hasattr(self, 'audioContainer') and self.audioContainer.isVisible():
-                if self.playlistContainer.isVisible():
+            if hasattr(self, 'audioContainer') and not self.audioContainer.isHidden():
+                if not self.playlistContainer.isHidden():
                     self.playlistContainer.hide()
-                if self.drawingContainer.isVisible():
+                if not self.drawingContainer.isHidden():
                     self.drawingContainer.hide()
-            if self.playlistContainer.isVisible() and self.drawingContainer.isVisible():
+            if not self.playlistContainer.isHidden() and not self.drawingContainer.isHidden():
                 self.drawingContainer.hide()
             
             # Restore windowed sizes dynamically based on actual visibility of the sidebars
             sizes = [
-                260 if self.globalSettingsContainer.isVisible() else 0,
-                260 if self.settingsContainer.isVisible() else 0,
-                260 if self.imageAdjContainer.isVisible() else 0,
-                260 if self.subtitleContainer.isVisible() else 0,
+                260 if not self.globalSettingsContainer.isHidden() else 0,
+                260 if not self.settingsContainer.isHidden() else 0,
+                260 if not self.imageAdjContainer.isHidden() else 0,
+                260 if not self.subtitleContainer.isHidden() else 0,
                 10000,
-                260 if hasattr(self, 'audioContainer') and self.audioContainer.isVisible() else 0,
-                260 if self.playlistContainer.isVisible() else 0,
-                260 if self.drawingContainer.isVisible() else 0
+                260 if hasattr(self, 'audioContainer') and not self.audioContainer.isHidden() else 0,
+                260 if not self.playlistContainer.isHidden() else 0,
+                260 if not self.drawingContainer.isHidden() else 0
             ]
             self.mainSplitter.setSizes(sizes)
 

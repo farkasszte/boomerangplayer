@@ -298,6 +298,8 @@ class StyleUIMixin:
 
         # Update Background Colors
         # Main window (PlayerWindow)
+        if hasattr(self, 'setCustomBackgroundColor'):
+            self.setCustomBackgroundColor(bg_color, bg_color)
         self.setStyleSheet(win_bg_style)
         
         # Title bar

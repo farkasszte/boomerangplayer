@@ -6,7 +6,7 @@ import logging
 import copy
 from PyQt6.QtCore import Qt
 
-VERSION = "4.5"
+VERSION = "4.6"
 logger = logging.getLogger("BoomerangPlayer")
 
 def get_base_path():

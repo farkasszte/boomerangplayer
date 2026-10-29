@@ -301,7 +301,7 @@ class LoaderMixin(LoaderMixinBase):
             logger.info(f"load_video completed successfully for: {filePath}")
             
             if hasattr(self, 'refresh_window_frame'):
-                QTimer.singleShot(250, self.refresh_window_frame)
+                self.refresh_window_frame()
 
         except Exception as e:
             logger.exception(f"Error opening file: {filePath}")

@@ -86,6 +86,19 @@ class PlayerWindow(
         
         # Target the top-level window directly to avoid cascading
         bg_col = self.config.get('bg_color', '#202020')
+        if hasattr(self, 'setMicaEffectEnabled'):
+            self.setMicaEffectEnabled(False)
+        if hasattr(self, 'setCustomBackgroundColor'):
+            self.setCustomBackgroundColor(bg_col, bg_col)
+        if sys.platform == 'win32' and hasattr(self, 'windowEffect'):
+            try:
+                hwnd = int(self.winId())
+                self.windowEffect.disableBlurBehindWindow(hwnd)
+                self.windowEffect.removeBackgroundEffect(hwnd)
+                self.windowEffect.addWindowAnimation(hwnd)
+                self.windowEffect.addShadowEffect(hwnd)
+            except Exception:
+                pass
         self.setStyleSheet(f"PlayerWindow {{ background-color: {bg_col}; }}")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAutoFillBackground(True)
@@ -244,30 +257,53 @@ class PlayerWindow(
 
 
 
-    def refresh_window_frame(self):
-        hwnd = int(self.winId())
-        if not hwnd:
-            return
-        import sys
-        if sys.platform == 'win32' and not self.isMaximized():
+    def updateFrameless(self):
+        """Override AcrylicWindow.updateFrameless to avoid Qt 6.10+ NoTitleBarBackgroundHint (-8px frameMargins bug)."""
+        if sys.platform == 'win32':
+            stay_on_top = (
+                Qt.WindowType.WindowStaysOnTopHint
+                if self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
+                else Qt.WindowType(0)
+            )
+            self.setWindowFlags(
+                Qt.WindowType.Window
+                | Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowMinMaxButtonsHint
+                | Qt.WindowType.WindowSystemMenuHint
+                | stay_on_top
+            )
+            if hasattr(self, 'windowEffect'):
+                hwnd = int(self.winId())
+                self.windowEffect.addWindowAnimation(hwnd)
+                self.windowEffect.addShadowEffect(hwnd)
+        else:
+            super().updateFrameless()
+
+    def refreshBackgroundBlurEffect(self):
+        """No-op: prevent AcrylicWindow from toggling WS_THICKFRAME / SWP_FRAMECHANGED on maximize."""
+        pass
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if sys.platform == 'win32' and hasattr(self, 'windowEffect') and not getattr(self, '_win32_frame_initialized', False):
+            self._win32_frame_initialized = True
             try:
-                from qfluentwidgets import isDarkTheme
-                if hasattr(self, 'windowEffect'):
-                    if getattr(self, 'isMicaEffectEnabled', lambda: False)():
-                        self.windowEffect.setMicaEffect(hwnd, isDarkTheme())
-                    else:
-                        self.windowEffect.addShadowEffect(hwnd)
-                import win32gui
-                import win32con
-                win32gui.SetWindowPos(
-                    hwnd, None, 0, 0, 0, 0,
-                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE |
-                    win32con.SWP_NOACTIVATE | win32con.SWP_FRAMECHANGED
-                )
+                hwnd = int(self.winId())
+                self.windowEffect.disableBlurBehindWindow(hwnd)
+                self.windowEffect.removeBackgroundEffect(hwnd)
+                self.windowEffect.addWindowAnimation(hwnd)
+                self.windowEffect.addShadowEffect(hwnd)
             except Exception:
                 pass
+
+    def refresh_window_frame(self):
         title = getattr(self, '_original_window_title', self.windowTitle())
         self.customSetTitle(title)
+        if hasattr(self, 'playerInterface') and self.playerInterface:
+            self.playerInterface.update()
+        if hasattr(self, 'view') and self.view and self.view.viewport():
+            self.view.viewport().update()
+        self.update()
 
     def setWindowTitle(self, title):
         super().setWindowTitle(title)
@@ -297,17 +333,18 @@ class PlayerWindow(
 
     def event(self, event):
         from PyQt6.QtCore import QEvent
-        if event.type() in (QEvent.Type.WindowActivate, QEvent.Type.ActivationChange, QEvent.Type.FocusIn):
-            self.refresh_window_frame()
+        if event.type() in (QEvent.Type.WindowActivate, QEvent.Type.ActivationChange):
+            title = getattr(self, '_original_window_title', self.windowTitle())
+            self.customSetTitle(title)
+            self.update()
         return super().event(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Fix the title bar position and size when navigationInterface is hidden
         if hasattr(self, 'titleBar') and not getattr(self, 'is_full_screen', False):
-            if not self.isMaximized():
-                self.titleBar.move(0, 0)
-                self.titleBar.resize(self.width(), self.titleBar.height())
+            self.titleBar.move(0, 0)
+            self.titleBar.resize(self.width(), self.titleBar.height())
             
             # Manually center titleLabel strictly relative to the window width, applying elide to prevent overlaps
             if hasattr(self.titleBar, 'titleLabel') and self.titleBar.titleLabel:

@@ -202,6 +202,7 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             self._t_loc = self.shader.attributeLocation("texCoord")
  
     def paint(self, painter, option, widget):
+        native_painting_active = False
         try:
             if not self.gpu_enabled or self.pixmap().isNull() or self.current_image.isNull():
                 super().paint(painter, option, widget)
@@ -241,6 +242,7 @@ class GPUPixmapItem(QGraphicsPixmapItem):
                 self._new_image_loaded = False
 
             painter.beginNativePainting()
+            native_painting_active = True
             
             self.shader.bind()
             
@@ -283,8 +285,9 @@ class GPUPixmapItem(QGraphicsPixmapItem):
                 self._gl = QOpenGLFunctions_2_1()
                 self._gl.initializeOpenGLFunctions()
             
-            # Ensure viewport is correct
-            self._gl.glViewport(0, 0, widget.width(), widget.height())
+            # Ensure viewport accounts for HiDPI physical pixel ratio
+            dpr = widget.devicePixelRatioF() if hasattr(widget, 'devicePixelRatioF') else 1.0
+            self._gl.glViewport(0, 0, int(round(widget.width() * dpr)), int(round(widget.height() * dpr)))
             
             self.shader.enableAttributeArray(v_loc)
             self.shader.enableAttributeArray(t_loc)
@@ -302,8 +305,14 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             self.texture.release()
             
             painter.endNativePainting()
+            native_painting_active = False
             
         except Exception as e:
+            if native_painting_active:
+                try:
+                    painter.endNativePainting()
+                except Exception:
+                    pass
             # Fallback to standard painting on error
             print(f"Shader paint error: {e}")
             super().paint(painter, option, widget)
