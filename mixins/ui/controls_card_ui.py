@@ -352,6 +352,7 @@ class ControlsCardUIMixin:
         dialog.setFixedSize(380, 240)
         
         # Apply Windows 11 title bar styling using DWM API
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         import sys
         if sys.platform == 'win32':
             try:

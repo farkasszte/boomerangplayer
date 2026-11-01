@@ -403,6 +403,7 @@ class SkinsDialog(QDialog):
 
     def _apply_dwm(self, bg, fg):
         import sys
+        self.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         if sys.platform != 'win32':
             return
         try:

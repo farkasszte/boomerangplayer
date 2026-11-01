@@ -273,6 +273,7 @@ class MediaFileDialog(QDialog):
         self.resize(850, 500)
 
     def _apply_dwm(self, bg, fg):
+        self.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         if sys.platform != 'win32':
             return
         try:

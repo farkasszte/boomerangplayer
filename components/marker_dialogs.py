@@ -114,6 +114,7 @@ class MarkerRowWidget(QWidget):
 
 def _apply_dwm(dialog, bg, fg):
     import sys
+    dialog.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
     if sys.platform != 'win32':
         return
     try:

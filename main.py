@@ -92,10 +92,12 @@ def main():
     import threading
     threading.Thread(target=run_cleanup_async, name="StartupCleanupThread", daemon=True).start()
 
-    # Enable High DPI scaling
+    # Enable High DPI scaling and prevent child winId() calls from forcing native HWND siblings on top-level windows
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
     
     app = QApplication(sys.argv)
+    app.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
     app.setApplicationName("Boomerang Player")
     
     # Raise Qt's internal QImage allocation limit (default 256 MB) to prevent

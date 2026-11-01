@@ -96,9 +96,11 @@ class LoaderMixin(LoaderMixinBase):
 
     def _on_open_media_finished(self, result):
         dialog = self._open_media_dialog
+        self._open_media_dialog = None
         if result and hasattr(dialog, 'selected_files') and dialog.selected_files:
             self._process_selected_files(dialog.selected_files)
-        self._open_media_dialog = None
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
 
     def _process_selected_files(self, selected):
         video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')

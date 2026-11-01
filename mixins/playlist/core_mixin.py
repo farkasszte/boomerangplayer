@@ -117,6 +117,8 @@ class PlaylistCoreMixin:
 
         if hasattr(self, 'update_playlist_counter'):
             self.update_playlist_counter()
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
 
     # ------------------------------------------------------------------ #
     # Item interaction                                                     #

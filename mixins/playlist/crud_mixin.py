@@ -22,6 +22,9 @@ class PlaylistCrudMixin:
         fg_color = "#1c1c1c" if inverse_text else "#ffffff"
         border_color = "rgba(0, 0, 0, 0.35)" if inverse_text else "rgba(255, 255, 255, 0.1)"
         
+        # Prevent child dialog winId() from forcing native HWND siblings on PlayerWindow
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
+
         # Apply Windows DWM title bar styling
         import sys
         if sys.platform == 'win32':
@@ -238,6 +241,8 @@ class PlaylistCrudMixin:
         box.setDefaultButton(cancel_btn)
         
         box.exec()
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
         if box.clickedButton() != delete_btn:
             log_debug("Delete cancelled in QMessageBox.")
             return
@@ -334,6 +339,8 @@ class PlaylistCrudMixin:
                     duration=3000,
                     parent=self
                 )
+                if hasattr(self, 'refresh_window_frame'):
+                    self.refresh_window_frame()
             else:
                 raise Exception("Failed to move file to Recycle Bin. The file might be in use or access was denied.")
 
@@ -410,6 +417,8 @@ class PlaylistCrudMixin:
         box.setDefaultButton(cancel_btn)
 
         box.exec()
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
         if box.clickedButton() != delete_btn:
             log_debug("Bulk delete confirmation cancelled by user.")
             return
@@ -514,6 +523,8 @@ class PlaylistCrudMixin:
 
         if hasattr(self, 'update_playlist_counter'):
             self.update_playlist_counter()
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
 
         # Show result
         if success_count > 0:
@@ -559,6 +570,8 @@ class PlaylistCrudMixin:
 
         if hasattr(self, 'update_playlist_counter'):
             self.update_playlist_counter()
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
 
     def clear_playlist(self):
         
@@ -594,3 +607,5 @@ class PlaylistCrudMixin:
         self.currentTimeLabel.setText("00:00")
         
         self.totalTimeLabel.setText("00:00")
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()

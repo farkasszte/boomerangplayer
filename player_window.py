@@ -76,9 +76,12 @@ class PlayerWindow(
         
         self.accent_color = self.config.get('accent_color', '#00f2ff')
         from PyQt6.QtGui import QColor
+        from PyQt6.QtWidgets import QApplication
         setThemeColor(QColor(self.accent_color))
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
 
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         self.BORDER_WIDTH = 8  # Wider resize grip (default 5 is too narrow, especially on HiDPI)
         self.setWindowIcon(QIcon(get_resource_path("resources/app_icon.ico")))
         self.setWindowTitle(f"Boomerang Player v{VERSION}")
@@ -92,9 +95,14 @@ class PlayerWindow(
             self.setCustomBackgroundColor(bg_col, bg_col)
         if sys.platform == 'win32' and hasattr(self, 'windowEffect'):
             try:
+                import ctypes
                 hwnd = int(self.winId())
                 self.windowEffect.disableBlurBehindWindow(hwnd)
                 self.windowEffect.removeBackgroundEffect(hwnd)
+                # Reset DWMWA_SYSTEMBACKDROP_TYPE (38) to DWMSBT_NONE (1) to undo FramelessWindow/FluentWidget Mica init
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, 38, ctypes.byref(ctypes.c_int(1)), 4
+                )
                 self.windowEffect.addWindowAnimation(hwnd)
                 self.windowEffect.addShadowEffect(hwnd)
             except Exception:
@@ -288,19 +296,36 @@ class PlayerWindow(
         if sys.platform == 'win32' and hasattr(self, 'windowEffect') and not getattr(self, '_win32_frame_initialized', False):
             self._win32_frame_initialized = True
             try:
+                import ctypes
+                import win32con
+                import win32gui
                 hwnd = int(self.winId())
                 self.windowEffect.disableBlurBehindWindow(hwnd)
                 self.windowEffect.removeBackgroundEffect(hwnd)
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, 38, ctypes.byref(ctypes.c_int(1)), 4
+                )
                 self.windowEffect.addWindowAnimation(hwnd)
                 self.windowEffect.addShadowEffect(hwnd)
+                win32gui.SetWindowPos(
+                    hwnd, None, 0, 0, 0, 0,
+                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOZORDER
+                    | win32con.SWP_NOACTIVATE | win32con.SWP_FRAMECHANGED
+                )
             except Exception:
                 pass
 
     def refresh_window_frame(self):
         title = getattr(self, '_original_window_title', self.windowTitle())
         self.customSetTitle(title)
+        if hasattr(self, 'playlistContainer') and self.playlistContainer:
+            self.playlistContainer.update()
+        if hasattr(self, 'controlsCard') and self.controlsCard:
+            self.controlsCard.update()
         if hasattr(self, 'playerInterface') and self.playerInterface:
             self.playerInterface.update()
+        if hasattr(self, 'stackedWidget') and self.stackedWidget:
+            self.stackedWidget.update()
         if hasattr(self, 'view') and self.view and self.view.viewport():
             self.view.viewport().update()
         self.update()
@@ -333,10 +358,8 @@ class PlayerWindow(
 
     def event(self, event):
         from PyQt6.QtCore import QEvent
-        if event.type() in (QEvent.Type.WindowActivate, QEvent.Type.ActivationChange):
-            title = getattr(self, '_original_window_title', self.windowTitle())
-            self.customSetTitle(title)
-            self.update()
+        if event.type() in (QEvent.Type.WindowActivate, QEvent.Type.WindowDeactivate, QEvent.Type.ActivationChange):
+            self.refresh_window_frame()
         return super().event(event)
 
     def resizeEvent(self, event):

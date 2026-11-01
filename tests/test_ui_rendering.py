@@ -83,6 +83,32 @@ class TestUIRendering(unittest.TestCase):
             self.assertEqual(self.win.geometry(), self.win.frameGeometry())
             self.win.hide()
 
+    def test_dialogs_do_not_create_native_child_siblings(self):
+        from PyQt6.QtWidgets import QMessageBox
+        from mixins.file_dialog import MediaFileDialog
+
+        self.assertTrue(app.testAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings))
+        self.assertTrue(self.win.testAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors))
+
+        # Test delete confirmation dialog (QMessageBox + style_dialog)
+        box = QMessageBox(self.win)
+        self.win.style_dialog(box)
+        self.assertTrue(box.testAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors))
+        self.assertFalse(self.win.stackedWidget.testAttribute(Qt.WidgetAttribute.WA_NativeWindow))
+        self.assertIsNone(self.win.stackedWidget.windowHandle())
+        self.assertFalse(self.win.titleBar.testAttribute(Qt.WidgetAttribute.WA_NativeWindow))
+        self.assertIsNone(self.win.titleBar.windowHandle())
+        box.deleteLater()
+
+        # Test open media dialog (MediaFileDialog)
+        dlg = MediaFileDialog(self.win, self.win.config)
+        self.assertTrue(dlg.testAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors))
+        self.assertFalse(self.win.stackedWidget.testAttribute(Qt.WidgetAttribute.WA_NativeWindow))
+        self.assertIsNone(self.win.stackedWidget.windowHandle())
+        self.assertFalse(self.win.titleBar.testAttribute(Qt.WidgetAttribute.WA_NativeWindow))
+        self.assertIsNone(self.win.titleBar.windowHandle())
+        dlg.deleteLater()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -547,6 +547,7 @@ class GlobalSettingsUiBuilderMixin:
     @staticmethod
     def _apply_dialog_win11_style(dialog: QDialog, bg_color: str) -> None:
         """Applies Windows 11 DWM title bar styling to a QDialog on Windows platforms."""
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         if sys.platform == 'win32':
             try:
                 import ctypes
