@@ -250,8 +250,11 @@ class GPUPixmapItem(QGraphicsPixmapItem):
             v_loc = self._v_loc if self._v_loc != -1 else self.shader.attributeLocation("vertex")
             t_loc = self._t_loc if self._t_loc != -1 else self.shader.attributeLocation("texCoord")
             
-            # Setup Projection Matrix
-            matrix = QMatrix4x4(painter.combinedTransform())
+            # Setup Projection Matrix:
+            # Use worldTransform (logical widget coordinates) rather than combinedTransform
+            # (which includes deviceTransform's HiDPI scale factor), paired with logical
+            # widget dimensions in ortho() and physical pixel dimensions in glViewport().
+            matrix = QMatrix4x4(painter.worldTransform())
             
             proj = QMatrix4x4()
             proj.ortho(0, widget.width(), widget.height(), 0, -1, 1)

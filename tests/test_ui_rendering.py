@@ -109,6 +109,27 @@ class TestUIRendering(unittest.TestCase):
         self.assertIsNone(self.win.titleBar.windowHandle())
         dlg.deleteLater()
 
+    def test_gpu_pixmap_item_hidpi_projection_bounds(self):
+        from PyQt6.QtGui import QImage, QMatrix4x4, QVector4D
+
+        img = QImage(1920, 1080, QImage.Format.Format_RGB32)
+        self.win.pixmapItem.setImage(img)
+        self.win.apply_transformations(fit=True)
+
+        viewport = self.win.view.viewport()
+        world_matrix = QMatrix4x4(self.win.pixmapItem.sceneTransform() * self.win.view.viewportTransform())
+        proj = QMatrix4x4()
+        proj.ortho(0, viewport.width(), viewport.height(), 0, -1, 1)
+        mvp = proj * world_matrix
+
+        tl_ndc = mvp.map(QVector4D(0.0, 0.0, 0.0, 1.0))
+        br_ndc = mvp.map(QVector4D(1920.0, 1080.0, 0.0, 1.0))
+
+        self.assertGreaterEqual(tl_ndc.x(), -1.01)
+        self.assertLessEqual(tl_ndc.y(), 1.01)
+        self.assertLessEqual(br_ndc.x(), 1.01)
+        self.assertGreaterEqual(br_ndc.y(), -1.01)
+
 
 if __name__ == '__main__':
     unittest.main()
