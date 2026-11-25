@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QGridLayout, QMenu, QAbstractItemView,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle
@@ -8,6 +8,36 @@ from qfluentwidgets import CaptionLabel, PushButton
 from components import DropListWidget
 from styles import MENU_STYLE, _hex_to_rgb, get_color_tokens
 from translations import tr
+
+
+class PlaylistDropFrame(QFrame):
+    """Playlist sidebar container that also accepts external file/folder drops anywhere on the panel."""
+    filesDropped = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            files = [u.toLocalFile() for u in event.mimeData().urls() if u.toLocalFile()]
+            if files:
+                self.filesDropped.emit(files)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
 class PlaylistDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -88,7 +118,8 @@ class PlaylistSidebarUIMixin:
             self.config.get('bg_color', '#202020'),
             self.config.get('inverse_text', False)
         )
-        self.playlistContainer = QFrame()
+        self.playlistContainer = PlaylistDropFrame()
+        self.playlistContainer.filesDropped.connect(self.handle_playlist_drop)
         self.playlistContainer.setMinimumWidth(260)
         self.playlistContainer.setStyleSheet(f"background: {t['bg']}; border: none;")
         self.playlistLayout = QVBoxLayout(self.playlistContainer)
@@ -117,7 +148,7 @@ class PlaylistSidebarUIMixin:
         
         self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
         
-        self.playlistList.filesDropped.connect(self.add_files_to_playlist)
+        self.playlistList.filesDroppedAt.connect(self.handle_playlist_drop)
         self.playlistList.deleteRequested.connect(self.delete_selected_playlist_items)
         self.playlistLayout.addWidget(self.playlistList)
 

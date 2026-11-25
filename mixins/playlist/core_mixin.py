@@ -10,22 +10,69 @@ class PlaylistCoreMixin:
     # ------------------------------------------------------------------ #
 
     def handle_view_drop(self, files):
-        if files:
-            valid_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv',
-                          '.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
-            valid_files = [f for f in files if f.lower().endswith(valid_exts)]
-            if valid_files:
-                self.add_files_to_playlist(valid_files)
-                
-                if not self.currentFilePath:
-                    
-                    self.load_video(valid_files[0])
+        self.handle_playlist_drop(files, insert_row=None, auto_load_if_empty=True)
+
+    def handle_playlist_drop(self, files, insert_row=None, auto_load_if_empty=False):
+        if not files:
+            return
+        video_exts = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', '.webm', '.flv', '.mpg', '.mpeg', '.ogv')
+        image_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tiff')
+        audio_exts = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
+        playlist_exts = ('.bpl', '.json')
+        all_exts = video_exts + image_exts + audio_exts + playlist_exts
+
+        def is_bpl_playlist(filepath):
+            if not os.path.isfile(filepath):
+                return False
+            if filepath.lower().endswith('.bpl'):
+                return True
+            if filepath.lower().endswith('.json'):
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as pf:
+                        prefix = pf.read(512)
+                        return 'boomerangplaylist' in prefix
+                except Exception:
+                    return False
+            return False
+
+        files_to_add = []
+        playlist_files = []
+        for path in files:
+            if not path:
+                continue
+            if os.path.isdir(path):
+                try:
+                    for f in sorted(os.listdir(path)):
+                        if f.lower().endswith(all_exts):
+                            fpath = os.path.join(path, f)
+                            if is_bpl_playlist(fpath):
+                                playlist_files.append(fpath)
+                            elif not f.lower().endswith('.json'):
+                                files_to_add.append(fpath)
+                except OSError:
+                    pass
+            elif os.path.isfile(path) and path.lower().endswith(all_exts):
+                if is_bpl_playlist(path):
+                    playlist_files.append(path)
+                elif not path.lower().endswith('.json'):
+                    files_to_add.append(path)
+
+        loaded_playlist = False
+        if playlist_files and hasattr(self, 'load_playlist_by_path'):
+            loaded_playlist = self.load_playlist_by_path(playlist_files[0], silent=True)
+            if files_to_add:
+                self.add_files_to_playlist(files_to_add, insert_row=insert_row)
+        elif files_to_add:
+            self.add_files_to_playlist(files_to_add, insert_row=insert_row)
+
+        if auto_load_if_empty and not loaded_playlist and files_to_add and not self.currentFilePath:
+            self.load_video(files_to_add[0])
 
     # ------------------------------------------------------------------ #
     # Adding files                                                         #
     # ------------------------------------------------------------------ #
 
-    def add_files_to_playlist(self, file_paths, cached_thumbnails=None):
+    def add_files_to_playlist(self, file_paths, cached_thumbnails=None, insert_row=None):
         
         show_thumbs = self.thumbToggle.isChecked()
         
@@ -101,7 +148,11 @@ class PlaylistCoreMixin:
                     item.setIcon(QIcon())
                 
                 
-                self.playlistList.addItem(item)
+                if insert_row is not None and 0 <= insert_row <= self.playlistList.count():
+                    self.playlistList.insertItem(insert_row, item)
+                    insert_row += 1
+                else:
+                    self.playlistList.addItem(item)
                 
                 if show_thumbs and not has_cached_thumb:
                     

@@ -130,6 +130,43 @@ class TestUIRendering(unittest.TestCase):
         self.assertLessEqual(br_ndc.x(), 1.01)
         self.assertGreaterEqual(br_ndc.y(), -1.01)
 
+    def test_playlist_drag_drop_and_manual_reorder(self):
+        from PyQt6.QtWidgets import QListWidgetItem
+
+        pl = self.win.playlistList
+        self.assertTrue(self.win.playlistContainer.acceptDrops())
+        self.assertTrue(pl.acceptDrops())
+        self.assertTrue(pl.viewport().acceptDrops())
+        self.assertTrue(pl.dragEnabled())
+
+        # Ensure layout mode changes never disable drag & drop
+        self.win.update_playlist_layout(force_reload_thumbs=False)
+        self.assertTrue(pl.acceptDrops())
+        self.assertTrue(pl.viewport().acceptDrops())
+        self.assertTrue(pl.dragEnabled())
+
+        pl.clear()
+        for name in ["a.mp4", "b.mp4", "c.mp4", "d.mp4"]:
+            it = QListWidgetItem(name)
+            it.setData(Qt.ItemDataRole.UserRole, name)
+            pl.addItem(it)
+
+        # Move index 0 ("a.mp4") after index 2 ("c.mp4") -> target_row = 3
+        pl.move_rows([0], 3)
+        order = [pl.item(i).data(Qt.ItemDataRole.UserRole) for i in range(pl.count())]
+        self.assertEqual(order, ["b.mp4", "c.mp4", "a.mp4", "d.mp4"])
+
+        # Move index 3 ("d.mp4") to the top -> target_row = 0
+        pl.move_rows([3], 0)
+        order = [pl.item(i).data(Qt.ItemDataRole.UserRole) for i in range(pl.count())]
+        self.assertEqual(order, ["d.mp4", "b.mp4", "c.mp4", "a.mp4"])
+
+        # Multi-select move: move indices [0, 2] ("d.mp4", "c.mp4") to end -> target_row = 4
+        pl.move_rows([0, 2], 4)
+        order = [pl.item(i).data(Qt.ItemDataRole.UserRole) for i in range(pl.count())]
+        self.assertEqual(order, ["b.mp4", "a.mp4", "d.mp4", "c.mp4"])
+        pl.clear()
+
 
 if __name__ == '__main__':
     unittest.main()
