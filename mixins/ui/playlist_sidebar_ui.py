@@ -106,6 +106,12 @@ class PlaylistSidebarUIMixin:
         palette.setColor(QPalette.ColorRole.Highlight, QColor(accent))
         self.playlistList.setPalette(palette)
 
+    def _on_playlist_reordered(self):
+        if hasattr(self, 'update_playlist_counter'):
+            self.update_playlist_counter()
+        if hasattr(self, 'refresh_window_frame'):
+            self.refresh_window_frame()
+
     def update_playlist_counter(self):
         """Update the count display on the playlist sidebar header."""
         if hasattr(self, 'playlistLabel') and hasattr(self, 'playlistList'):
@@ -149,6 +155,7 @@ class PlaylistSidebarUIMixin:
         self.playlistList.itemRightClicked.connect(self.show_playlist_context_menu)
         
         self.playlistList.filesDroppedAt.connect(self.handle_playlist_drop)
+        self.playlistList.orderChanged.connect(self._on_playlist_reordered)
         self.playlistList.deleteRequested.connect(self.delete_selected_playlist_items)
         self.playlistLayout.addWidget(self.playlistList)
 

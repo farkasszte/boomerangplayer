@@ -111,14 +111,19 @@ class PlaylistCrudMixin:
                 
         # Re-create and bind to existing audioOutput
         self.mediaPlayer = QMediaPlayer()
+        self.mediaPlayer.setPitchCompensation(True)
         if hasattr(self, 'audioOutput') and self.audioOutput:
             self.mediaPlayer.setAudioOutput(self.audioOutput)
-            
+        if hasattr(self, '_pending_media_source'):
+            self._pending_media_source = None
+
         # Reconnect signals
         self.mediaPlayer.durationChanged.connect(self.update_duration)
         self.mediaPlayer.playbackStateChanged.connect(self.handle_state_change)
         self.mediaPlayer.mediaStatusChanged.connect(self.handle_status_change)
         self.mediaPlayer.metaDataChanged.connect(self.handle_metadata_change)
+        if hasattr(self, 'handle_media_error'):
+            self.mediaPlayer.errorOccurred.connect(self.handle_media_error)
 
         if hasattr(self, 'setup_media_player_intercept'):
             self.setup_media_player_intercept()

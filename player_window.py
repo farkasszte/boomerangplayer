@@ -200,6 +200,7 @@ class PlayerWindow(
         self.mediaPlayer.playbackStateChanged.connect(self.handle_state_change)
         self.mediaPlayer.mediaStatusChanged.connect(self.handle_status_change)
         self.mediaPlayer.metaDataChanged.connect(self.handle_metadata_change)
+        self.mediaPlayer.errorOccurred.connect(self.handle_media_error)
 
         # ---- Playback timer -------------------------------------------
         self.playbackTimer = QTimer()

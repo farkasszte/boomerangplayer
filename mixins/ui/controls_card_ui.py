@@ -49,6 +49,7 @@ class ControlsCardUIMixin:
                 pass
         
         self.audioOutput.setVolume(initial_vol / 100.0)
+        self.audioOutput.setMuted(self.userMutedIntent)
 
         progressLayout.addWidget(self.currentTimeLabel)
         progressLayout.addWidget(self.frameLabel)

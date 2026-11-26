@@ -15,6 +15,18 @@ from translations import tr
 
 logger = logging.getLogger("Loader")
 
+AUDIO_EXTS = ('.mp3', '.wav', '.aac', '.flac', '.m4a', '.ogg', '.wma')
+
+
+def _parse_positive_float(val):
+    if val is None or val == 'N/A':
+        return None
+    try:
+        parsed = float(val)
+        return parsed if parsed > 0 else None
+    except (ValueError, TypeError):
+        return None
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -220,6 +232,7 @@ class LoaderMixin(LoaderMixinBase):
 
             if is_image:
                 logger.info("Processing as static image...")
+                self.was_playing_before_cache_miss = False
                 self.cached_frame_dict = {0: filePath}
                 self.cached_file_path = filePath
                 self.current_cache_index = 0
@@ -249,8 +262,6 @@ class LoaderMixin(LoaderMixinBase):
 
                 self.current_cache_index = 0
 
-                logger.info(f"Setting QMediaPlayer source to: {self.currentVideoPath}")
-                self.mediaPlayer.setSource(QUrl.fromLocalFile(self.currentVideoPath))
                 if self.is_motion_photo:
                     self.setWindowTitle(f"Boomerang Player v{VERSION} - [Motion Photo] {os.path.basename(filePath)}")
                 elif self.is_audio_only:
@@ -266,7 +277,18 @@ class LoaderMixin(LoaderMixinBase):
 
                 self.update_duration(duration_ms)
 
-                self.mediaPlayer.pause()
+                logger.info(f"Setting QMediaPlayer source to: {self.currentVideoPath}")
+                if hasattr(self, '_load_audio_source'):
+                    self._load_audio_source(
+                        self.currentVideoPath,
+                        target_pos_ms=0,
+                        auto_play=False,
+                        is_chunk_switch=False
+                    )
+                else:
+                    self.mediaPlayer.setSource(QUrl.fromLocalFile(self.currentVideoPath))
+                    self.mediaPlayer.pause()
+
                 self.playButton.setIcon(FluentIcon.PLAY)
                 self.playButton.setEnabled(True)
 
@@ -284,6 +306,8 @@ class LoaderMixin(LoaderMixinBase):
                     self.generate_audio_placeholder()
                     self.update_pixmap_from_cache()
                     self.apply_transformations(fit=True)
+                    if hasattr(self, '_apply_file_saved_zoom'):
+                        self._apply_file_saved_zoom()
                 else:
                     logger.info("Initializing cache and starting full video frame extraction...")
                     self.update_pixmap_from_cache()
@@ -300,12 +324,16 @@ class LoaderMixin(LoaderMixinBase):
                         self.isForward = True
                         self.current_cache_index = 0
                     self._start_playback()
+            elif self.is_audio_only and getattr(self, 'was_playing_before_cache_miss', False):
+                self.was_playing_before_cache_miss = False
+                self._start_playback()
             logger.info(f"load_video completed successfully for: {filePath}")
             
             if hasattr(self, 'refresh_window_frame'):
                 self.refresh_window_frame()
 
         except Exception as e:
+            self.is_loading_video = False
             logger.exception(f"Error opening file: {filePath}")
             from qfluentwidgets import InfoBar, InfoBarPosition
             InfoBar.error(
@@ -331,7 +359,7 @@ class LoaderMixin(LoaderMixinBase):
 
             cmd = [
                 ffprobe_path, "-v", "error",
-                "-show_entries", "stream=index,codec_type,codec_name,avg_frame_rate,duration,nb_frames,channels,color_space,color_transfer,color_primaries:stream_tags=language,title:format=duration",
+                "-show_entries", "stream=index,codec_type,codec_name,avg_frame_rate,r_frame_rate,duration,nb_frames,channels,color_space,color_transfer,color_primaries:stream_disposition=attached_pic:stream_tags=language,title:format=duration",
                 "-of", "json", file_path
             ]
 
@@ -365,26 +393,31 @@ class LoaderMixin(LoaderMixinBase):
                     })
                     audio_idx += 1
             
-            video_stream = next((s for s in streams if s.get('codec_type') == 'video'), None)
+            video_stream = next(
+                (s for s in streams
+                 if s.get('codec_type') == 'video' and not s.get('disposition', {}).get('attached_pic')),
+                None
+            )
             audio_stream = next((s for s in streams if s.get('codec_type') == 'audio'), None)
-            
-            self.is_audio_only = (video_stream is None and audio_stream is not None)
+
+            is_audio_ext = bool(file_path and file_path.lower().endswith(AUDIO_EXTS))
+            self.is_audio_only = (audio_stream is not None and (video_stream is None or is_audio_ext))
             
             self.is_hdr = False
             self.color_transfer = ""
             self.color_primaries = ""
-            if video_stream:
+            if video_stream and not self.is_audio_only:
                 self.color_transfer = video_stream.get('color_transfer', '')
                 self.color_primaries = video_stream.get('color_primaries', '')
                 if self.color_transfer in ('smpte2084', 'arib-std-b67') or self.color_primaries == 'bt2020':
                     self.is_hdr = True
             
-            if not self.is_hdr and file_path:
+            if not self.is_hdr and not self.is_audio_only and file_path:
                 bn = os.path.basename(file_path).lower()
                 if '.hdr.' in bn or '_hdr_' in bn or bn.endswith('hdr') or 'hdr10' in bn:
                     self.is_hdr = True
 
-            stream = video_stream if video_stream is not None else audio_stream
+            stream = audio_stream if self.is_audio_only else (video_stream if video_stream is not None else audio_stream)
             if not stream:
                 return 30.0, 0, 0
 
@@ -400,20 +433,23 @@ class LoaderMixin(LoaderMixinBase):
                 else:
                     fps = float(fps_str)
                 
-            s_dur = stream.get('duration')
-            f_dur = fmt.get('duration')
-            duration = float(s_dur if s_dur is not None else (f_dur if f_dur is not None else 0))
-            
-            nb_frames_val = stream.get('nb_frames', 0)
-            if nb_frames_val == 'N/A' or nb_frames_val is None:
-                nb_frames = 0
+            duration = _parse_positive_float(stream.get('duration'))
+            if duration is None:
+                duration = _parse_positive_float(fmt.get('duration')) or 0.0
+
+            if self.is_audio_only:
+                nb_frames = max(1, int(round(duration * fps))) if duration > 0 else 0
             else:
-                try:
-                    nb_frames = int(nb_frames_val)
-                except (ValueError, TypeError):
+                nb_frames_val = stream.get('nb_frames', 0)
+                if nb_frames_val == 'N/A' or nb_frames_val is None:
                     nb_frames = 0
-            if nb_frames == 0 and duration > 0:
-                nb_frames = int(duration * fps)
+                else:
+                    try:
+                        nb_frames = int(nb_frames_val)
+                    except (ValueError, TypeError):
+                        nb_frames = 0
+                if nb_frames == 0 and duration > 0:
+                    nb_frames = int(duration * fps)
             
             codec = stream.get('codec_name', 'unknown')
             self.video_codec = codec

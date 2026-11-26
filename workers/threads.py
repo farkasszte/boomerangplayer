@@ -204,16 +204,20 @@ class ThumbnailThread(QThread):
             is_hdr = False
             color_transfer = ""
             seek_time = "1.0"
+            has_real_video = False
+            has_attached_pic = False
+            probe_ok = False
             try:
                 ffprobe_path = get_ffprobe_path()
                 probe_cmd = [
                     ffprobe_path, "-v", "error",
-                    "-show_entries", "stream=codec_type,color_transfer,color_primaries:format=duration",
+                    "-show_entries", "stream=codec_type,color_transfer,color_primaries:stream_disposition=attached_pic:format=duration",
                     "-of", "json", self.filePath
                 ]
                 creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
                 probe_proc = subprocess.run(probe_cmd, creationflags=creationflags, capture_output=True, text=True, timeout=4)
                 if probe_proc.returncode == 0 and probe_proc.stdout:
+                    probe_ok = True
                     probe_data = json.loads(probe_proc.stdout)
                     duration_str = probe_data.get('format', {}).get('duration')
                     if duration_str:
@@ -225,16 +229,24 @@ class ThumbnailThread(QThread):
                             pass
                     for s in probe_data.get('streams', []):
                         if s.get('codec_type') == 'video':
-                            transfer = s.get('color_transfer', '')
-                            primaries = s.get('color_primaries', '')
-                            if transfer in ('smpte2084', 'arib-std-b67') or primaries == 'bt2020':
-                                is_hdr = True
-                                color_transfer = transfer
-                            break
+                            if s.get('disposition', {}).get('attached_pic'):
+                                has_attached_pic = True
+                            else:
+                                has_real_video = True
+                                transfer = s.get('color_transfer', '')
+                                primaries = s.get('color_primaries', '')
+                                if transfer in ('smpte2084', 'arib-std-b67') or primaries == 'bt2020':
+                                    is_hdr = True
+                                    color_transfer = transfer
+                                break
             except Exception as e:
                 print(f"ffprobe color check failed in ThumbnailThread: {e}")
 
             if self._is_cancelled:
+                return
+
+            if probe_ok and not has_real_video and not has_attached_pic:
+                self.thumbnail_ready.emit(self.filePath, QImage())
                 return
 
             vf_filter = "setsar=1,scale=160:160:force_original_aspect_ratio=increase,crop=160:160"
@@ -242,16 +254,17 @@ class ThumbnailThread(QThread):
                 transfer_in = "arib-std-b67" if color_transfer == "arib-std-b67" else "smpte2084"
                 vf_filter = f"zscale=matrixin=bt2020nc:transferin={transfer_in}:primariesin=bt2020:matrix=bt709:transfer=linear:primaries=bt709,tonemap=tonemap=mobius:desat=0,zscale=transfer=bt709,format=yuv420p,{vf_filter}"
 
-            cmd = [
-                ffmpeg_path, "-y",
-                "-ss", seek_time,
+            cmd = [ffmpeg_path, "-y"]
+            if has_real_video or not has_attached_pic:
+                cmd.extend(["-ss", seek_time])
+            cmd.extend([
                 "-i", self.filePath,
                 "-vframes", "1",
                 "-vf", vf_filter,
                 "-f", "image2pipe",
                 "-vcodec", "mjpeg",
                 "-"
-            ]
+            ])
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             self.process = subprocess.Popen(
@@ -314,21 +327,30 @@ class AudioExtractionThread(QThread):
 
     def run(self):
         try:
+            if self._is_cancelled:
+                return
+
             if os.path.exists(self.output_path):
                 try:
                     os.remove(self.output_path)
                 except OSError:
                     pass
 
+            if self._is_cancelled:
+                return
+
             cmd = [
                 self.ffmpeg_path, "-y",
                 "-ss", f"{self.start_time:.3f}",
                 "-i", self.video_path,
-                "-t", f"{self.duration:.3f}",
+            ]
+            if self.duration and self.duration > 0:
+                cmd.extend(["-t", f"{self.duration:.3f}"])
+            cmd.extend([
                 "-map", f"0:a:{self.track_index}",
                 "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
                 self.output_path
-            ]
+            ])
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
             self.process = subprocess.Popen(
                 cmd,
@@ -336,6 +358,15 @@ class AudioExtractionThread(QThread):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
+
+            if self._is_cancelled:
+                try:
+                    self.process.kill()
+                except OSError:
+                    pass
+                self.process.wait()
+                return
+
             self.process.wait()
 
             if self._is_cancelled:
@@ -346,7 +377,9 @@ class AudioExtractionThread(QThread):
                         pass
                 return
 
-            if self.process.returncode == 0:
+            if (self.process.returncode == 0
+                    and os.path.exists(self.output_path)
+                    and os.path.getsize(self.output_path) > 44):
                 self.finished_extraction.emit(self.output_path, self.start_time, self.duration)
             else:
                 self.finished_extraction.emit("", self.start_time, self.duration)

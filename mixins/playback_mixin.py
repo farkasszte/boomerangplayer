@@ -90,27 +90,38 @@ class PlaybackMixin(PlaybackMixinBase):
 
         if self.isForward and self.fps > 0:
             audio_pos = int((self.current_cache_index * 1000) / self.fps)
-            self.mediaPlayer.setPosition(audio_pos)
-            
-            self.audioOutput.setMuted(self.userMutedIntent)
-            # Ensure the playback rate is set before calling play
-            rate = self.speedSlider.value() / 100.0
-            self.mediaPlayer.setPlaybackRate(rate)
-            self.mediaPlayer.play()
+            if hasattr(self, '_sync_audio_to_position'):
+                self._sync_audio_to_position(audio_pos, ensure_playing=True)
+            else:
+                self.mediaPlayer.setPosition(audio_pos)
+                self.audioOutput.setMuted(self.userMutedIntent)
+                rate = self.speedSlider.value() / 100.0
+                self.mediaPlayer.setPlaybackRate(rate)
+                self.mediaPlayer.play()
         else:
-            self.mediaPlayer.pause()
-            
+            self._pause_media_player()
+
             self.audioOutput.setMuted(True)
 
         if not getattr(self, '_block_broadcast', False):
             
             self.broadcast_sync_event("play", {"isForward": self.isForward, "speed": self.speedSlider.value()})
 
+    def _pause_media_player(self):
+        if hasattr(self, '_pending_media_autoplay'):
+            self._pending_media_autoplay = False
+        if not hasattr(self, 'mediaPlayer') or not self.mediaPlayer:
+            return
+        if (getattr(self, '_pending_media_source', None) is not None
+                or self.mediaPlayer.mediaStatus() == QMediaPlayer.MediaStatus.LoadingMedia):
+            return
+        self.mediaPlayer.pause()
+
     def stop_playback(self):
         self.is_playing = False
-        
+
         self.playbackTimer.stop()
-        self.mediaPlayer.pause()
+        self._pause_media_player()
         self.update_play_icons()
 
         if not getattr(self, '_block_broadcast', False):
@@ -206,19 +217,18 @@ class PlaybackMixin(PlaybackMixinBase):
 
                     if loop_mode == 3:  # Ping-pong
                         self.isForward = False
-                        self.current_cache_index = end_frame - (self.current_cache_index - end_frame)
-                        self.mediaPlayer.pause()
-                        
+                        self.current_cache_index = max(0, min(max(0, self.total_frames - 1), end_frame - (self.current_cache_index - end_frame)))
+                        self._pause_media_player()
                         self.audioOutput.setMuted(True)
                     else:
-                        self.current_cache_index = start_frame + (self.current_cache_index - end_frame - 1)
-
-                    if self.fps > 0:
-                        self.mediaPlayer.setPosition(
-                            int(self.current_cache_index * 1000 / self.fps)
-                        )
-                        
-                        self.audioOutput.setVolume(self.audioOutput.volume())
+                        self.current_cache_index = max(0, min(max(0, self.total_frames - 1), start_frame + (self.current_cache_index - end_frame - 1)))
+                        if self.fps > 0:
+                            pos_ms = int(self.current_cache_index * 1000 / self.fps)
+                            if hasattr(self, '_sync_audio_to_position'):
+                                self._sync_audio_to_position(pos_ms, ensure_playing=True)
+                            else:
+                                self.mediaPlayer.setPosition(pos_ms)
+                            self.audioOutput.setVolume(self.audioOutput.volume())
                 else:
                     self.current_cache_index = end_frame
                     if self.config.get('advance_playlist_after_loop', False):
@@ -234,19 +244,19 @@ class PlaybackMixin(PlaybackMixinBase):
                         return
 
                     self.isForward = True
-                    self.current_cache_index = start_frame + (start_frame - self.current_cache_index)
-                    
+                    self.current_cache_index = max(0, min(max(0, self.total_frames - 1), start_frame + (start_frame - self.current_cache_index)))
+
                     self.audioOutput.setVolume(self.audioOutput.volume())
                     if self.fps > 0:
-                        self.mediaPlayer.setPosition(
-                            int(self.current_cache_index * 1000 / self.fps)
-                        )
-                        
-                        self.audioOutput.setMuted(self.userMutedIntent)
-                        # Ensure the playback rate is set before calling play
-                        rate = self.speedSlider.value() / 100.0
-                        self.mediaPlayer.setPlaybackRate(rate)
-                        self.mediaPlayer.play()
+                        pos_ms = int(self.current_cache_index * 1000 / self.fps)
+                        if hasattr(self, '_sync_audio_to_position'):
+                            self._sync_audio_to_position(pos_ms, ensure_playing=True)
+                        else:
+                            self.mediaPlayer.setPosition(pos_ms)
+                            self.audioOutput.setMuted(self.userMutedIntent)
+                            rate = self.speedSlider.value() / 100.0
+                            self.mediaPlayer.setPlaybackRate(rate)
+                            self.mediaPlayer.play()
                 elif loop_mode == 2:  # Backward loop
                     if self.handle_loop_cycle():
                         return
@@ -320,8 +330,17 @@ class PlaybackMixin(PlaybackMixinBase):
 
         if self.fps > 0:
             ms = int((index * 1000) / self.fps)
-            
+
             self.currentTimeLabel.setText(format_time(ms))
+
+            if not getattr(self, 'is_scrubbing', False):
+                if hasattr(self, '_sync_audio_to_position'):
+                    self._sync_audio_to_position(
+                        ms,
+                        ensure_playing=(getattr(self, 'is_playing', False) and getattr(self, 'isForward', True))
+                    )
+                else:
+                    self.mediaPlayer.setPosition(ms)
 
         if not getattr(self, '_block_broadcast', False):
             
@@ -334,7 +353,13 @@ class PlaybackMixin(PlaybackMixinBase):
         self.is_scrubbing = False
         if self.fps > 0:
             pos = int((self.current_cache_index * 1000) / self.fps)
-            self.mediaPlayer.setPosition(pos)
+            if hasattr(self, '_sync_audio_to_position'):
+                self._sync_audio_to_position(
+                    pos,
+                    ensure_playing=(getattr(self, 'is_playing', False) and getattr(self, 'isForward', True))
+                )
+            else:
+                self.mediaPlayer.setPosition(pos)
         self.update_pixmap_from_cache()
         
         self.update_chronometer()
@@ -401,6 +426,9 @@ class PlaybackMixin(PlaybackMixinBase):
                 self.mediaPlayer.setPlaybackRate(speed_val / 100.0)
 
     def update_duration(self, duration):
+        if duration <= 0 and getattr(self, 'total_frames', 0) > 0 and getattr(self, 'currentFilePath', None):
+            return
+
         # Use ffprobe nb_frames if available to prevent drift/over-estimation
         if hasattr(self, 'ffprobe_nb_frames') and self.ffprobe_nb_frames > 0:
             self.total_frames = self.ffprobe_nb_frames
@@ -424,18 +452,50 @@ class PlaybackMixin(PlaybackMixinBase):
         if status in (QMediaPlayer.MediaStatus.LoadedMedia, QMediaPlayer.MediaStatus.BufferedMedia):
             if status == QMediaPlayer.MediaStatus.LoadedMedia:
                 self.handle_metadata_change()
-            
-            # Apply current speed slider value to the media player
-            speed_slider = getattr(self, 'speedSlider', None)
-            if speed_slider is not None:
-                speed_val = speed_slider.value()
-                self.mediaPlayer.setPlaybackRate(speed_val / 100.0)
 
-            
+            if getattr(self, '_pending_media_source', None) is not None and hasattr(self, '_apply_pending_media_state'):
+                self._apply_pending_media_state()
+            else:
+                # Apply current speed slider value to the media player
+                speed_slider = getattr(self, 'speedSlider', None)
+                if speed_slider is not None:
+                    speed_val = speed_slider.value()
+                    self.mediaPlayer.setPlaybackRate(speed_val / 100.0)
+
             if self.view and self.pixmapItem and self.last_transform_state is None:
                 self.apply_transformations(fit=True)
                 if hasattr(self, '_apply_file_saved_zoom'):
                     self._apply_file_saved_zoom()
+        elif status == QMediaPlayer.MediaStatus.InvalidMedia:
+            if hasattr(self, '_pending_media_source'):
+                self._pending_media_source = None
+            if hasattr(self, 'is_loading_audio_chunk'):
+                self.is_loading_audio_chunk = False
+
+    def handle_media_error(self, error, error_string=""):
+        logger.warning(f"QMediaPlayer error ({error}): {error_string}")
+        active_orig = getattr(self, 'active_original_path', None)
+        active_filt = getattr(self, 'active_filtered_path', None)
+        cur_src = self.mediaPlayer.source().toLocalFile() if hasattr(self, 'mediaPlayer') and self.mediaPlayer else ""
+        norm_cur = os.path.normcase(os.path.normpath(cur_src)) if cur_src else ""
+        is_temp_wav = any(
+            temp_path and norm_cur == os.path.normcase(os.path.normpath(temp_path))
+            for temp_path in (active_orig, active_filt)
+        )
+        if is_temp_wav and getattr(self, 'currentFilePath', None):
+            fallback_path = getattr(self, 'currentVideoPath', None) or self.currentFilePath
+            if fallback_path and os.path.exists(fallback_path):
+                if hasattr(self, '_reset_audio_chunk_state'):
+                    self._reset_audio_chunk_state()
+                pos_ms = int((self.current_cache_index * 1000) / self.fps) if getattr(self, 'fps', 0) > 0 else 0
+                should_play = bool(getattr(self, 'is_playing', False) and getattr(self, 'isForward', True))
+                if hasattr(self, '_load_audio_source'):
+                    self._load_audio_source(
+                        fallback_path,
+                        target_pos_ms=pos_ms,
+                        auto_play=should_play,
+                        is_chunk_switch=False
+                    )
 
     def handle_metadata_change(self):
         pass
